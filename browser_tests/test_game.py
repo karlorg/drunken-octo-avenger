@@ -47,7 +47,7 @@ class GameTest(SeleniumTest):
         ## check one of those images can be loaded
         img = self.browser.find_element_by_css_selector('table.goban a img')
         response = urlopen(img.get_attribute('src'))
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.getcode(), 200)
         try:
             self.assertNotIn(
                 'Exception', response.read().decode(),

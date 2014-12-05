@@ -13,27 +13,42 @@ from flask import render_template
 import main
 
 
-class TestWithDb(unittest.TestCase):
+class TestWithTestingApp(unittest.TestCase):
 
     def setUp(self):
-        self.db_fd, main.app.config['DATABASE'] = tempfile.mkstemp()
         main.app.config['TESTING'] = True
         self.app = main.app.test_client()
+
+class TestWithDb(TestWithTestingApp):
+
+    def setUp(self):
+        super().setUp()
+        self.db_fd, main.app.config['DATABASE'] = tempfile.mkstemp()
         main.init_db()
 
     def tearDown(self):
         os.close(self.db_fd)
         os.unlink(main.app.config['DATABASE'])
+        super().tearDown()
 
 
-class TestGameIntegrated(TestWithDb):
+class TestGameIntegrated(TestWithTestingApp):
 
-    def test_uses_game_template(self):
+    def test_passes_correct_goban_format_to_template(self):
         mock_render = Mock(wraps=render_template)
         with patch('main.render_template', mock_render):
             self.app.get('/game')
-        args, _ = mock_render.call_args  ## _ would be keyword args
+        args, kwargs = mock_render.call_args
         assert args[0] == "game.html"
+
+        goban = kwargs['goban']
+        assert goban[0][0] == str(goban[0][0])
+        assert kwargs['move_no'] == int(kwargs['move_no'])
+
+
+class TestGameUnit(TestWithTestingApp):
+
+    pass
 
 
 if __name__ == '__main__':

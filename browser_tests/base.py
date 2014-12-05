@@ -1,4 +1,7 @@
-from __future__ import unicode_literals
+from __future__ import (absolute_import, division, print_function,
+        unicode_literals)
+from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
+        zip)
 from future import standard_library
 standard_library.install_aliases()
 
@@ -28,7 +31,10 @@ class SeleniumTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        print("tearDown")
+        print(cls.server_process.pid)
         cls.server_process.terminate()
+        cls.server_process.wait()
 
     def setUp(self):
         self.browser = webdriver.Firefox()
