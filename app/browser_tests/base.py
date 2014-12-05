@@ -5,40 +5,23 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
 from future import standard_library
 standard_library.install_aliases()
 
-import os
-from subprocess import Popen
 import time
-import unittest
 
+from flask.ext.testing import LiveServerTestCase
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.keys import Keys
 
-PORT_NO = 5000
+from app.main import app
 
 
-class SeleniumTest(unittest.TestCase):
+class SeleniumTest(LiveServerTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        print("Starting test server...")
-        os.chdir(os.path.dirname(os.path.realpath(__file__)) + '/..')
-        cls.server_process = Popen(
-            ['python', 'main.py'],
-            #stdout=DEVNULL, stderr=DEVNULL
-        )
-        time.sleep(1)
-
-    @classmethod
-    def tearDownClass(cls):
-        print("tearDown")
-        print(cls.server_process.pid)
-        cls.server_process.terminate()
-        cls.server_process.wait()
+    def create_app(self):
+        return app
 
     def setUp(self):
         self.browser = webdriver.Firefox()
-        self.server_url = 'localhost:' + str(PORT_NO)
 
     def tearDown(self):
         self.browser.quit()

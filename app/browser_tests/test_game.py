@@ -11,7 +11,7 @@ from urllib.request import urlopen
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
-from base import SeleniumTest
+from .base import SeleniumTest
 
 
 class GameTest(SeleniumTest):
@@ -32,7 +32,7 @@ class GameTest(SeleniumTest):
 
 
     def test_game_page(self):
-        self.browser.get(self.server_url + '/game')
+        self.browser.get(self.get_server_url() + '/game')
         ## just to make sure page is loaded
         self.wait_for(lambda: self.assertIn('Go', self.browser.title))
 

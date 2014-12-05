@@ -10,7 +10,7 @@ import tempfile
 
 from flask import render_template
 
-import main
+from app import main
 
 
 class TestWithTestingApp(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestGameIntegrated(TestWithTestingApp):
 
     def test_passes_correct_goban_format_to_template(self):
         mock_render = Mock(wraps=render_template)
-        with patch('main.render_template', mock_render):
+        with patch('app.main.render_template', mock_render):
             self.app.get('/game')
         args, kwargs = mock_render.call_args
         assert args[0] == "game.html"
