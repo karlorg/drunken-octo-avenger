@@ -31,6 +31,16 @@ class GameTest(SeleniumTest):
         return {'empty': empty, 'black': black, 'white': white}
 
 
+    def find_empty_point_to_click(self):
+        links = self.browser.find_elements_by_css_selector('table.goban a')
+        target_link = None
+        for link in links:
+            if ('e.gif' in
+                    link.find_element_by_tag_name('img').get_attribute('src')):
+                target_link = link
+                break
+        return target_link
+
     def test_game_page(self):
         self.browser.get(self.get_server_url() + '/game')
         ## just to make sure page is loaded
@@ -57,22 +67,27 @@ class GameTest(SeleniumTest):
             pass  ## fine, we got image data
 
         # user clicks an empty spot, which is a link
-        links = self.browser.find_elements_by_css_selector('table.goban a')
-        target_link = None
-        for link in links:
-            if ('e.gif' in
-                    link.find_element_by_tag_name('img').get_attribute('src')):
-                target_link = link
-                break
         try:
-            target_link.click()
-        except UnboundLocalError:
+            self.find_empty_point_to_click().click()
+        except AttributeError:
             self.fail('no clickable board point found')
 
         # now on the board is one black stone and 19x19 - 1 empty points
         counts = self.count_stones_and_points()
         self.assertEqual(counts['empty'], 19*19-1)
         self.assertEqual(counts['black'], 1)
+
+        # user clicks another empty spot
+        try:
+            self.find_empty_point_to_click().click()
+        except AttributeError:
+            self.fail('no clickable board point found')
+
+        # now one black stone, one white, rest empty
+        counts = self.count_stones_and_points()
+        self.assertEqual(counts['empty'], 19*19-2)
+        self.assertEqual(counts['black'], 1)
+        self.assertEqual(counts['white'], 1)
 
 
 if __name__ == '__main__':

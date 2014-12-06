@@ -46,9 +46,41 @@ class TestGameIntegrated(TestWithTestingApp):
         assert kwargs['move_no'] == int(kwargs['move_no'])
 
 
-class TestGameUnit(TestWithTestingApp):
+class TestGetStoneIfArgsGood(TestWithTestingApp):
 
-    pass
+    def test_returns_none_for_missing_args(self):
+        assert main.get_stone_if_args_good(args = {}, moves = []) is None
+        assert main.get_stone_if_args_good(
+                args = {'move_no': 0, 'row': 0}, moves = []) is None
+        assert main.get_stone_if_args_good(
+                args = {'move_no': 0, 'column': 0}, moves = []) is None
+        assert main.get_stone_if_args_good(
+                args = {'column': 0, 'row': 0}, moves = []) is None
+
+    def test_returns_none_if_move_no_bad(self):
+        stone = main.get_stone_if_args_good(
+                moves=[{'row': 9, 'column': 9}],
+                args={'move_no': 0, 'row': 3, 'column': 3})
+        assert stone is None
+        stone = main.get_stone_if_args_good(
+                moves=[{'row': 9, 'column': 9}],
+                args={'move_no': 2, 'row': 3, 'column': 3})
+        assert stone is None
+
+    def test_returns_black_stone_as_first_move(self):
+        stone = main.get_stone_if_args_good(moves=[],
+                args={'move_no': 0, 'row': 9, 'column': 9})
+        assert stone['row'] == 9
+        assert stone['column'] == 9
+        assert stone['color'] == 'black'
+
+    def test_returns_white_stone_as_second_move(self):
+        stone = main.get_stone_if_args_good(
+                moves=[{'row': 9, 'column': 9}],
+                args={'move_no': 1, 'row': 3, 'column': 3})
+        assert stone['row'] == 3
+        assert stone['column'] == 3
+        assert stone['color'] == 'white'
 
 
 if __name__ == '__main__':
