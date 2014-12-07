@@ -70,14 +70,14 @@ class TestGetStoneIfArgsGood(TestWithTestingApp):
     def test_returns_black_stone_as_first_move(self):
         stone = main.get_stone_if_args_good(moves=[],
                 args={'move_no': 0, 'row': 9, 'column': 9})
-        assert stone['row'] == 9
-        assert stone['column'] == 9
-        assert stone['color'] == 'black'
+        assert stone.row == 9
+        assert stone.column == 9
+        assert stone.color == 'black'
 
     def test_returns_white_stone_as_second_move(self):
         stone = main.get_stone_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
                 args={'move_no': 1, 'row': 3, 'column': 3})
-        assert stone['row'] == 3
-        assert stone['column'] == 3
-        assert stone['color'] == 'white'
+        assert stone.row == 3
+        assert stone.column == 3
+        assert stone.color == 'white'
