@@ -35,8 +35,3 @@ def get_stone_if_args_good(args, moves):
         return None
     color = ['black', 'white'][move_no % 2]
     return {'row': row, 'column': column, 'color': color}
-
-
-if __name__ == '__main__':
-    app.debug = True
-    app.run()

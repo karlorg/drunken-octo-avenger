@@ -10,7 +10,7 @@ import tempfile
 
 from flask import render_template
 
-from app import main
+from .. import main
 
 
 class TestWithTestingApp(unittest.TestCase):
@@ -81,7 +81,3 @@ class TestGetStoneIfArgsGood(TestWithTestingApp):
         assert stone['row'] == 3
         assert stone['column'] == 3
         assert stone['color'] == 'white'
-
-
-if __name__ == '__main__':
-    unittest.main()

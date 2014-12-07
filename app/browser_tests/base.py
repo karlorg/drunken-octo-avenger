@@ -12,7 +12,7 @@ from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.keys import Keys
 
-from app.main import app
+from ..main import app
 
 
 class SeleniumTest(LiveServerTestCase):
