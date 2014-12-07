@@ -5,6 +5,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
 from future.standard_library import install_aliases  # for urlopen
 install_aliases()
 
+from collections import namedtuple
 import unittest
 from urllib.request import urlopen
 
@@ -16,6 +17,7 @@ from .base import SeleniumTest
 
 class GameTest(SeleniumTest):
 
+    Count = namedtuple('Count', ['white', 'black', 'empty'])
     def count_stones_and_points(self):
         imgs = self.browser.find_elements_by_tag_name('img')
         empty = 0
@@ -28,7 +30,7 @@ class GameTest(SeleniumTest):
                 black += 1
             elif 'w.gif' in img.get_attribute('src'):
                 white += 1
-        return {'empty': empty, 'black': black, 'white': white}
+        return GameTest.Count(empty=empty, black=black, white=white)
 
 
     def find_empty_point_to_click(self):
@@ -51,7 +53,7 @@ class GameTest(SeleniumTest):
             ## should not raise
 
         # on the game page are 19x19 imgs representing board points/stones
-        empty = self.count_stones_and_points()['empty']
+        empty = self.count_stones_and_points().empty
         self.assertEqual(19*19, empty, "did not find 19x19 board imgs")
 
         ## check one of those images can be loaded
@@ -74,8 +76,8 @@ class GameTest(SeleniumTest):
 
         # now on the board is one black stone and 19x19 - 1 empty points
         counts = self.count_stones_and_points()
-        self.assertEqual(counts['empty'], 19*19-1)
-        self.assertEqual(counts['black'], 1)
+        self.assertEqual(counts.empty, 19*19-1)
+        self.assertEqual(counts.black, 1)
 
         # user clicks another empty spot
         try:
@@ -85,9 +87,9 @@ class GameTest(SeleniumTest):
 
         # now one black stone, one white, rest empty
         counts = self.count_stones_and_points()
-        self.assertEqual(counts['empty'], 19*19-2)
-        self.assertEqual(counts['black'], 1)
-        self.assertEqual(counts['white'], 1)
+        self.assertEqual(counts.empty, 19*19-2)
+        self.assertEqual(counts.black, 1)
+        self.assertEqual(counts.white, 1)
 
 
 if __name__ == '__main__':
