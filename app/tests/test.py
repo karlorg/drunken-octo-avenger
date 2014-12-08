@@ -5,45 +5,63 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
 
 import os
 from mock import ANY, Mock, patch
-import unittest
 import tempfile
 
 from flask import render_template
+from flask.ext.testing import TestCase
 
 from .. import main
+from ..main import Move
 
 
-class TestWithTestingApp(unittest.TestCase):
+class TestWithTestingApp(TestCase):
+
+    def create_app(self):
+        main.app.config['TESTING'] = True
+        return main.app
 
     def setUp(self):
-        main.app.config['TESTING'] = True
-        self.app = main.app.test_client()
+        self.test_client = main.app.test_client()
 
 class TestWithDb(TestWithTestingApp):
 
+    def create_app(self):
+        main.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        return super().create_app()
+
     def setUp(self):
         super().setUp()
-        self.db_fd, main.app.config['DATABASE'] = tempfile.mkstemp()
-        main.init_db()
+        main.db.create_all()
 
     def tearDown(self):
-        os.close(self.db_fd)
-        os.unlink(main.app.config['DATABASE'])
+        main.db.session.remove()
+        main.db.drop_all()
         super().tearDown()
 
 
-class TestGameIntegrated(TestWithTestingApp):
+class TestGameIntegrated(TestWithDb):
 
     def test_passes_correct_goban_format_to_template(self):
         mock_render = Mock(wraps=render_template)
         with patch('app.main.render_template', mock_render):
-            self.app.get('/game')
+            self.test_client.get('/game')
         args, kwargs = mock_render.call_args
         assert args[0] == "game.html"
 
         goban = kwargs['goban']
         assert goban[0][0] == str(goban[0][0])
         assert kwargs['move_no'] == int(kwargs['move_no'])
+
+    def test_writes_passed_valid_move_to_db(self):
+        assert Move.query.all() == []
+        self.test_client.get('/game?move_no=0&row=16&column=15')
+        moves = Move.query.all()
+        assert len(moves) == 1
+        move = moves[0]
+        assert move.move_no == 0
+        assert move.row == 16
+        assert move.column == 15
+        assert move.color == Move.Color.black
 
 
 class TestGetStoneIfArgsGood(TestWithTestingApp):
