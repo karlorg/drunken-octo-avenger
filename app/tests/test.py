@@ -63,6 +63,10 @@ class TestGameIntegrated(TestWithDb):
         assert move.column == 15
         assert move.color == Move.Color.black
 
+    def test_links_go_to_right_move_no(self):
+        response = self.test_client.get('/game?move_no=0&row=16&column=15')
+        assert 'move_no=1' in response.get_data()
+
 
 class TestGetStoneIfArgsGood(TestWithTestingApp):
 
@@ -90,7 +94,7 @@ class TestGetStoneIfArgsGood(TestWithTestingApp):
                 args={'move_no': 0, 'row': 9, 'column': 9})
         assert stone.row == 9
         assert stone.column == 9
-        assert stone.color == 'black'
+        assert stone.color == Move.Color.black
 
     def test_returns_white_stone_as_second_move(self):
         stone = main.get_stone_if_args_good(
@@ -98,4 +102,4 @@ class TestGetStoneIfArgsGood(TestWithTestingApp):
                 args={'move_no': 1, 'row': 3, 'column': 3})
         assert stone.row == 3
         assert stone.column == 3
-        assert stone.color == 'white'
+        assert stone.color == Move.Color.white

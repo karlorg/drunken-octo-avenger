@@ -18,6 +18,9 @@ from ..main import app
 class SeleniumTest(LiveServerTestCase):
 
     def create_app(self):
+        ## for some reason the SQL Alchemy URI is removed between setup in the
+        ## main app and here
+        app.config.from_object('config')
         return app
 
     def setUp(self):

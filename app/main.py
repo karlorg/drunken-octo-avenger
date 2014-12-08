@@ -16,17 +16,25 @@ db = SQLAlchemy(app)
 
 @app.route('/game')
 def game():
-    img_path = '/static/images/goban/e.gif'
+    moves = Move.query.all()
+    stone = get_stone_if_args_good(args=request.args, moves=moves)
+    if stone is not None:
+        db.session.add(stone)
+        db.session.commit()
+    empty_img_path = '/static/images/goban/e.gif'
     goban = [None] * 19
     for i in xrange(len(goban)):
-        goban[i] = [img_path] * 19
-    stone = get_stone_if_args_good(args=request.args, moves=[])
-    if stone is not None:
-        goban[stone.row][stone.column] = '/static/images/goban/b.gif'
-    return render_template("game.html", move_no=0, goban=goban)
+        goban[i] = [empty_img_path] * 19
+    img_paths = {
+            Move.Color.black: '/static/images/goban/b.gif',
+            Move.Color.white: '/static/images/goban/w.gif'
+            }
+    moves = Move.query.all()
+    for move in moves:
+        goban[move.row][move.column] = img_paths[move.color]
+    return render_template("game.html", move_no=len(moves), goban=goban)
 
 
-Stone = namedtuple('Stone', ['row', 'column', 'color'])
 def get_stone_if_args_good(args, moves):
     try:
         move_no = int(args['move_no'])
@@ -36,8 +44,8 @@ def get_stone_if_args_good(args, moves):
         return None
     if move_no != len(moves):
         return None
-    color = ('black', 'white')[move_no % 2]
-    return Stone(row=row, column=column, color=color)
+    color = (Move.Color.black, Move.Color.white)[move_no % 2]
+    return Move(move_no=move_no, row=row, column=column, color=color)
 
 
 class Move(db.Model):

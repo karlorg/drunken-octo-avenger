@@ -32,7 +32,6 @@ class GameTest(SeleniumTest):
                 white += 1
         return GameTest.Count(empty=empty, black=black, white=white)
 
-
     def find_empty_point_to_click(self):
         links = self.browser.find_elements_by_css_selector('table.goban a')
         target_link = None
@@ -42,6 +41,7 @@ class GameTest(SeleniumTest):
                 target_link = link
                 break
         return target_link
+
 
     def test_game_page(self):
         self.browser.get(self.get_server_url() + '/game')
