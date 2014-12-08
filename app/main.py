@@ -10,6 +10,10 @@ from flask import Flask, render_template, request, url_for
 from flask.ext.sqlalchemy import SQLAlchemy
 
 
+IMG_PATH_EMPTY = '/static/images/goban/e.gif'
+IMG_PATH_BLACK = '/static/images/goban/b.gif'
+IMG_PATH_WHITE = '/static/images/goban/w.gif'
+
 app = Flask(__name__)
 app.config.from_object('config')
 db = SQLAlchemy(app)
@@ -21,17 +25,8 @@ def game():
     if stone is not None:
         db.session.add(stone)
         db.session.commit()
-    empty_img_path = '/static/images/goban/e.gif'
-    goban = [None] * 19
-    for i in xrange(len(goban)):
-        goban[i] = [empty_img_path] * 19
-    img_paths = {
-            Move.Color.black: '/static/images/goban/b.gif',
-            Move.Color.white: '/static/images/goban/w.gif'
-            }
     moves = Move.query.all()
-    for move in moves:
-        goban[move.row][move.column] = img_paths[move.color]
+    goban = get_img_array_from_moves(moves)
     return render_template("game.html", move_no=len(moves), goban=goban)
 
 
@@ -46,6 +41,16 @@ def get_stone_if_args_good(args, moves):
         return None
     color = (Move.Color.black, Move.Color.white)[move_no % 2]
     return Move(move_no=move_no, row=row, column=column, color=color)
+
+def get_img_array_from_moves(moves):
+    goban = [[IMG_PATH_EMPTY for j in xrange(19)]
+            for i in xrange(19)]
+    for move in moves:
+        if move.color == Move.Color.black:
+            goban[move.row][move.column] = IMG_PATH_BLACK
+        elif move.color == Move.Color.white:
+            goban[move.row][move.column] = IMG_PATH_WHITE
+    return goban
 
 
 class Move(db.Model):

@@ -103,3 +103,16 @@ class TestGetStoneIfArgsGood(TestWithTestingApp):
         assert stone.row == 3
         assert stone.column == 3
         assert stone.color == Move.Color.white
+
+class TestGetImgArrayFromMoves(TestWithTestingApp):
+
+    def test_imgs_appear_on_expected_points(self):
+        goban = main.get_img_array_from_moves([
+            Move(move_no=0, row=3, column=4, color=Move.Color.black),
+            Move(move_no=1, row=15, column=16, color=Move.Color.white)
+        ])
+        assert 'e.gif' in goban[3][3]
+        assert 'w.gif' in goban[15][16]
+        assert 'b.gif' in goban[3][4]
+        ## regression: shared list pointers cause stones to appear on all rows
+        assert 'e.gif' in goban[4][4]
