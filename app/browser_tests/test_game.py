@@ -50,7 +50,16 @@ class GameTest(SeleniumTest):
         main.db.drop_all()
         main.db.create_all()
 
-        self.browser.get(self.get_server_url() + '/game')
+        # start a new game
+        self.browser.get(self.get_server_url() + '/newgame')
+
+        # should see a page listing games
+        self.wait_for(lambda: 
+                self.browser.find_element_by_partial_link_text('Game '))
+        # select the most recent game
+        link = self.browser.find_elements_by_partial_link_text('Game ')[-1]
+        link.click()
+        
         ## just to make sure page is loaded
         self.wait_for(lambda: self.assertIn('Go', self.browser.title))
 

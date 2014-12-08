@@ -3,11 +3,12 @@ from __future__ import (absolute_import, division, print_function,
 from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
         zip)
 
-import os
 from mock import ANY, Mock, patch
+import re
+import os
 import tempfile
 
-from flask import render_template
+from flask import render_template, url_for
 from flask.ext.testing import TestCase
 
 from .. import main
@@ -37,6 +38,32 @@ class TestWithDb(TestWithTestingApp):
         main.db.session.remove()
         main.db.drop_all()
         super().tearDown()
+
+
+class TestNewgameIntegrated(TestWithDb):
+
+    def test_redirects_to_game_list(self):
+        response = self.test_client.get('/newgame')
+        self.assert_redirects(response, url_for('listgames'))
+
+    def test_adds_new_game_to_db(self):
+        assert len(main.Game.query.all()) == 0
+        self.test_client.get('/newgame')
+        assert len(main.Game.query.all()) == 1
+
+
+class TestListgamesIntegrated(TestWithDb):
+
+    def count_pattern_in(self, pattern, string):
+        return len(re.split(pattern, string)) - 1
+
+    def test_shows_links_to_existing_games(self):
+        response = self.test_client.get('/listgames')
+        assert self.count_pattern_in(r"Game \d", response.get_data()) == 0
+        main.db.session.add(main.Game())
+        main.db.session.add(main.Game())
+        response = self.test_client.get('/listgames')
+        assert self.count_pattern_in(r"Game \d", response.get_data()) == 2
 
 
 class TestGameIntegrated(TestWithDb):

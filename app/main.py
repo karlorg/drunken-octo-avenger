@@ -6,7 +6,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
 from collections import namedtuple
 from enum import IntEnum
 
-from flask import Flask, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, url_for
 from flask.ext.sqlalchemy import SQLAlchemy
 
 
@@ -28,6 +28,17 @@ def game():
     moves = Move.query.all()
     goban = get_img_array_from_moves(moves)
     return render_template("game.html", move_no=len(moves), goban=goban)
+
+@app.route('/newgame')
+def newgame():
+    db.session.add(Game())
+    db.session.commit()
+    return redirect(url_for('listgames'))
+
+@app.route('/listgames')
+def listgames():
+    games = Game.query.all()
+    return render_template("listgames.html", games=games)
 
 
 def get_stone_if_args_good(args, moves):
@@ -52,6 +63,9 @@ def get_img_array_from_moves(moves):
             goban[move.row][move.column] = IMG_PATH_WHITE
     return goban
 
+
+class Game(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
 
 class Move(db.Model):
     id = db.Column(db.Integer, primary_key=True)
