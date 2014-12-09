@@ -5,8 +5,6 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
 from future.standard_library import install_aliases  # for urlopen
 install_aliases()
 
-from collections import namedtuple
-import unittest
 from urllib.request import urlopen
 
 from selenium import webdriver
@@ -17,32 +15,6 @@ from .. import main
 
 
 class GameTest(SeleniumTest):
-
-    Count = namedtuple('Count', ['white', 'black', 'empty'])
-    def count_stones_and_points(self):
-        imgs = self.browser.find_elements_by_tag_name('img')
-        empty = 0
-        black = 0
-        white = 0
-        for img in imgs:
-            if 'e.gif' in img.get_attribute('src'):
-                empty += 1
-            elif 'b.gif' in img.get_attribute('src'):
-                black += 1
-            elif 'w.gif' in img.get_attribute('src'):
-                white += 1
-        return GameTest.Count(empty=empty, black=black, white=white)
-
-    def find_empty_point_to_click(self):
-        links = self.browser.find_elements_by_css_selector('table.goban a')
-        target_link = None
-        for link in links:
-            if ('e.gif' in
-                    link.find_element_by_tag_name('img').get_attribute('src')):
-                target_link = link
-                break
-        return target_link
-
 
     def test_game_page(self):
         ## clear database; should only be necessary until we have multiple
