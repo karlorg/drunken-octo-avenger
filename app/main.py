@@ -1,7 +1,8 @@
 from __future__ import (absolute_import, division, print_function,
         unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
-        zip)
+
+from builtins import (ascii, bytes, chr, dict, filter, hex, input, range, str,
+        super, zip)
 
 from collections import namedtuple
 from enum import IntEnum
@@ -54,8 +55,8 @@ def get_stone_if_args_good(args, moves):
     return Move(move_no=move_no, row=row, column=column, color=color)
 
 def get_img_array_from_moves(moves):
-    goban = [[IMG_PATH_EMPTY for j in xrange(19)]
-            for i in xrange(19)]
+    goban = [[IMG_PATH_EMPTY for j in range(19)]
+            for i in range(19)]
     for move in moves:
         if move.color == Move.Color.black:
             goban[move.row][move.column] = IMG_PATH_BLACK

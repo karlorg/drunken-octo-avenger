@@ -59,11 +59,11 @@ class TestListgamesIntegrated(TestWithDb):
 
     def test_shows_links_to_existing_games(self):
         response = self.test_client.get('/listgames')
-        assert self.count_pattern_in(r"Game \d", response.get_data()) == 0
+        assert self.count_pattern_in(r"Game \d", str(response.get_data())) == 0
         main.db.session.add(main.Game())
         main.db.session.add(main.Game())
         response = self.test_client.get('/listgames')
-        assert self.count_pattern_in(r"Game \d", response.get_data()) == 2
+        assert self.count_pattern_in(r"Game \d", str(response.get_data())) == 2
 
 
 class TestGameIntegrated(TestWithDb):
@@ -92,7 +92,7 @@ class TestGameIntegrated(TestWithDb):
 
     def test_links_go_to_right_move_no(self):
         response = self.test_client.get('/game?move_no=0&row=16&column=15')
-        assert 'move_no=1' in response.get_data()
+        assert 'move_no=1' in str(response.get_data())
 
 
 class TestGetStoneIfArgsGood(TestWithTestingApp):
