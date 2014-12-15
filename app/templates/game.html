@@ -1,9 +1,6 @@
-<html>
-<head>
-<link href="static/index.css" rel="stylesheet" type="text/css">
-<title>Go</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block content %}
 <table class="goban">
     {% for row in goban %}
     <tr>
@@ -17,5 +14,4 @@
     </tr>
     {% endfor %}
 </table>
-</body>
-</html>
+{% endblock %}
