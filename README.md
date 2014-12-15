@@ -9,7 +9,7 @@ stay compatible with both.
 
 (from virtualenv)
 
-    python app/main.py
+    python run.py
 
 ## testing
 
