@@ -19,6 +19,11 @@ app = Flask(__name__)
 app.config.from_object('config')
 db = SQLAlchemy(app)
 
+
+@app.route('/')
+def front_page():
+    return render_template("frontpage.html")
+
 @app.route('/game')
 def game():
     moves = Move.query.all()
