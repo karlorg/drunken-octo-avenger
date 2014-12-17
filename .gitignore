@@ -4,3 +4,8 @@ __pycache__
 *.pyc
 *.swo
 *.swp
+*.egg-info
+.coverage
+htmlcov
+venv/
+*-venv/
