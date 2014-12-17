@@ -1,5 +1,7 @@
-table.goban { border-collapse: collapse; }
-.goban td, .goban tr, .goban img {
+table.goban { 
+    border-collapse: collapse;
+}
+.goban * {
     padding: 0px;
     margin: 0px;
     border: none;
@@ -7,5 +9,6 @@ table.goban { border-collapse: collapse; }
 .goban img {
     width: 16px;
     height: 16px;
+    display: block;
 }
 
