@@ -13,4 +13,14 @@ stay compatible with both.
 
 ## testing
 
+### Python code
+
     python -m unittest discover [<package path>]
+
+Omit the package path to run all Python tests.  (Please run this before each
+commit.  Committing with expected failures is OK, but do check there are no
+unexpected failures.)
+
+### Javascript code
+
+Open `app/static/tests/tests.html` in your browser.
