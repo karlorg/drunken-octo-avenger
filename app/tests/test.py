@@ -45,7 +45,7 @@ class TestFrontPageIntegrated(TestWithTestingApp):
     def test_without_login_shows_persona_login_link(self):
         response = self.test_client.get('/')
         assert re.search(
-                r"""<a [^>]*id=['"]persona-login['"]""",
+                r"""<a [^>]*id=['"]persona_login['"]""",
                 str(response.get_data())) is not None
 
 

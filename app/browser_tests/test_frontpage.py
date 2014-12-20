@@ -28,7 +28,7 @@ class FrontPageTest(SeleniumTest):
         # loading the site's base url for the first time shows a button
         # to log in with Mozilla Persona
         self.browser.get(self.get_server_url())
-        persona_button = self.browser.find_element_by_id('persona-login')
+        persona_button = self.browser.find_element_by_id('persona_login')
         # push the button and enter mockmyid login details
         persona_button.click()
         self.switch_to_new_window('Mozilla Persona')
@@ -38,7 +38,19 @@ class FrontPageTest(SeleniumTest):
         self.browser.find_element_by_tag_name('button').click()
         # the Persona window closes
         self.switch_to_new_window('Go')
+        # the new page has a logout link
+        plogout_button = self.wait_for((lambda: 
+                self.browser.find_element_by_id('persona_logout')
+        ), timeout=15)
         # our email address is now shown on the page
         email_display = self.browser.find_element_by_class_name(
-                'logged-in-user')
+                'logged_in_user')
         assert 'test@mockmyid.com' in email_display.text()
+        # and there is now no login link
+        try:
+            persona_button = self.browser.find_element_by_id('persona_login')
+        except NoSuchElementException:
+            pass  ## we expect no such element
+        else:
+            self.fail('found login link, should not exist')
+

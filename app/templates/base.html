@@ -5,7 +5,21 @@
 <title>Go</title>
 </head>
 <body>
+<a href="#" id="persona_login">Login with Persona</a>
+
 {% block content %}
 {% endblock %}
+
+<script>
+window.tesuji_charm = {
+    current_user_email: "{{ current_user_email }}"
+};
+</script>
+<script src="static/jquery.js"></script>
+<script src="https://login.persona.org/include.js"></script>
+<script src="static/persona.js"></script>
+<script>
+tesuji_charm.persona.initialize(navigator);
+</script>
 </body>
 </html>
