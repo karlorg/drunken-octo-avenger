@@ -1,7 +1,7 @@
-from __future__ import (absolute_import, division, print_function,
-        unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
-        zip)
+from __future__ import (
+        absolute_import, division, print_function, unicode_literals)
+from builtins import (  # noqa
+        ascii, bytes, chr, dict, filter, hex, input, str, super, zip)
 from future import standard_library
 standard_library.install_aliases()
 
@@ -10,7 +10,6 @@ import time
 from flask.ext.testing import LiveServerTestCase
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.common.keys import Keys
 
 from collections import namedtuple
 
@@ -56,6 +55,7 @@ class SeleniumTest(LiveServerTestCase):
             remaining = remaining[group_size:]
 
     Count = namedtuple('Count', ['white', 'black', 'empty'])
+
     def count_stones_and_points(self):
         imgs = self.browser.find_elements_by_tag_name('img')
         empty = 0

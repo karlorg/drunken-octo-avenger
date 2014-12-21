@@ -1,14 +1,11 @@
-from __future__ import (absolute_import, division, print_function,
-        unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
-        zip)
+from __future__ import (
+        absolute_import, division, print_function, unicode_literals)
+from builtins import (  # noqa
+        ascii, bytes, chr, dict, filter, hex, input, str, super, zip)
 from future.standard_library import install_aliases  # for urlopen
 install_aliases()
 
 from urllib.request import urlopen
-
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 
 from .base import SeleniumTest
 from .. import main
@@ -26,18 +23,19 @@ class GameTest(SeleniumTest):
         self.browser.get(self.get_server_url() + '/newgame')
 
         # should see a page listing games
-        self.wait_for(lambda: 
-                self.browser.find_element_by_partial_link_text('Game '))
+        def find_game_links():
+            self.browser.find_element_by_partial_link_text('Game ')
+        self.wait_for(find_game_links)
         # select the most recent game
         link = self.browser.find_elements_by_partial_link_text('Game ')[-1]
         link.click()
-        
+
         ## just to make sure page is loaded
         self.wait_for(lambda: self.assertIn('Go', self.browser.title))
 
         # on the game page is a table with class 'goban'
-        table = self.browser.find_element_by_css_selector('table.goban')
-            ## should not raise
+        self.browser.find_element_by_css_selector('table.goban')
+        ## should not raise
 
         # on the game page are 19x19 imgs representing board points/stones
         empty = self.count_stones_and_points().empty
@@ -77,7 +75,3 @@ class GameTest(SeleniumTest):
         self.assertEqual(counts.empty, 19*19-2)
         self.assertEqual(counts.black, 1)
         self.assertEqual(counts.white, 1)
-
-
-if __name__ == '__main__':
-    unittest.main()
