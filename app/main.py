@@ -28,7 +28,7 @@ def front_page():
     if 'email' in session:
         email = session['email']
     else:
-        email = None
+        email = ''
     return render_template(
             "frontpage.html",
             current_user_email=email)
@@ -73,7 +73,7 @@ def persona_login():
     # we're only accessed through AJAX, the response doesn't matter
     return ''
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def logout():
     try:
         del session['email']

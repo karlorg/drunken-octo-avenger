@@ -96,7 +96,7 @@ class TestLogoutIntegrated(TestWithTestingApp):
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as transaction:
                 transaction['email'] = 'olduser@remove.me'
-            test_client.get('/logout')
+            test_client.post('/logout')
             assert 'email' not in session
 
 
