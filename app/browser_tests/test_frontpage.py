@@ -23,6 +23,25 @@ class FrontPageTest(SeleniumTest):
             time.sleep(0.5)
         self.fail('could not find window')
 
+    def confirm_logged_in_and_get_logout_link(self):
+        """Assertions expecting a logged-in page."""
+        # the page has a logout link
+        def find_logout():
+            return self.browser.find_element_by_id('logout')
+        logout_link = self.wait_for(find_logout, timeout=15)
+        # our email address is now shown on the page
+        email_display = self.browser.find_element_by_class_name(
+                'logged_in_user')
+        assert 'test@mockmyid.com' in email_display.text
+        # and there is now no login link
+        try:
+            persona_button = self.browser.find_element_by_id('persona_login')
+        except NoSuchElementException:
+            pass  ## we expect no such element
+        else:
+            self.fail('found login link, should not exist')
+        return logout_link
+
     def test_persona_login(self):
         # loading the site's base url for the first time shows a button
         # to log in with Mozilla Persona
@@ -37,25 +56,15 @@ class FrontPageTest(SeleniumTest):
         self.browser.find_element_by_tag_name('button').click()
         # the Persona window closes
         self.switch_to_new_window('Go')
+        # and we're logged in
+        plogout_link = self.confirm_logged_in_and_get_logout_link()
 
-        # the new page has a logout link
-        def find_logout():
-            return self.browser.find_element_by_id('logout')
-        plogout_button = self.wait_for(find_logout, timeout=15)
-        # our email address is now shown on the page
-        email_display = self.browser.find_element_by_class_name(
-                'logged_in_user')
-        assert 'test@mockmyid.com' in email_display.text
-        # and there is now no login link
-        try:
-            persona_button = self.browser.find_element_by_id('persona_login')
-        except NoSuchElementException:
-            pass  ## we expect no such element
-        else:
-            self.fail('found login link, should not exist')
+        # we try another page, we're still logged in there
+        self.browser.get(self.get_server_url() + "/listgames")
+        plogout_link = self.confirm_logged_in_and_get_logout_link()
 
         # now we log out again
-        plogout_button.click()
+        plogout_link.click()
         # we're back to a login link...
         def find_login():
             return self.browser.find_element_by_id('persona_login')

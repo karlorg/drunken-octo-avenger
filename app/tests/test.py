@@ -55,7 +55,7 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
                 '/persona/login',
                 data={}
         )
-        assert response.status_code == 400;
+        assert response.status_code == 400
 
     def test_posts_assertion_to_mozilla(self):
         mock_post = Mock(wraps=requests.post)
