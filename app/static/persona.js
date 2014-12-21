@@ -19,7 +19,7 @@
         if (signin_link) {
             signin_link.click(function() { navigator.id.request(); });
         }
-        var signout_link = $("#persona_logout");
+        var signout_link = $("#logout");
         if (signout_link) {
             signout_link.click(function() { navigator.id.logout(); });
         }

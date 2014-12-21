@@ -40,7 +40,7 @@ class FrontPageTest(SeleniumTest):
 
         # the new page has a logout link
         def find_logout():
-            self.browser.find_element_by_id('logout')
+            return self.browser.find_element_by_id('logout')
         plogout_button = self.wait_for(find_logout, timeout=15)
         # our email address is now shown on the page
         email_display = self.browser.find_element_by_class_name(
@@ -53,3 +53,25 @@ class FrontPageTest(SeleniumTest):
             pass  ## we expect no such element
         else:
             self.fail('found login link, should not exist')
+
+        # now we log out again
+        plogout_button.click()
+        # we're back to a login link...
+        def find_login():
+            return self.browser.find_element_by_id('persona_login')
+        persona_button = self.wait_for(find_login, timeout=15)
+        # and no email display...
+        try:
+            email_display = self.browser.find_element_by_class_name(
+                    'logged_in_user')
+        except NoSuchElementException:
+            pass
+        else:
+            assert 'test@mockmyid.com' not in email_display.text
+        # and no logout link
+        try:
+            self.browser.find_element_by_id('logout')
+        except NoSuchElementException:
+            pass  ## we expect no such element
+        else:
+            self.fail('found logout link, should not exist')

@@ -48,7 +48,7 @@
         $("#persona_login").click();
         equal(request_called, true, "login request called correctly");
         equal(logout_called, false);
-        $("#persona_logout").click();
+        $("#logout").click();
         equal(logout_called, true, "logout callback called correctly");
     });
 
