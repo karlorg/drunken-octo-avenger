@@ -89,6 +89,23 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
                 )
             assert session['email'] == 'test@example.com'
 
+    def test_bad_response_aborts(self):
+        mock_post = Mock(wraps=requests.post)
+        mock_post.return_value = Mock()
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+                'status': 'no no NO',
+                'email': 'test@example.com',
+        }
+        with main.app.test_client() as test_client:
+            with patch('app.main.requests.post', mock_post):
+                response = test_client.post(
+                        '/persona/login',
+                        data={'assertion': 'test'}
+                )
+            assert 'email' not in session
+            assert response.status_code != 200
+
 
 class TestLogoutIntegrated(TestWithTestingApp):
 

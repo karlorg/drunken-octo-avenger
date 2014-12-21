@@ -67,8 +67,10 @@ def persona_login():
     session_update = process_persona_response(response)
     if session_update.do:
         session.update({'email': session_update.email})
-    # we're only accessed through AJAX, the response doesn't matter
-    return ''
+        # we're only accessed through AJAX, the response doesn't matter
+        return ''
+    else:
+        abort(500)
 
 @app.route('/logout', methods=['POST'])
 def logout():
