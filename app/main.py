@@ -7,8 +7,11 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input, range, str,
 from collections import namedtuple
 from enum import IntEnum
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import (
+        Flask, abort, redirect, render_template, request, session, url_for
+)
 from flask.ext.sqlalchemy import SQLAlchemy
+import requests
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -22,7 +25,13 @@ db = SQLAlchemy(app)
 
 @app.route('/')
 def front_page():
-    return render_template("frontpage.html")
+    if 'email' in session:
+        email = session['email']
+    else:
+        email = None
+    return render_template(
+            "frontpage.html",
+            current_user_email=email)
 
 @app.route('/game')
 def game():
@@ -46,6 +55,45 @@ def listgames():
     games = Game.query.all()
     return render_template("listgames.html", games=games)
 
+@app.route('/persona/login', methods=['POST'])
+def persona_login():
+    if 'assertion' not in request.form:
+        abort(400)
+    data = {
+            'assertion': request.form['assertion'],
+            'audience': 'http://localhost:5000',
+    }
+    response = requests.post(
+            'https://verifier.login.persona.org/verify',
+            data=data, verify=True
+    )
+    session_update = process_persona_response(response)
+    if session_update.do:
+        session.update({'email': session_update.email})
+    # we're only accessed through AJAX, the response doesn't matter
+    return ''
+
+@app.route('/logout')
+def logout():
+    try:
+        del session['email']
+    except KeyError:
+        pass
+    return ''
+
+
+SessionUpdate = namedtuple('SessionUpdate', ['do', 'email'])
+def process_persona_response(response):
+    if not response.ok:
+        return SessionUpdate(do=False, email='')
+    verification_data = response.json()
+    if (
+            'status' not in verification_data or
+            verification_data['status'] != 'okay' or
+            'email' not in verification_data
+    ):
+        return SessionUpdate(do=False, email='')
+    return SessionUpdate(do=True, email=verification_data['email'])
 
 def get_stone_if_args_good(args, moves):
     try:

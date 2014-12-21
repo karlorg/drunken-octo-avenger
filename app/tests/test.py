@@ -1,15 +1,14 @@
 from __future__ import (absolute_import, division, print_function,
         unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
-        zip)
+from builtins import (
+        ascii, bytes, chr, dict, filter, hex, input, str, super, zip)
 
 from mock import ANY, Mock, patch
 import re
-import os
-import tempfile
 
-from flask import render_template, url_for
+from flask import render_template, session, url_for
 from flask.ext.testing import TestCase
+import requests
 
 from .. import main
 from ..main import Move
@@ -47,6 +46,83 @@ class TestFrontPageIntegrated(TestWithTestingApp):
         assert re.search(
                 r"""<a [^>]*id=['"]persona_login['"]""",
                 str(response.get_data())) is not None
+
+
+class TestPersonaLoginIntegrated(TestWithTestingApp):
+
+    def test_aborts_on_no_assertion(self):
+        response = self.test_client.post(
+                '/persona/login',
+                data={}
+        )
+        assert response.status_code == 400;
+
+    def test_posts_assertion_to_mozilla(self):
+        mock_post = Mock(wraps=requests.post)
+        with patch('app.main.requests.post', mock_post):
+            self.test_client.post(
+                    '/persona/login',
+                    data={'assertion': 'test'}
+            )
+        mock_post.assert_called_once_with(
+                'https://verifier.login.persona.org/verify',
+                data={
+                    'assertion': 'test',
+                    'audience': ANY
+                },
+                verify=True
+        )
+
+    def test_good_response_sets_session_email(self):
+        mock_post = Mock(wraps=requests.post)
+        mock_post.return_value = Mock()
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+                'status': 'okay',
+                'email': 'test@example.com',
+        }
+        with main.app.test_client() as test_client:
+            with patch('app.main.requests.post', mock_post):
+                test_client.post(
+                        '/persona/login',
+                        data={'assertion': 'test'}
+                )
+            assert session['email'] == 'test@example.com'
+
+
+class TestLogoutIntegrated(TestWithTestingApp):
+
+    def test_removes_email_from_session(self):
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as transaction:
+                transaction['email'] = 'olduser@remove.me'
+            test_client.get('/logout')
+            assert 'email' not in session
+
+
+class TestProcessPersonaResponse(TestWithTestingApp):
+
+    def test_checks_response_ok(self):
+        response = Mock()
+        response.ok = False
+        assert main.process_persona_response(response).do is False
+
+    def test_checks_status_okay(self):
+        response = Mock()
+        response.ok = True
+        response.json.return_value = {'status': 'very very bad'}
+        assert main.process_persona_response(response).do is False
+
+    def test_returns_good_for_good_response(self):
+        response = Mock()
+        response.ok = True
+        response.json.return_value = {
+                'status': 'okay',
+                'email': 'bob@testcase.python',
+        }
+        result = main.process_persona_response(response)
+        assert result.do is True
+        assert result.email == 'bob@testcase.python'
 
 
 class TestNewgameIntegrated(TestWithDb):

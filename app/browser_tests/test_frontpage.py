@@ -1,12 +1,11 @@
-from __future__ import (absolute_import, division, print_function,
-        unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input, str, super,
-        zip)
+from __future__ import (
+        absolute_import, division, print_function, unicode_literals)
+from builtins import (  # noqa
+        ascii, bytes, chr, dict, filter, hex, input, str, super, zip)
 
 import time
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
 
 from .base import SeleniumTest
 
@@ -38,14 +37,15 @@ class FrontPageTest(SeleniumTest):
         self.browser.find_element_by_tag_name('button').click()
         # the Persona window closes
         self.switch_to_new_window('Go')
+
         # the new page has a logout link
-        plogout_button = self.wait_for((lambda: 
-                self.browser.find_element_by_id('persona_logout')
-        ), timeout=15)
+        def find_logout():
+            self.browser.find_element_by_id('logout')
+        plogout_button = self.wait_for(find_logout, timeout=15)
         # our email address is now shown on the page
         email_display = self.browser.find_element_by_class_name(
                 'logged_in_user')
-        assert 'test@mockmyid.com' in email_display.text()
+        assert 'test@mockmyid.com' in email_display.text
         # and there is now no login link
         try:
             persona_button = self.browser.find_element_by_id('persona_login')
@@ -53,4 +53,3 @@ class FrontPageTest(SeleniumTest):
             pass  ## we expect no such element
         else:
             self.fail('found login link, should not exist')
-

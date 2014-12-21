@@ -2,10 +2,17 @@
 <html>
 <head>
 <link href="static/index.css" rel="stylesheet" type="text/css">
+<!-- following meta is needed by Persona -->
+<meta http-equiv="X-UA-Compatible" content="IE=Edge">
 <title>Go</title>
 </head>
 <body>
+{% if current_user_email %}
+<div class="logged_in_user">Logged in as: {{ current_user_email }}</div>
+<a href="#" id="logout">Log out</a>
+{% else %}
 <a href="#" id="persona_login">Login with Persona</a>
+{% endif %}
 
 {% block content %}
 {% endblock %}
