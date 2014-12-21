@@ -1,8 +1,8 @@
-from __future__ import (absolute_import, division, print_function,
-        unicode_literals)
+from __future__ import (
+        absolute_import, division, print_function, unicode_literals)
 
-from builtins import (ascii, bytes, chr, dict, filter, hex, input, range, str,
-        super, zip)
+from builtins import (  # noqa
+        ascii, bytes, chr, dict, filter, hex, input, range, str, super, zip)
 
 from collections import namedtuple
 from enum import IntEnum
@@ -108,7 +108,7 @@ def get_stone_if_args_good(args, moves):
 
 def get_img_array_from_moves(moves):
     goban = [[IMG_PATH_EMPTY for j in range(19)]
-            for i in range(19)]
+             for i in range(19)]
     for move in moves:
         if move.color == Move.Color.black:
             goban[move.row][move.column] = IMG_PATH_BLACK
@@ -136,7 +136,7 @@ class Move(db.Model):
     row = db.Column(db.Integer)
     column = db.Column(db.Integer)
     move_no = db.Column(db.Integer)
-    
+
     class Color(IntEnum):
         black = 0
         white = 1
@@ -150,5 +150,5 @@ class Move(db.Model):
 
     def __repr__(self):
         return '<Move {0}: {1} at ({2},{3})>'.format(
-                self.move_no, Color(self.color).name,
+                self.move_no, self.Color(self.color).name,
                 self.column, self.row)
