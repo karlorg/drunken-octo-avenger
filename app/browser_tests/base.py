@@ -44,6 +44,17 @@ class SeleniumTest(LiveServerTestCase):
         # one more try, which will raise any errors if they are outstanding
         return function_with_assertion()
 
+    def careful_keys(self, target, text):
+        """Send keys in small groups.
+
+        For some reason this gets around crazy send_keys behaviour on karl's
+        system."""
+        group_size = 10
+        remaining = text
+        while len(remaining) > 0:
+            target.send_keys(remaining[:group_size])
+            remaining = remaining[group_size:]
+
     Count = namedtuple('Count', ['white', 'black', 'empty'])
     def count_stones_and_points(self):
         imgs = self.browser.find_elements_by_tag_name('img')

@@ -13,6 +13,7 @@ future==0.14.2
 itsdangerous==0.24
 mock==1.0.1
 pbr==0.10.0
+requests==2.5.0
 selenium==2.44.0
 six==1.8.0
 sqlparse==0.1.14
