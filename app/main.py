@@ -1,8 +1,8 @@
 from __future__ import (
         absolute_import, division, print_function, unicode_literals)
-
-from builtins import (  # noqa
-        ascii, bytes, chr, dict, filter, hex, input, range, str, super, zip)
+from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
+                      int, map, next, oct, open, pow, range, round,
+                      str, super, zip)
 
 from collections import namedtuple
 from enum import IntEnum

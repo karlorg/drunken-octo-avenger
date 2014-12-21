@@ -3,9 +3,3 @@ from __future__ import (
 from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
-
-from app.main import db
-
-
-db.drop_all()
-db.create_all()
