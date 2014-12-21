@@ -11,6 +11,7 @@ from flask import (
         Flask, abort, redirect, render_template, request, session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
+import jinja2
 import requests
 
 
@@ -20,18 +21,13 @@ IMG_PATH_WHITE = '/static/images/goban/w.gif'
 
 app = Flask(__name__)
 app.config.from_object('config')
+app.jinja_env.undefined = jinja2.StrictUndefined
 db = SQLAlchemy(app)
 
 
 @app.route('/')
 def front_page():
-    if 'email' in session:
-        email = session['email']
-    else:
-        email = ''
-    return render_template(
-            "frontpage.html",
-            current_user_email=email)
+    return render_template_with_email("frontpage.html")
 
 @app.route('/game')
 def game():
@@ -42,7 +38,8 @@ def game():
         db.session.commit()
     moves = Move.query.all()
     goban = get_img_array_from_moves(moves)
-    return render_template("game.html", move_no=len(moves), goban=goban)
+    return render_template_with_email(
+            "game.html", move_no=len(moves), goban=goban)
 
 @app.route('/newgame')
 def newgame():
@@ -53,7 +50,7 @@ def newgame():
 @app.route('/listgames')
 def listgames():
     games = Game.query.all()
-    return render_template("listgames.html", games=games)
+    return render_template_with_email("listgames.html", games=games)
 
 @app.route('/persona/login', methods=['POST'])
 def persona_login():
@@ -116,6 +113,17 @@ def get_img_array_from_moves(moves):
         elif move.color == Move.Color.white:
             goban[move.row][move.column] = IMG_PATH_WHITE
     return goban
+
+def render_template_with_email(template_name_or_list, **context):
+    """A wrapper around flask.render_template, setting the email."""
+    if 'email' in session:
+        email = session['email']
+    else:
+        email = ''
+    return render_template(
+            template_name_or_list,
+            current_user_email=email,
+            **context)
 
 
 class Game(db.Model):
