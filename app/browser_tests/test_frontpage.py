@@ -1,7 +1,8 @@
 from __future__ import (
         absolute_import, division, print_function, unicode_literals)
-from builtins import (  # noqa
-        ascii, bytes, chr, dict, filter, hex, input, str, super, zip)
+from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
+                      int, map, next, oct, open, pow, range, round,
+                      str, super, zip)
 
 import time
 
@@ -35,7 +36,7 @@ class FrontPageTest(SeleniumTest):
         assert 'test@mockmyid.com' in email_display.text
         # and there is now no login link
         try:
-            persona_button = self.browser.find_element_by_id('persona_login')
+            self.browser.find_element_by_id('persona_login')
         except NoSuchElementException:
             pass  ## we expect no such element
         else:
@@ -66,6 +67,7 @@ class FrontPageTest(SeleniumTest):
         # now we log out again
         plogout_link.click()
         # we're back to a login link...
+
         def find_login():
             return self.browser.find_element_by_id('persona_login')
         persona_button = self.wait_for(find_login, timeout=15)
