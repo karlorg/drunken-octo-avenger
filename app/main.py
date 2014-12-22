@@ -25,6 +25,12 @@ app.jinja_env.undefined = jinja2.StrictUndefined
 db = SQLAlchemy(app)
 
 
+# Views
+#
+# Since view functions tend to have side-effects and to depend on global state,
+# try to keep complexity (if, for...) out of them and move it into pure
+# function helpers instead.
+
 @app.route('/')
 def front_page():
     return render_template_with_email("frontpage.html")
@@ -81,20 +87,30 @@ def logout():
     return ''
 
 
-SessionUpdate = namedtuple('SessionUpdate', ['do', 'email'])
+# helper functions
+
+_SessionUpdate = namedtuple('_SessionUpdate', ['do', 'email'])
 def process_persona_response(response):
+    """Given an HTTP response from Mozilla, determine who to log in.
+
+    Pure function.
+    """
     if not response.ok:
-        return SessionUpdate(do=False, email='')
+        return _SessionUpdate(do=False, email='')
     verification_data = response.json()
     if (
             'status' not in verification_data or
             verification_data['status'] != 'okay' or
             'email' not in verification_data
     ):
-        return SessionUpdate(do=False, email='')
-    return SessionUpdate(do=True, email=verification_data['email'])
+        return _SessionUpdate(do=False, email='')
+    return _SessionUpdate(do=True, email=verification_data['email'])
 
 def get_stone_if_args_good(args, moves):
+    """Check GET arguments and if a new move is indicated, return it.
+
+    Pure function; does not commit the new stone to the database.
+    """
     try:
         move_no = int(args['move_no'])
         row = int(args['row'])
@@ -107,6 +123,10 @@ def get_stone_if_args_good(args, moves):
     return Move(move_no=move_no, row=row, column=column, color=color)
 
 def get_img_array_from_moves(moves):
+    """Given the moves for a game, return a 2d array of image paths.
+
+    Pure function.
+    """
     goban = [[IMG_PATH_EMPTY for j in range(19)]
              for i in range(19)]
     for move in moves:
@@ -117,7 +137,10 @@ def get_img_array_from_moves(moves):
     return goban
 
 def render_template_with_email(template_name_or_list, **context):
-    """A wrapper around flask.render_template, setting the email."""
+    """A wrapper around flask.render_template, setting the email.
+
+    Depends on the session object.
+    """
     if 'email' in session:
         email = session['email']
     else:
