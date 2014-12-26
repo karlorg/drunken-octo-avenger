@@ -51,6 +51,18 @@ class TestFrontPageIntegrated(TestWithTestingApp):
 
 class TestPersonaLoginIntegrated(TestWithTestingApp):
 
+    TEST_EMAIL = 'test@example.com'
+
+    def make_mock_post(self, ok=True, status='okay', email=TEST_EMAIL):
+        mock_post = Mock(spec=requests.post)
+        mock_post.return_value = Mock()
+        mock_post.return_value.ok = ok
+        mock_post.return_value.json.return_value = {
+                'status': status,
+                'email': email,
+        }
+        return mock_post
+
     def test_aborts_on_no_assertion(self):
         response = self.test_client.post(
                 '/persona/login',
@@ -59,7 +71,7 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
         assert response.status_code == 400
 
     def test_posts_assertion_to_mozilla(self):
-        mock_post = Mock(wraps=requests.post)
+        mock_post = self.make_mock_post()
         with patch('app.main.requests.post', mock_post):
             self.test_client.post(
                     '/persona/login',
@@ -75,29 +87,17 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
         )
 
     def test_good_response_sets_session_email(self):
-        mock_post = Mock(wraps=requests.post)
-        mock_post.return_value = Mock()
-        mock_post.return_value.ok = True
-        mock_post.return_value.json.return_value = {
-                'status': 'okay',
-                'email': 'test@example.com',
-        }
+        mock_post = self.make_mock_post()
         with main.app.test_client() as test_client:
             with patch('app.main.requests.post', mock_post):
                 test_client.post(
                         '/persona/login',
                         data={'assertion': 'test'}
                 )
-            assert session['email'] == 'test@example.com'
+            assert session['email'] == self.TEST_EMAIL
 
     def test_bad_response_aborts(self):
-        mock_post = Mock(wraps=requests.post)
-        mock_post.return_value = Mock()
-        mock_post.return_value.ok = True
-        mock_post.return_value.json.return_value = {
-                'status': 'no no NO',
-                'email': 'test@example.com',
-        }
+        mock_post = self.make_mock_post(status='no no NO')
         with main.app.test_client() as test_client:
             with patch('app.main.requests.post', mock_post):
                 response = test_client.post(
