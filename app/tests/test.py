@@ -6,16 +6,17 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 
 from mock import ANY, Mock, patch
 import re
+import unittest
 
 from flask import render_template, session, url_for
-from flask.ext.testing import TestCase
+import flask.ext.testing
 import requests
 
 from .. import main
 from ..main import Move
 
 
-class TestWithTestingApp(TestCase):
+class TestWithTestingApp(flask.ext.testing.TestCase):
 
     def create_app(self):
         main.app.config['TESTING'] = True
@@ -118,7 +119,7 @@ class TestLogoutIntegrated(TestWithTestingApp):
             assert 'email' not in session
 
 
-class TestProcessPersonaResponse(TestWithTestingApp):
+class TestProcessPersonaResponse(unittest.TestCase):
 
     def test_checks_response_ok(self):
         response = Mock()
@@ -198,7 +199,7 @@ class TestGameIntegrated(TestWithDb):
         assert 'move_no=1' in str(response.get_data())
 
 
-class TestGetStoneIfArgsGood(TestWithTestingApp):
+class TestGetStoneIfArgsGood(unittest.TestCase):
 
     def test_returns_none_for_missing_args(self):
         assert main.get_stone_if_args_good(args={}, moves=[]) is None
@@ -235,7 +236,7 @@ class TestGetStoneIfArgsGood(TestWithTestingApp):
         assert stone.column == 3
         assert stone.color == Move.Color.white
 
-class TestGetImgArrayFromMoves(TestWithTestingApp):
+class TestGetImgArrayFromMoves(unittest.TestCase):
 
     def test_imgs_appear_on_expected_points(self):
         goban = main.get_img_array_from_moves([
