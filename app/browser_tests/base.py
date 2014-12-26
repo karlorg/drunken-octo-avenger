@@ -26,11 +26,19 @@ class SeleniumTest(LiveServerTestCase):
         return app
 
     def setUp(self):
-        self.browser = webdriver.Firefox()
+        self.active_browsers = []
+        self.browser = self.get_new_browser()
 
     def tearDown(self):
-        self.browser.quit()
+        for browser in self.active_browsers:
+            browser.quit()
         time.sleep(0.5)
+
+    def get_new_browser(self):
+        """Return a new browser object that will be cleaned up on teardown"""
+        browser = webdriver.Firefox()
+        self.active_browsers.append(browser)
+        return browser
 
     # credit to Harry Percival for this wait_for
     # from his book, Test-Driven Development with Python
@@ -56,8 +64,10 @@ class SeleniumTest(LiveServerTestCase):
             target.send_keys(remaining[:group_size])
             remaining = remaining[group_size:]
 
-    def create_login_session(self, email):
+    def create_login_session(self, email, browser=None):
         """Set a cookie for a pre-authenticated login session."""
+        if not browser:
+            browser = self.browser
         interface = app.session_interface
         session = interface.session_class()
         session['email'] = email
@@ -70,8 +80,8 @@ class SeleniumTest(LiveServerTestCase):
                 interface.get_signing_serializer(app).dumps(dict(session))
         )
         # to set a cookie we need to load a page; 404 loads fastest
-        self.browser.get(self.get_server_url() + "/404_no_such_url")
-        self.browser.add_cookie(dict(
+        browser.get(self.get_server_url() + "/404_no_such_url")
+        browser.add_cookie(dict(
             name=app.session_cookie_name,
             value=cookie_value,
             path=interface.get_cookie_path(app),
