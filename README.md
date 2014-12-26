@@ -34,6 +34,11 @@ Open `app/static/tests/tests.html` in your browser.
 For the moment I'm using recommendations from
 [python-future.org](http://python-future.org); if you see anything that looks
 not quite idiomatic for either 2 or 3, may be worth checking there before
-changing it.  The file `compat_stub.py` contains a set of imports to put at the
+changing it.  The aim is to write in a Python 3 style with Python 2
+compatibility; for example, use `range()` and import the 'future' `range` for
+Python 2, as opposed to using `xrange()` and importing the 'past' `xrange` for
+Python 3.
+
+The file `compat_stub.py` contains a set of imports to put at the
 top of each file, to guard against accidentally producing code that behaves
 differently on Python 2 and 3.
