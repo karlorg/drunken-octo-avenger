@@ -35,6 +35,7 @@ class SeleniumTest(LiveServerTestCase):
     # credit to Harry Percival for this wait_for
     # from his book, Test-Driven Development with Python
     def wait_for(self, function_with_assertion, timeout=5):
+        """Keep trying `function_with_assertion` for `timeout` seconds."""
         start_time = time.time()
         while time.time() < start_time + timeout:
             try:
@@ -76,10 +77,11 @@ class SeleniumTest(LiveServerTestCase):
             path=interface.get_cookie_path(app),
         ))
 
-    # return type for count_stones_and_points
     Count = namedtuple('Count', ['white', 'black', 'empty'])
+    """Return type for count_stones_and_points"""
 
     def count_stones_and_points(self):
+        """Count the images in the page for empty points and stones."""
         imgs = self.browser.find_elements_by_tag_name('img')
         empty = 0
         black = 0
