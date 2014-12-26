@@ -24,8 +24,10 @@ class FrontPageTest(SeleniumTest):
             time.sleep(0.5)
         self.fail('could not find window')
 
-    def confirm_logged_in_and_get_logout_link(self):
-        """Assertions expecting a logged-in page."""
+    def confirm_logged_in_and_get_logout_link(
+            self, expected_email='test@mockmyid.com'
+    ):
+        """Asserts logged in with expected_email and returns logout link."""
         # the page has a logout link
         def find_logout():
             return self.browser.find_element_by_id('logout')
@@ -33,7 +35,7 @@ class FrontPageTest(SeleniumTest):
         # our email address is now shown on the page
         email_display = self.browser.find_element_by_class_name(
                 'logged_in_user')
-        assert 'test@mockmyid.com' in email_display.text
+        assert expected_email in email_display.text
         # and there is now no login link
         try:
             self.browser.find_element_by_id('persona_login')
@@ -44,6 +46,9 @@ class FrontPageTest(SeleniumTest):
         return logout_link
 
     def test_persona_login(self):
+        ## we won't use the fake login session creator for this test; we want
+        ## to test the actual login procedure.
+
         # loading the site's base url for the first time shows a button
         # to log in with Mozilla Persona
         self.browser.get(self.get_server_url())
@@ -86,3 +91,9 @@ class FrontPageTest(SeleniumTest):
             pass  ## we expect no such element
         else:
             self.fail('found logout link, should not exist')
+
+    def test_create_login_session(self):
+        """Temporary smoke test for base.py's login creator helper."""
+        self.create_login_session('fakesession@base.py')
+        self.browser.get(self.get_server_url())
+        self.confirm_logged_in_and_get_logout_link('fakesession@base.py')

@@ -55,6 +55,28 @@ class SeleniumTest(LiveServerTestCase):
             target.send_keys(remaining[:group_size])
             remaining = remaining[group_size:]
 
+    def create_login_session(self, email):
+        """Set a cookie for a pre-authenticated login session."""
+        interface = app.session_interface
+        session = interface.session_class()
+        session['email'] = email
+        # the following process for creating the cookie value is copied from
+        # the Flask source; if the cookies created by this method stop
+        # working, see if a Flask update has changed the cookie creation
+        # procedure in flask/sessions.py -> SecureCookieSessionInterface
+        # (currently the default) -> save_session
+        cookie_value = (
+                interface.get_signing_serializer(app).dumps(dict(session))
+        )
+        # to set a cookie we need to load a page; 404 loads fastest
+        self.browser.get(self.get_server_url() + "/404_no_such_url")
+        self.browser.add_cookie(dict(
+            name=app.session_cookie_name,
+            value=cookie_value,
+            path=interface.get_cookie_path(app),
+        ))
+
+    # return type for count_stones_and_points
     Count = namedtuple('Count', ['white', 'black', 'empty'])
 
     def count_stones_and_points(self):
