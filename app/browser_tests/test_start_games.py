@@ -4,6 +4,8 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
+from selenium.common.exceptions import NoSuchElementException
+
 from .base import SeleniumTest
 
 
@@ -12,6 +14,7 @@ class StartGamesTest(SeleniumTest):
     def test_start_games(self):
         SHINDOU_EMAIL = 'shindou@ki-in.jp'
         TOUYA_EMAIL = 'touya@ki-in.jp'
+        OCHI_EMAIL = 'ochino1@ki-in.jp'
         # Shindou opens the front page and follows a link to create a new game
         self.create_login_session(SHINDOU_EMAIL)
         self.browser.get(self.get_server_url())
@@ -50,3 +53,14 @@ class StartGamesTest(SeleniumTest):
 
         assert touyas_game_link_text == shindous_game_link_text
         assert shindous_game_link_target == touyas_game_link_target
+
+        # a third user, Ochi, logs in.  The new game is not on his list.
+        self.create_login_session(OCHI_EMAIL)
+        self.browser.get(self.get_server_url())
+        self.wait_for(find_game_links)
+        try:
+            self.browser.find_element_by_link_text(shindous_game_link_text)
+        except NoSuchElementException:
+            pass  ## we expect no such element to be found
+        else:
+            assert False
