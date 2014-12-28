@@ -19,23 +19,13 @@ class GameTest(SeleniumTest):
         ## games
         main.db.drop_all()
         main.db.create_all()
-
-        # start a new game
+        ## create a game
+        self.create_game('player@one.com', 'player@two.net')
+        # player one logs in and gets the front page; should see a page listing
+        # games
         self.create_login_session('player@one.com')
         self.browser.get(self.get_server_url())
 
-        def find_challenge():
-            return self.browser.find_element_by_partial_link_text('Challenge')
-        challenge_link = self.wait_for(find_challenge)
-        challenge_link.click()
-
-        def find_opponent_email():
-            return self.browser.find_element_by_id('opponent_email')
-        opponent_input = self.wait_for(find_opponent_email)
-        self.careful_keys(opponent_input, 'player@two.com')
-        self.browser.find_element_by_id('send_challenge').click()
-
-        # should see a page listing games
         def find_game_links():
             self.browser.find_element_by_partial_link_text('Game ')
         self.wait_for(find_game_links)

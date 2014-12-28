@@ -14,7 +14,7 @@ from selenium.common.exceptions import WebDriverException
 
 from collections import namedtuple
 
-from ..main import app
+from ..main import app, db, Game
 
 
 class SeleniumTest(LiveServerTestCase):
@@ -84,6 +84,17 @@ class SeleniumTest(LiveServerTestCase):
             value=cookie_value,
             path=interface.get_cookie_path(app),
         ))
+
+    def create_game(self, black_email, white_email):
+        """Create a custom game in the database without using the web.
+
+        This is separated into a method primarily to ease making this a remote
+        command when we get to testing against a staging server."""
+        game = Game()
+        game.black = black_email
+        game.white = white_email
+        db.session.add(game)
+        db.session.commit()
 
     Count = namedtuple('Count', ['white', 'black', 'empty'])
     """Return type for count_stones_and_points"""

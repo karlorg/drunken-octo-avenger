@@ -12,6 +12,8 @@ from .base import SeleniumTest
 class StartGamesTest(SeleniumTest):
 
     def test_start_games(self):
+        """Tests the 'challenge a player' process; do not use the create_game
+        shortcut."""
         SHINDOU_EMAIL = 'shindou@ki-in.jp'
         TOUYA_EMAIL = 'touya@ki-in.jp'
         OCHI_EMAIL = 'ochino1@ki-in.jp'
