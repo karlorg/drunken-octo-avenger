@@ -21,7 +21,19 @@ class GameTest(SeleniumTest):
         main.db.create_all()
 
         # start a new game
-        self.browser.get(self.get_server_url() + '/newgame')
+        self.create_login_session('player@one.com')
+        self.browser.get(self.get_server_url())
+
+        def find_challenge():
+            return self.browser.find_element_by_partial_link_text('Challenge')
+        challenge_link = self.wait_for(find_challenge)
+        challenge_link.click()
+
+        def find_opponent_email():
+            return self.browser.find_element_by_id('opponent_email')
+        opponent_input = self.wait_for(find_opponent_email)
+        self.careful_keys(opponent_input, 'player@two.com')
+        self.browser.find_element_by_id('send_challenge').click()
 
         # should see a page listing games
         def find_game_links():
@@ -31,12 +43,10 @@ class GameTest(SeleniumTest):
         link = self.browser.find_elements_by_partial_link_text('Game ')[-1]
         link.click()
 
-        ## just to make sure page is loaded
-        self.wait_for(lambda: self.assertIn('Go', self.browser.title))
-
         # on the game page is a table with class 'goban'
-        self.browser.find_element_by_css_selector('table.goban')
-        ## should not raise
+        def check_goban_exists():
+            self.browser.find_element_by_css_selector('table.goban')
+        self.wait_for(check_goban_exists)
 
         # on the game page are 19x19 imgs representing board points/stones
         empty = self.count_stones_and_points().empty
