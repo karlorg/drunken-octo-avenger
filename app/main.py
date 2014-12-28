@@ -72,7 +72,13 @@ def challenge():
 
 @app.route('/status')
 def status():
-    games = Game.query.all()
+    if 'email' not in session:
+        return redirect('/')
+    logged_in_email = session['email']
+
+    def involved_in_game(game):
+        return (game.black == logged_in_email or game.white == logged_in_email)
+    games = filter(involved_in_game, Game.query.all())
     return render_template_with_email("status.html", games=games)
 
 @app.route('/persona/login', methods=['POST'])

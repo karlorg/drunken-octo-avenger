@@ -187,13 +187,27 @@ class TestStatusIntegrated(TestWithDb):
     def count_pattern_in(self, pattern, string):
         return len(re.split(pattern, string)) - 1
 
+    def test_anonymous_users_redirected_to_front(self):
+        response = self.test_client.get(url_for('status'))
+        self.assert_redirects(response, '/')
+
     def test_shows_links_to_existing_games(self):
-        response = self.test_client.get(url_for('status'))
-        assert self.count_pattern_in(r"Game \d", str(response.get_data())) == 0
-        main.db.session.add(main.Game())
-        main.db.session.add(main.Game())
-        response = self.test_client.get(url_for('status'))
-        assert self.count_pattern_in(r"Game \d", str(response.get_data())) == 2
+        LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
+        OTHER_EMAIL_1 = 'rando@opponent.net'
+        OTHER_EMAIL_2 = 'wotsit@thingy.com'
+        main.db.session.add(main.Game(
+            black=LOGGED_IN_EMAIL, white=OTHER_EMAIL_1))
+        main.db.session.add(main.Game(
+            black=OTHER_EMAIL_1, white=OTHER_EMAIL_2))
+        main.db.session.add(main.Game(
+            black=OTHER_EMAIL_1, white=LOGGED_IN_EMAIL))
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = LOGGED_IN_EMAIL
+            response = test_client.get(url_for('status'))
+            assert self.count_pattern_in(
+                    r"Game \d", str(response.get_data())
+            ) == 2
 
 
 class TestGameIntegrated(TestWithDb):
