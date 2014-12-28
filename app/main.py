@@ -15,7 +15,7 @@ from flask_wtf import Form
 import jinja2
 import requests
 from wtforms import StringField
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Email
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -56,9 +56,16 @@ def newgame():
     db.session.commit()
     return redirect(url_for('listgames'))
 
-@app.route('/challenge')
+@app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
     form = ChallengeForm()
+    if form.validate_on_submit():
+        game = Game()
+        game.black = form.opponent_email.data
+        game.white = session['email']
+        db.session.add(game)
+        db.session.commit()
+        return redirect('/')
     return render_template_with_email("challenge.html", form=form)
 
 @app.route('/listgames')
@@ -161,6 +168,8 @@ def render_template_with_email(template_name_or_list, **context):
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    black = db.Column(db.String(length=254))
+    white = db.Column(db.String(length=254))
 
 class Move(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -187,4 +196,4 @@ class Move(db.Model):
 
 class ChallengeForm(Form):
     opponent_email = StringField(
-            "Opponent's email", validators=[DataRequired()])
+            "Opponent's email", validators=[DataRequired(), Email()])

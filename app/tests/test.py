@@ -13,6 +13,7 @@ import flask.ext.testing
 import requests
 
 from .. import main
+from ..main import Game
 from ..main import Move
 
 
@@ -20,6 +21,7 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
 
     def create_app(self):
         main.app.config['TESTING'] = True
+        main.app.config['WTF_CSRF_ENABLED'] = False
         return main.app
 
     def setUp(self):
@@ -142,6 +144,23 @@ class TestProcessPersonaResponse(unittest.TestCase):
         result = main.process_persona_response(response)
         assert result.do is True
         assert result.email == 'bob@testcase.python'
+
+
+class TestChallengeIntegrated(TestWithDb):
+
+    def test_good_post_creates_game(self):
+        assert Game.query.all() == []
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = 'player1@gofan.com'
+            test_client.post('/challenge', data=dict(
+                opponent_email='player2@gofan.com'
+            ))
+        games = Game.query.all()
+        assert len(games) == 1
+        game = games[0]
+        assert game.white == 'player1@gofan.com'
+        assert game.black == 'player2@gofan.com'
 
 
 class TestNewgameIntegrated(TestWithDb):
