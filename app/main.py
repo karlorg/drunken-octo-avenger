@@ -11,8 +11,11 @@ from flask import (
         Flask, abort, redirect, render_template, request, session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
+from flask_wtf import Form
 import jinja2
 import requests
+from wtforms import StringField
+from wtforms.validators import DataRequired
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -52,6 +55,11 @@ def newgame():
     db.session.add(Game())
     db.session.commit()
     return redirect(url_for('listgames'))
+
+@app.route('/challenge')
+def challenge():
+    form = ChallengeForm()
+    return render_template_with_email("challenge.html", form=form)
 
 @app.route('/listgames')
 def listgames():
@@ -175,3 +183,8 @@ class Move(db.Model):
         return '<Move {0}: {1} at ({2},{3})>'.format(
                 self.move_no, self.Color(self.color).name,
                 self.column, self.row)
+
+
+class ChallengeForm(Form):
+    opponent_email = StringField(
+            "Opponent's email", validators=[DataRequired()])

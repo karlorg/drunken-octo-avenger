@@ -17,7 +17,16 @@ class StartGamesTest(SeleniumTest):
         self.create_login_session('touyajr@ki-in.jp', browser=touya)
         # Shindou opens the front page and follows a link to create a new game
         shindou.get(self.get_server_url())
-        challenge_link = self.wait_for(
-                shindou.find_element_by_link_text('Challenge')
-        )
+
+        def find_challenge():
+            return shindou.find_element_by_partial_link_text('Challenge')
+        challenge_link = self.wait_for(find_challenge)
         challenge_link.click()
+        # on the following form he enters Touya's email and clicks 'Send
+        # challenge'
+
+        def find_opponent_email():
+            return shindou.find_element_by_id('opponent_email')
+        opponent_input = self.wait_for(find_opponent_email)
+        self.careful_keys(opponent_input, 'touyajr@ki-in.jp')
+        shindou.find_element_by_id('send_challenge').click()

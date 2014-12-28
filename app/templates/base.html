@@ -14,6 +14,14 @@
 <a href="#" id="persona_login">Login with Persona</a>
 {% endif %}
 
+{% if current_user_email %}
+<div id="main_menu">
+    <ul>
+        <li><a href="/challenge">Challenge a player</a></li>
+    </ul>
+</div>
+{% endif %}
+
 {% block content %}
 {% endblock %}
 

@@ -236,6 +236,7 @@ class TestGetStoneIfArgsGood(unittest.TestCase):
         assert stone.column == 3
         assert stone.color == Move.Color.white
 
+
 class TestGetImgArrayFromMoves(unittest.TestCase):
 
     def test_imgs_appear_on_expected_points(self):
