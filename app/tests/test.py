@@ -96,7 +96,7 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
                 verify=True
         )
 
-    def test_good_response_sets_session_email(self):
+    def test_good_response_sets_session_email_and_persona_email(self):
         mock_post = self.make_mock_post()
         with main.app.test_client() as test_client:
             with patch('app.main.requests.post', mock_post):
@@ -105,6 +105,7 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
                         data={'assertion': 'test'}
                 )
             assert session['email'] == self.TEST_EMAIL
+            assert session['persona_email'] == self.TEST_EMAIL
 
     def test_bad_response_aborts(self):
         mock_post = self.make_mock_post(status='no no NO')
@@ -120,12 +121,14 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
 
 class TestLogoutIntegrated(TestWithTestingApp):
 
-    def test_removes_email_from_session(self):
+    def test_removes_email_and_persona_email_from_session(self):
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as transaction:
                 transaction['email'] = 'olduser@remove.me'
+                transaction['persona_email'] = 'olduser@remove.me'
             test_client.post('/logout')
             assert 'email' not in session
+            assert 'persona_email' not in session
 
 
 class TestProcessPersonaResponse(unittest.TestCase):

@@ -96,6 +96,7 @@ def persona_login():
     session_update = process_persona_response(response)
     if session_update.do:
         session.update({'email': session_update.email})
+        session.update({'persona_email': session_update.email})
         # we're only accessed through AJAX, the response doesn't matter
         return ''
     else:
@@ -105,6 +106,7 @@ def persona_login():
 def logout():
     try:
         del session['email']
+        del session['persona_email']
     except KeyError:
         pass
     return ''
@@ -164,13 +166,18 @@ def render_template_with_email(template_name_or_list, **context):
 
     Depends on the session object.
     """
-    if 'email' in session:
+    try:
         email = session['email']
-    else:
+    except KeyError:
         email = ''
+    try:
+        persona_email = session['persona_email']
+    except KeyError:
+        persona_email = ''
     return render_template(
             template_name_or_list,
             current_user_email=email,
+            current_persona_email=persona_email,
             **context)
 
 
