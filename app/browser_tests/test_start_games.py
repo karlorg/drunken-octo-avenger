@@ -4,6 +4,8 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
+from functools import partial
+
 from .base import SeleniumTest
 
 
@@ -30,3 +32,20 @@ class StartGamesTest(SeleniumTest):
         opponent_input = self.wait_for(find_opponent_email)
         self.careful_keys(opponent_input, 'touyajr@ki-in.jp')
         shindou.find_element_by_id('send_challenge').click()
+
+        # TODO: instead of simply creating a game, Touya should receive a
+        # challenge, which he has to accept
+
+        # both players load the front page and see links to the same game
+
+        def find_game_link(browser):
+            return browser.find_element_by_partial_link_text('Game')
+        touya.get(self.get_server_url())
+        touyas_game_link = self.wait_for(partial(find_game_link, touya))
+        shindou.get(self.get_server_url())
+        shindous_game_link = self.wait_for(partial(find_game_link, shindou))
+        assert touyas_game_link.text == shindous_game_link.text
+        assert (
+                touyas_game_link.get_attribute('href')
+                == shindous_game_link.get_attribute('href')
+        )
