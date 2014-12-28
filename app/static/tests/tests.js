@@ -16,7 +16,7 @@
                 },
                 watch: function (params) {
                     var pUser = params.loggedInUser;
-                    var tUser = tesuji_charm.current_user_email;
+                    var tUser = tesuji_charm.current_persona_email;
                     ok((tUser === "" && pUser === null)
                         || (tUser !== "" && pUser === tUser),
                         "n.i.watch passed good loggedInUser");
@@ -37,10 +37,10 @@
             }
         };
         equal(watch_called, false);
-        tesuji_charm.current_user_email = "";
+        tesuji_charm.current_persona_email = "";
         tesuji_charm.persona.initialize(mock_navigator);
         equal(watch_called, true, "navigator.id.watch called")
-        tesuji_charm.current_user_email = "bob@example.com";
+        tesuji_charm.current_persona_email = "bob@example.com";
         tesuji_charm.persona.initialize(mock_navigator);
 
         equal(request_called, false);

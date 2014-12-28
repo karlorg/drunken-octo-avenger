@@ -24,7 +24,7 @@
             signout_link.click(function() { navigator.id.logout(); });
         }
 
-        var loggedInUser = tesuji_charm.current_user_email;
+        var loggedInUser = tesuji_charm.current_persona_email;
         if (loggedInUser === "") {
             loggedInUser = null;
         }
