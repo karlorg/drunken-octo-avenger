@@ -19,7 +19,8 @@ class GameTest(SeleniumTest):
         ## games
         main.db.drop_all()
         main.db.create_all()
-        ## create a game
+        ## create a couple of games
+        self.create_game('player@one.com', 'player@two.net')
         self.create_game('player@one.com', 'player@two.net')
         # player one logs in and gets the front page; should see a page listing
         # games
@@ -76,3 +77,15 @@ class GameTest(SeleniumTest):
         self.assertEqual(counts.empty, 19*19-2)
         self.assertEqual(counts.black, 1)
         self.assertEqual(counts.white, 1)
+
+        # reload front page and get the other game
+        self.browser.get(self.get_server_url())
+        self.wait_for(find_game_links)
+        # select the most recent game
+        link = self.browser.find_elements_by_partial_link_text('Game ')[-2]
+        link.click()
+
+        # we should be back to an empty board
+        self.wait_for(check_goban_exists)
+        empty = self.count_stones_and_points().empty
+        self.assertEqual(19*19, empty, "second board not empty")
