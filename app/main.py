@@ -72,6 +72,10 @@ def persona_login():
     )
     session_update = process_persona_response(response)
     if session_update.do:
+        # we separate out our internal "who's logged in" email from the one
+        # used by Persona so that when the browser automation tests need to
+        # create a fake login session, Persona doesn't get confused by a user
+        # appearing who it doesn't remember processing.
         session.update({'email': session_update.email})
         session.update({'persona_email': session_update.email})
         # we're only accessed through AJAX, the response doesn't matter
