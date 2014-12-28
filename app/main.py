@@ -36,6 +36,8 @@ db = SQLAlchemy(app)
 
 @app.route('/')
 def front_page():
+    if 'email' in session:
+        return redirect(url_for('status'))
     return render_template_with_email("frontpage.html")
 
 @app.route('/game')
@@ -54,7 +56,7 @@ def game():
 def newgame():
     db.session.add(Game())
     db.session.commit()
-    return redirect(url_for('listgames'))
+    return redirect(url_for('status'))
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
@@ -65,13 +67,13 @@ def challenge():
         game.white = session['email']
         db.session.add(game)
         db.session.commit()
-        return redirect('/')
+        return redirect(url_for('status'))
     return render_template_with_email("challenge.html", form=form)
 
-@app.route('/listgames')
-def listgames():
+@app.route('/status')
+def status():
     games = Game.query.all()
-    return render_template_with_email("listgames.html", games=games)
+    return render_template_with_email("status.html", games=games)
 
 @app.route('/persona/login', methods=['POST'])
 def persona_login():

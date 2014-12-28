@@ -64,10 +64,8 @@ class SeleniumTest(LiveServerTestCase):
             target.send_keys(remaining[:group_size])
             remaining = remaining[group_size:]
 
-    def create_login_session(self, email, browser=None):
+    def create_login_session(self, email):
         """Set a cookie for a pre-authenticated login session."""
-        if not browser:
-            browser = self.browser
         interface = app.session_interface
         session = interface.session_class()
         session['email'] = email
@@ -80,8 +78,8 @@ class SeleniumTest(LiveServerTestCase):
                 interface.get_signing_serializer(app).dumps(dict(session))
         )
         # to set a cookie we need to load a page; 404 loads fastest
-        browser.get(self.get_server_url() + "/404_no_such_url")
-        browser.add_cookie(dict(
+        self.browser.get(self.get_server_url() + "/404_no_such_url")
+        self.browser.add_cookie(dict(
             name=app.session_cookie_name,
             value=cookie_value,
             path=interface.get_cookie_path(app),

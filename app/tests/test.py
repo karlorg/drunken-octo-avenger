@@ -51,6 +51,13 @@ class TestFrontPageIntegrated(TestWithTestingApp):
                 r"""<a [^>]*id=['"]persona_login['"]""",
                 str(response.get_data())) is not None
 
+    def test_with_login_redirects_to_status(self):
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = 'test@mockmyid.com'
+            response = test_client.get('/')
+        self.assert_redirects(response, url_for('status'))
+
 
 class TestPersonaLoginIntegrated(TestWithTestingApp):
 
@@ -167,7 +174,7 @@ class TestNewgameIntegrated(TestWithDb):
 
     def test_redirects_to_game_list(self):
         response = self.test_client.get('/newgame')
-        self.assert_redirects(response, url_for('listgames'))
+        self.assert_redirects(response, url_for('status'))
 
     def test_adds_new_game_to_db(self):
         assert len(main.Game.query.all()) == 0
@@ -175,17 +182,17 @@ class TestNewgameIntegrated(TestWithDb):
         assert len(main.Game.query.all()) == 1
 
 
-class TestListgamesIntegrated(TestWithDb):
+class TestStatusIntegrated(TestWithDb):
 
     def count_pattern_in(self, pattern, string):
         return len(re.split(pattern, string)) - 1
 
     def test_shows_links_to_existing_games(self):
-        response = self.test_client.get('/listgames')
+        response = self.test_client.get(url_for('status'))
         assert self.count_pattern_in(r"Game \d", str(response.get_data())) == 0
         main.db.session.add(main.Game())
         main.db.session.add(main.Game())
-        response = self.test_client.get('/listgames')
+        response = self.test_client.get(url_for('status'))
         assert self.count_pattern_in(r"Game \d", str(response.get_data())) == 2
 
 

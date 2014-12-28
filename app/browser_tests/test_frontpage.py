@@ -66,7 +66,8 @@ class FrontPageTest(SeleniumTest):
         plogout_link = self.confirm_logged_in_and_get_logout_link()
 
         # we try another page, we're still logged in there
-        self.browser.get(self.get_server_url() + "/listgames")
+        # TODO: once we have a non-frontpage to browse to, go there
+        self.browser.get(self.get_server_url() + "/")
         plogout_link = self.confirm_logged_in_and_get_logout_link()
 
         # now we log out again
