@@ -15,10 +15,6 @@ from .. import main
 class GameTest(SeleniumTest):
 
     def test_game_page(self):
-        ## clear database; should only be necessary until we have multiple
-        ## games
-        main.db.drop_all()
-        main.db.create_all()
         ## create a couple of games
         self.create_game('player@one.com', 'player@two.net')
         self.create_game('player@one.com', 'player@two.net')

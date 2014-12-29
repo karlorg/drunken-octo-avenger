@@ -35,6 +35,8 @@ class TestWithDb(TestWithTestingApp):
 
     def setUp(self):
         super().setUp()
+        main.db.session.remove()
+        main.db.drop_all()
         main.db.create_all()
 
     def tearDown(self):
@@ -215,31 +217,67 @@ class TestStatusIntegrated(TestWithDb):
 
 class TestGameIntegrated(TestWithDb):
 
+    def add_game(self):
+        game = Game()
+        game.black = 'black@black.com'
+        game.white = 'white@white.com'
+        main.db.session.add(game)
+        main.db.session.commit()
+        return game
+
+    def test_redirects_to_home_if_no_game_specified(self):
+        response = self.test_client.get('/game')
+        self.assert_redirects(response, '/')
+
     def test_passes_correct_goban_format_to_template(self):
+        game = self.add_game()
         mock_render = Mock(wraps=render_template)
         with patch('app.main.render_template', mock_render):
-            self.test_client.get('/game')
+            self.test_client.get('/game?game_no={game}'.format(game=game.id))
         args, kwargs = mock_render.call_args
         assert args[0] == "game.html"
-
         goban = kwargs['goban']
         assert goban[0][0] == str(goban[0][0])
         assert kwargs['move_no'] == int(kwargs['move_no'])
 
     def test_writes_passed_valid_move_to_db(self):
+        game = self.add_game()
         assert Move.query.all() == []
-        self.test_client.get('/game?move_no=0&row=16&column=15')
+        self.test_client.get(
+                '/game?game_no={game}&move_no=0&row=16&column=15'
+                .format(game=game.id)
+        )
         moves = Move.query.all()
         assert len(moves) == 1
         move = moves[0]
+        assert move.game_no == game.id
         assert move.move_no == 0
         assert move.row == 16
         assert move.column == 15
         assert move.color == Move.Color.black
 
     def test_links_go_to_right_move_no(self):
-        response = self.test_client.get('/game?move_no=0&row=16&column=15')
+        response = self.test_client.get(
+                '/game?game_no=1&move_no=0&row=16&column=15')
         assert 'move_no=1' in str(response.get_data())
+
+    def test_can_add_stones_to_two_games(self):
+        game1 = self.add_game()
+        game2 = self.add_game()
+        self.test_client.get(
+                '/game?game_no={game}&move_no=0&row=3&column=15'
+                .format(game=game1.id)
+        )
+        self.test_client.get(
+                '/game?game_no={game}&move_no=1&row=15&column=15'
+                .format(game=game1.id)
+        )
+        self.test_client.get(
+                '/game?game_no={game}&move_no=0&row=9&column=9'
+                .format(game=game2.id)
+        )
+        assert len(Move.query.filter(Move.game_no == game1.id).all()) == 2
+        assert len(Move.query.filter(Move.game_no == game2.id).all()) == 1
 
 
 class TestGetStoneIfArgsGood(unittest.TestCase):
@@ -247,26 +285,27 @@ class TestGetStoneIfArgsGood(unittest.TestCase):
     def test_returns_none_for_missing_args(self):
         assert main.get_stone_if_args_good(args={}, moves=[]) is None
         assert main.get_stone_if_args_good(
-                args={'move_no': 0, 'row': 0}, moves=[]) is None
+                args={'game_no': 1, 'move_no': 0, 'row': 0}, moves=[]) is None
         assert main.get_stone_if_args_good(
-                args={'move_no': 0, 'column': 0}, moves=[]) is None
+                args={'game_no': 1, 'move_no': 0, 'column': 0}, moves=[]
+        ) is None
         assert main.get_stone_if_args_good(
                 args={'column': 0, 'row': 0}, moves=[]) is None
 
     def test_returns_none_if_move_no_bad(self):
         stone = main.get_stone_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
-                args={'move_no': 0, 'row': 3, 'column': 3})
+                args={'game_no': 1, 'move_no': 0, 'row': 3, 'column': 3})
         assert stone is None
         stone = main.get_stone_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
-                args={'move_no': 2, 'row': 3, 'column': 3})
+                args={'game_no': 1, 'move_no': 2, 'row': 3, 'column': 3})
         assert stone is None
 
     def test_returns_black_stone_as_first_move(self):
         stone = main.get_stone_if_args_good(
                 moves=[],
-                args={'move_no': 0, 'row': 9, 'column': 9})
+                args={'game_no': 1, 'move_no': 0, 'row': 9, 'column': 9})
         assert stone.row == 9
         assert stone.column == 9
         assert stone.color == Move.Color.black
@@ -274,7 +313,7 @@ class TestGetStoneIfArgsGood(unittest.TestCase):
     def test_returns_white_stone_as_second_move(self):
         stone = main.get_stone_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
-                args={'move_no': 1, 'row': 3, 'column': 3})
+                args={'game_no': 1, 'move_no': 1, 'row': 3, 'column': 3})
         assert stone.row == 3
         assert stone.column == 3
         assert stone.color == Move.Color.white
@@ -284,8 +323,12 @@ class TestGetImgArrayFromMoves(unittest.TestCase):
 
     def test_imgs_appear_on_expected_points(self):
         goban = main.get_img_array_from_moves([
-            Move(move_no=0, row=3, column=4, color=Move.Color.black),
-            Move(move_no=1, row=15, column=16, color=Move.Color.white)
+            Move(
+                game_no=1, move_no=0,
+                row=3, column=4, color=Move.Color.black),
+            Move(
+                game_no=1, move_no=1,
+                row=15, column=16, color=Move.Color.white)
         ])
         assert 'e.gif' in goban[3][3]
         assert 'w.gif' in goban[15][16]

@@ -42,15 +42,19 @@ def front_page():
 
 @app.route('/game')
 def game():
-    moves = Move.query.all()
+    try:
+        game_no = int(request.args['game_no'])
+    except (KeyError, ValueError):
+        return redirect('/')
+    moves = Move.query.filter(Move.game_no == game_no).all()
     stone = get_stone_if_args_good(args=request.args, moves=moves)
     if stone is not None:
         db.session.add(stone)
         db.session.commit()
-    moves = Move.query.all()
+    moves = Move.query.filter(Move.game_no == game_no).all()
     goban = get_img_array_from_moves(moves)
     return render_template_with_email(
-            "game.html", move_no=len(moves), goban=goban)
+            "game.html", game_no=game_no, move_no=len(moves), goban=goban)
 
 @app.route('/newgame')
 def newgame():
@@ -137,6 +141,7 @@ def get_stone_if_args_good(args, moves):
     Pure function; does not commit the new stone to the database.
     """
     try:
+        game_no = int(args['game_no'])
         move_no = int(args['move_no'])
         row = int(args['row'])
         column = int(args['column'])
@@ -145,7 +150,9 @@ def get_stone_if_args_good(args, moves):
     if move_no != len(moves):
         return None
     color = (Move.Color.black, Move.Color.white)[move_no % 2]
-    return Move(move_no=move_no, row=row, column=column, color=color)
+    return Move(
+            game_no=game_no, move_no=move_no,
+            row=row, column=column, color=color)
 
 def get_img_array_from_moves(moves):
     """Given the moves for a game, return a 2d array of image paths.
@@ -182,12 +189,16 @@ def render_template_with_email(template_name_or_list, **context):
 
 
 class Game(db.Model):
+    __tablename__ = 'games'
     id = db.Column(db.Integer, primary_key=True)
     black = db.Column(db.String(length=254))
     white = db.Column(db.String(length=254))
+    moves = db.relationship('Move', backref='game')
 
 class Move(db.Model):
+    __tablename__ = 'moves'
     id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
     row = db.Column(db.Integer)
     column = db.Column(db.Integer)
     move_no = db.Column(db.Integer)
@@ -197,7 +208,8 @@ class Move(db.Model):
         white = 1
     color = db.Column(db.Integer)
 
-    def __init__(self, move_no, row, column, color):
+    def __init__(self, game_no, move_no, row, column, color):
+        self.game_no = game_no
         self.move_no = move_no
         self.row = row
         self.column = column

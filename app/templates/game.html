@@ -8,7 +8,7 @@
         {% for point in row %}
         <td>
             <a href="{{ url_for('game', column=loop.index0, row=rowloop.index0,
-                move_no=move_no) }}"><img src="{{ point }}" /></a>
+                game_no=game_no, move_no=move_no) }}"><img src="{{ point }}" /></a>
         </td>
         {% endfor %}
     </tr>
