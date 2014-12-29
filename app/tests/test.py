@@ -175,18 +175,6 @@ class TestChallengeIntegrated(TestWithDb):
         assert game.black == 'player2@gofan.com'
 
 
-class TestNewgameIntegrated(TestWithDb):
-
-    def test_redirects_to_game_list(self):
-        response = self.test_client.get('/newgame')
-        self.assert_redirects(response, url_for('status'))
-
-    def test_adds_new_game_to_db(self):
-        assert len(main.Game.query.all()) == 0
-        self.test_client.get('/newgame')
-        assert len(main.Game.query.all()) == 1
-
-
 class TestStatusIntegrated(TestWithDb):
 
     def count_pattern_in(self, pattern, string):

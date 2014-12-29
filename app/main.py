@@ -56,12 +56,6 @@ def game():
     return render_template_with_email(
             "game.html", game_no=game_no, move_no=len(moves), goban=goban)
 
-@app.route('/newgame')
-def newgame():
-    db.session.add(Game())
-    db.session.commit()
-    return redirect(url_for('status'))
-
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
     form = ChallengeForm()
