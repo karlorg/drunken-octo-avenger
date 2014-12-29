@@ -92,9 +92,3 @@ class FrontPageTest(SeleniumTest):
             pass  ## we expect no such element
         else:
             self.fail('found logout link, should not exist')
-
-    def test_create_login_session(self):
-        """Temporary smoke test for base.py's login creator helper."""
-        self.create_login_session('fakesession@base.py')
-        self.browser.get(self.get_server_url())
-        self.confirm_logged_in_and_get_logout_link('fakesession@base.py')
