@@ -9,26 +9,32 @@ install_aliases()
 from urllib.request import urlopen
 
 from .base import SeleniumTest
-from .. import main
 
 
 class GameTest(SeleniumTest):
 
     def test_game_page(self):
+        """Test game display and placing stones through the web interface."""
+
+        ONE_EMAIL = 'player@one.com'
+        TWO_EMAIL = 'playa@dos.es'
         ## create a couple of games
-        self.create_game('player@one.com', 'player@two.net')
-        self.create_game('player@one.com', 'player@two.net')
+        self.create_game(black_email=ONE_EMAIL, white_email=TWO_EMAIL)
+        self.create_game(black_email=ONE_EMAIL, white_email=TWO_EMAIL)
         # player one logs in and gets the front page; should see a page listing
         # games
-        self.create_login_session('player@one.com')
+        self.create_login_session(ONE_EMAIL)
         self.browser.get(self.get_server_url())
 
-        def find_game_links():
-            self.browser.find_element_by_partial_link_text('Game ')
-        self.wait_for(find_game_links)
+        def find_your_turn_games():
+            return self.browser.find_element_by_id('your_turn_games')
+        your_turn_games = self.wait_for(find_your_turn_games)
         # select the most recent game
-        link = self.browser.find_elements_by_partial_link_text('Game ')[-1]
-        link.click()
+        latest_game_link = (
+                your_turn_games.find_elements_by_partial_link_text('Game ')[-1]
+        )
+        latest_game_text = latest_game_link.text
+        latest_game_link.click()
 
         # on the game page is a table with class 'goban'
         def check_goban_exists():
@@ -62,6 +68,11 @@ class GameTest(SeleniumTest):
         self.assertEqual(counts.empty, 19*19-1)
         self.assertEqual(counts.black, 1)
 
+        # now the white player logs in and visits the same game
+        self.create_login_session(TWO_EMAIL)
+        self.browser.get(self.get_server_url())
+        self.browser.find_element_by_link_text(latest_game_text).click()
+
         # user clicks another empty spot
         try:
             self.find_empty_point_to_click().click()
@@ -76,7 +87,7 @@ class GameTest(SeleniumTest):
 
         # reload front page and get the other game
         self.browser.get(self.get_server_url())
-        self.wait_for(find_game_links)
+        self.wait_for(find_your_turn_games)
         # select the most recent game
         link = self.browser.find_elements_by_partial_link_text('Game ')[-2]
         link.click()

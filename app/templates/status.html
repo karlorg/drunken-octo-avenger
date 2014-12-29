@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<ul>
-    {% for game in games %}
-    <li>
-    <a href="{{ url_for('game', game_no=game.id) }}">Game {{ game.id }}</a>
-    </li>
-    {% endfor %}
-</ul>
+<div id="your_turn_games">
+    <h3>Your turn in the following games:</h3>
+    <ul>
+        {% for game in games %}
+        <li>
+        <a href="{{ url_for('game', game_no=game.id) }}">Game {{ game.id }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+<div id="not_your_turn_games">
+    <h3>Your other games:</h3>
+</div>
 {% endblock %}

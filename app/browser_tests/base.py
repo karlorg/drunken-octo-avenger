@@ -14,7 +14,7 @@ from selenium.common.exceptions import WebDriverException
 
 from collections import namedtuple
 
-from ..main import app, db, Game
+from ..main import app, db, Game, Move
 
 
 class SeleniumTest(LiveServerTestCase):
@@ -94,6 +94,21 @@ class SeleniumTest(LiveServerTestCase):
         game.black = black_email
         game.white = white_email
         db.session.add(game)
+        db.session.commit()
+
+    def clear_games_for_player(self, email):
+        """Clear all of `email`'s games from the database.
+
+        This is separated into a method primarily to ease making this a remote
+        command when we get to testing against a staging server."""
+        games_as_black = Game.query.filter(Game.black == email).all()
+        games_as_white = Game.query.filter(Game.white == email).all()
+        games = games_as_black + games_as_white
+        moves = Move.query.filter(Move.game in games).all()
+        for move in moves:
+            db.session.delete(move)
+        for game in games:
+            db.session.delete(game)
         db.session.commit()
 
     Count = namedtuple('Count', ['white', 'black', 'empty'])
