@@ -4,6 +4,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
+from contextlib import contextmanager
 from mock import ANY, Mock, patch
 import re
 import unittest
@@ -26,6 +27,18 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
 
     def setUp(self):
         self.test_client = main.app.test_client()
+
+    @contextmanager
+    def suppress_render_template(self):
+        """Patches out render_template with a mock.
+
+        Use when the return value of the view is not important to the test;
+        rendering templates uses a ton of runtime."""
+        mock_render = Mock(spec=render_template)
+        mock_render.return_value = ''
+        with patch('app.main.render_template', mock_render):
+            yield
+
 
 class TestWithDb(TestWithTestingApp):
 
@@ -213,6 +226,7 @@ class TestGameIntegrated(TestWithDb):
         main.db.session.commit()
         return game
 
+
     def test_redirects_to_home_if_no_game_specified(self):
         response = self.test_client.get('/game')
         self.assert_redirects(response, '/')
@@ -231,10 +245,11 @@ class TestGameIntegrated(TestWithDb):
     def test_writes_passed_valid_move_to_db(self):
         game = self.add_game()
         assert Move.query.all() == []
-        self.test_client.get(
-                '/game?game_no={game}&move_no=0&row=16&column=15'
-                .format(game=game.id)
-        )
+        with self.suppress_render_template():
+            self.test_client.get(
+                    '/game?game_no={game}&move_no=0&row=16&column=15'
+                    .format(game=game.id)
+            )
         moves = Move.query.all()
         assert len(moves) == 1
         move = moves[0]
@@ -252,18 +267,19 @@ class TestGameIntegrated(TestWithDb):
     def test_can_add_stones_to_two_games(self):
         game1 = self.add_game()
         game2 = self.add_game()
-        self.test_client.get(
-                '/game?game_no={game}&move_no=0&row=3&column=15'
-                .format(game=game1.id)
-        )
-        self.test_client.get(
-                '/game?game_no={game}&move_no=1&row=15&column=15'
-                .format(game=game1.id)
-        )
-        self.test_client.get(
-                '/game?game_no={game}&move_no=0&row=9&column=9'
-                .format(game=game2.id)
-        )
+        with self.suppress_render_template():
+            self.test_client.get(
+                    '/game?game_no={game}&move_no=0&row=3&column=15'
+                    .format(game=game1.id)
+            )
+            self.test_client.get(
+                    '/game?game_no={game}&move_no=1&row=15&column=15'
+                    .format(game=game1.id)
+            )
+            self.test_client.get(
+                    '/game?game_no={game}&move_no=0&row=9&column=9'
+                    .format(game=game2.id)
+            )
         assert len(Move.query.filter(Move.game_no == game1.id).all()) == 2
         assert len(Move.query.filter(Move.game_no == game2.id).all()) == 1
 
