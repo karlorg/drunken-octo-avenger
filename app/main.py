@@ -108,6 +108,9 @@ def persona_login():
 def logout():
     try:
         del session['email']
+    except KeyError:
+        pass
+    try:
         del session['persona_email']
     except KeyError:
         pass
