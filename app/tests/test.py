@@ -5,6 +5,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       str, super, zip)
 
 from contextlib import contextmanager
+import itertools
 from mock import ANY, Mock, patch
 import re
 import unittest
@@ -14,8 +15,7 @@ import flask.ext.testing
 import requests
 
 from .. import main
-from ..main import Game
-from ..main import Move
+from ..main import Game, Move, db
 
 
 class TestWithTestingApp(flask.ext.testing.TestCase):
@@ -242,6 +242,31 @@ class TestStatusIntegrated(TestWithDb):
         assert game4 in your_turn_games
         assert game3 not in your_turn_games
         assert game3 in not_your_turn_games
+
+    def test_games_come_out_sorted(self):
+        """Regression test: going via dictionaries can break sorting"""
+        for i in range(5):
+            db.session.add(Game(black='some@one.com', white='some@two.com'))
+            db.session.add(Game(black='some@two.com', white='some@one.com'))
+        mock_render = Mock(spec=render_template)
+        mock_render.return_value = ''
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = 'some@one.com'
+            with patch('app.main.render_template', mock_render):
+                test_client.get(url_for('status'))
+        args, kwargs = mock_render.call_args
+        your_turn_games = kwargs['your_turn_games']
+        not_your_turn_games = kwargs['not_your_turn_games']
+
+        def game_key(game):
+            return game.id
+        self.assertEqual(
+                your_turn_games,
+                sorted(your_turn_games, key=game_key))
+        self.assertEqual(
+                not_your_turn_games,
+                sorted(not_your_turn_games, key=game_key))
 
 
 class TestGetPlayerGames(unittest.TestCase):
