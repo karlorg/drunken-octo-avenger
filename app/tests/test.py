@@ -5,7 +5,6 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       str, super, zip)
 
 from contextlib import contextmanager
-import itertools
 from mock import ANY, Mock, patch
 import re
 import unittest
@@ -29,7 +28,7 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
         self.test_client = main.app.test_client()
 
     @contextmanager
-    def suppress_render_template(self):
+    def patch_render_template(self):
         """Patches out render_template with a mock.
 
         Use when the return value of the view is not important to the test;
@@ -37,7 +36,7 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
         mock_render = Mock(spec=render_template)
         mock_render.return_value = ''
         with patch('app.main.render_template', mock_render):
-            yield
+            yield mock_render
 
 
 class TestWithDb(TestWithTestingApp):
@@ -193,6 +192,15 @@ class TestStatusIntegrated(TestWithDb):
     def count_pattern_in(self, pattern, string):
         return len(re.split(pattern, string)) - 1
 
+    @contextmanager
+    def set_email(self, email=None):
+        if email is None:
+            email = self.LOGGED_IN_EMAIL
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = email
+            yield test_client
+
     def setup_test_games(self):
         self.LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
         OTHER_EMAIL_1 = 'rando@opponent.net'
@@ -217,24 +225,18 @@ class TestStatusIntegrated(TestWithDb):
 
     def test_shows_links_to_existing_games(self):
         self.setup_test_games()
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                session['email'] = self.LOGGED_IN_EMAIL
+        with self.set_email() as test_client:
             response = test_client.get(url_for('status'))
-            assert self.count_pattern_in(
-                    r"Game \d", str(response.get_data())
-            ) == 3
+        self.assertEqual(
+                self.count_pattern_in(r"Game \d", str(response.get_data())),
+                3)
 
     def test_sends_games_to_correct_template_params(self):
         game1, game2, game3, game4 = self.setup_test_games()
-        mock_render = Mock(spec=render_template)
-        mock_render.return_value = ''
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                session['email'] = self.LOGGED_IN_EMAIL
-            with patch('app.main.render_template', mock_render):
+        with self.set_email() as test_client:
+            with self.patch_render_template() as mock_render:
                 test_client.get(url_for('status'))
-        args, kwargs = mock_render.call_args
+                args, kwargs = mock_render.call_args
         assert args[0] == "status.html"
         your_turn_games = kwargs['your_turn_games']
         not_your_turn_games = kwargs['not_your_turn_games']
@@ -248,14 +250,10 @@ class TestStatusIntegrated(TestWithDb):
         for i in range(5):
             db.session.add(Game(black='some@one.com', white='some@two.com'))
             db.session.add(Game(black='some@two.com', white='some@one.com'))
-        mock_render = Mock(spec=render_template)
-        mock_render.return_value = ''
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                session['email'] = 'some@one.com'
-            with patch('app.main.render_template', mock_render):
+        with self.set_email('some@one.com') as test_client:
+            with self.patch_render_template() as mock_render:
                 test_client.get(url_for('status'))
-        args, kwargs = mock_render.call_args
+                args, kwargs = mock_render.call_args
         your_turn_games = kwargs['your_turn_games']
         not_your_turn_games = kwargs['not_your_turn_games']
 
@@ -349,7 +347,7 @@ class TestGameIntegrated(TestWithDb):
     def test_writes_passed_valid_move_to_db(self):
         game = self.add_game()
         assert Move.query.all() == []
-        with self.suppress_render_template():
+        with self.patch_render_template():
             self.test_client.get(
                     '/game?game_no={game}&move_no=0&row=16&column=15'
                     .format(game=game.id)
@@ -371,7 +369,7 @@ class TestGameIntegrated(TestWithDb):
     def test_can_add_stones_to_two_games(self):
         game1 = self.add_game()
         game2 = self.add_game()
-        with self.suppress_render_template():
+        with self.patch_render_template():
             self.test_client.get(
                     '/game?game_no={game}&move_no=0&row=3&column=15'
                     .format(game=game1.id)
