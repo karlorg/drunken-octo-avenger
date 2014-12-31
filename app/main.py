@@ -73,11 +73,24 @@ def status():
     if 'email' not in session:
         return redirect('/')
     logged_in_email = session['email']
-
-    def involved_in_game(game):
-        return (game.black == logged_in_email or game.white == logged_in_email)
-    games = filter(involved_in_game, Game.query.all())
-    return render_template_with_email("status.html", games=games)
+    all_games = Game.query.all()
+    current_player_games = get_player_games(logged_in_email, all_games)
+    your_turn_games = [
+            game for game in current_player_games
+            if is_players_turn_in_game(
+                logged_in_email, game,
+                Move.query.filter(Move.game_no == game.id))
+    ]
+    not_your_turn_games = [
+            game for game in current_player_games
+            if not is_players_turn_in_game(
+                logged_in_email, game,
+                Move.query.filter(Move.game_no == game.id))
+    ]
+    return render_template_with_email(
+            "status.html",
+            your_turn_games=your_turn_games,
+            not_your_turn_games=not_your_turn_games)
 
 @app.route('/persona/login', methods=['POST'])
 def persona_login():
@@ -165,6 +178,32 @@ def get_img_array_from_moves(moves):
         elif move.color == Move.Color.white:
             goban[move.row][move.column] = IMG_PATH_WHITE
     return goban
+
+def get_player_games(player_email, games):
+    """Filter `games` to those involving player_email.
+
+    Pure function.
+    """
+    def involved_in_game(game):
+        return (player_email == game.black or player_email == game.white)
+    return list(filter(involved_in_game, games))
+
+def is_players_turn_in_game(player_email, game, moves):
+    """Tests if it's `player_email`'s turn to move in `game` given `moves`.
+
+    Pure function.  `moves` should be the list of moves associated with
+    `game`, since this function won't access the database itself.
+    """
+    try:
+        last_move = (sorted(moves, key=lambda move: move.move_no))[-1]
+        last_move_color = last_move.color
+    except IndexError:
+        last_move_color = Move.Color.white  # black to move
+    if (game.black == player_email):
+        return (last_move_color == Move.Color.white)
+    else:  # player is white
+        return (last_move_color == Move.Color.black)
+    return False
 
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.

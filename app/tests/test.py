@@ -193,27 +193,96 @@ class TestStatusIntegrated(TestWithDb):
     def count_pattern_in(self, pattern, string):
         return len(re.split(pattern, string)) - 1
 
+    def setup_test_games(self):
+        self.LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
+        OTHER_EMAIL_1 = 'rando@opponent.net'
+        OTHER_EMAIL_2 = 'wotsit@thingy.com'
+        game1 = Game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
+        game2 = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
+        game3 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        main.db.session.add(game1)
+        main.db.session.add(game2)
+        main.db.session.add(game3)
+        return (game1, game2, game3,)
+
     def test_anonymous_users_redirected_to_front(self):
         response = self.test_client.get(url_for('status'))
         self.assert_redirects(response, '/')
 
     def test_shows_links_to_existing_games(self):
-        LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
-        OTHER_EMAIL_1 = 'rando@opponent.net'
-        OTHER_EMAIL_2 = 'wotsit@thingy.com'
-        main.db.session.add(main.Game(
-            black=LOGGED_IN_EMAIL, white=OTHER_EMAIL_1))
-        main.db.session.add(main.Game(
-            black=OTHER_EMAIL_1, white=OTHER_EMAIL_2))
-        main.db.session.add(main.Game(
-            black=OTHER_EMAIL_1, white=LOGGED_IN_EMAIL))
+        game1, game2, game3 = self.setup_test_games()
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as session:
-                session['email'] = LOGGED_IN_EMAIL
+                session['email'] = self.LOGGED_IN_EMAIL
             response = test_client.get(url_for('status'))
             assert self.count_pattern_in(
                     r"Game \d", str(response.get_data())
             ) == 2
+
+    def test_sends_games_to_correct_template_params(self):
+        game1, game2, game3 = self.setup_test_games()
+        mock_render = Mock(spec=render_template)
+        mock_render.return_value = ''
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = self.LOGGED_IN_EMAIL
+            with patch('app.main.render_template', mock_render):
+                test_client.get(url_for('status'))
+        args, kwargs = mock_render.call_args
+        assert args[0] == "status.html"
+        assert game1 in kwargs['your_turn_games']
+        assert game3 not in kwargs['your_turn_games']
+        assert game3 in kwargs['not_your_turn_games']
+
+
+class TestGetPlayerGames(unittest.TestCase):
+
+    def test_filters_correctly(self):
+        TEST_EMAIL = 'our_guy@our_guy.com'
+        OTHER_EMAIL_1 = 'other@other.com'
+        OTHER_EMAIL_2 = 'other2@other2.com'
+        game_not_involved = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
+        game_black = Game(black=TEST_EMAIL, white=OTHER_EMAIL_1)
+        game_white = Game(black=OTHER_EMAIL_1, white=TEST_EMAIL)
+        games = [game_not_involved, game_black, game_white]
+
+        result = main.get_player_games(TEST_EMAIL, games)
+        assert game_not_involved not in result
+        assert game_black in result
+        assert game_white in result
+
+
+class TestIsPlayersTurnInGame(unittest.TestCase):
+
+    def setUp(self):
+        self.TEST_EMAIL = 'us@we.com'
+        self.OTHER_EMAIL = 'other@other.com'
+        self.black_game = Game(black=self.TEST_EMAIL, white=self.OTHER_EMAIL)
+        self.white_game = Game(black=self.OTHER_EMAIL, white=self.TEST_EMAIL)
+
+    def test_black_first_move(self):
+        moves = []
+        self.assertTrue(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.black_game, moves))
+
+    def test_white_first_move(self):
+        moves = []
+        self.assertFalse(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.white_game, moves))
+
+    def test_black_second_move(self):
+        moves = [Move(
+            game_no=self.black_game.id, move_no=0,
+            row=9, column=9, color=Move.Color.black)]
+        self.assertFalse(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.black_game, moves))
+
+    def test_white_second_move(self):
+        moves = [Move(
+            game_no=self.white_game.id, move_no=0,
+            row=9, column=9, color=Move.Color.black)]
+        self.assertTrue(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.white_game, moves))
 
 
 class TestGameIntegrated(TestWithDb):
@@ -233,7 +302,8 @@ class TestGameIntegrated(TestWithDb):
 
     def test_passes_correct_goban_format_to_template(self):
         game = self.add_game()
-        mock_render = Mock(wraps=render_template)
+        mock_render = Mock(spec=render_template)
+        mock_render.return_value = ''
         with patch('app.main.render_template', mock_render):
             self.test_client.get('/game?game_no={game}'.format(game=game.id))
         args, kwargs = mock_render.call_args
