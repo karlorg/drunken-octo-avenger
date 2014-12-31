@@ -200,27 +200,33 @@ class TestStatusIntegrated(TestWithDb):
         game1 = Game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
         game2 = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
         game3 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        game4 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
         main.db.session.add(game1)
         main.db.session.add(game2)
         main.db.session.add(game3)
-        return (game1, game2, game3,)
+        main.db.session.add(game4)
+        main.db.session.commit()
+        main.db.session.add(Move(
+            game_no=game4.id, move_no=0,
+            row=9, column=9, color=Move.Color.black))
+        return (game1, game2, game3, game4,)
 
     def test_anonymous_users_redirected_to_front(self):
         response = self.test_client.get(url_for('status'))
         self.assert_redirects(response, '/')
 
     def test_shows_links_to_existing_games(self):
-        game1, game2, game3 = self.setup_test_games()
+        self.setup_test_games()
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as session:
                 session['email'] = self.LOGGED_IN_EMAIL
             response = test_client.get(url_for('status'))
             assert self.count_pattern_in(
                     r"Game \d", str(response.get_data())
-            ) == 2
+            ) == 3
 
     def test_sends_games_to_correct_template_params(self):
-        game1, game2, game3 = self.setup_test_games()
+        game1, game2, game3, game4 = self.setup_test_games()
         mock_render = Mock(spec=render_template)
         mock_render.return_value = ''
         with main.app.test_client() as test_client:
@@ -231,6 +237,7 @@ class TestStatusIntegrated(TestWithDb):
         args, kwargs = mock_render.call_args
         assert args[0] == "status.html"
         assert game1 in kwargs['your_turn_games']
+        assert game4 in kwargs['your_turn_games']
         assert game3 not in kwargs['your_turn_games']
         assert game3 in kwargs['not_your_turn_games']
 
