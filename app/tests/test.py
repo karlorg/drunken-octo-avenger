@@ -236,10 +236,12 @@ class TestStatusIntegrated(TestWithDb):
                 test_client.get(url_for('status'))
         args, kwargs = mock_render.call_args
         assert args[0] == "status.html"
-        assert game1 in kwargs['your_turn_games']
-        assert game4 in kwargs['your_turn_games']
-        assert game3 not in kwargs['your_turn_games']
-        assert game3 in kwargs['not_your_turn_games']
+        your_turn_games = kwargs['your_turn_games']
+        not_your_turn_games = kwargs['not_your_turn_games']
+        assert game1 in your_turn_games
+        assert game4 in your_turn_games
+        assert game3 not in your_turn_games
+        assert game3 in not_your_turn_games
 
 
 class TestGetPlayerGames(unittest.TestCase):

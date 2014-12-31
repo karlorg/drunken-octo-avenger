@@ -75,18 +75,12 @@ def status():
     logged_in_email = session['email']
     all_games = Game.query.all()
     current_player_games = get_player_games(logged_in_email, all_games)
-    your_turn_games = [
-            game for game in current_player_games
-            if is_players_turn_in_game(
-                logged_in_email, game,
-                Move.query.filter(Move.game_no == game.id))
+    games_to_moves = [
+            (game, Move.query.filter(Move.game_no == game.id).all(),)
+            for game in current_player_games
     ]
-    not_your_turn_games = [
-            game for game in current_player_games
-            if not is_players_turn_in_game(
-                logged_in_email, game,
-                Move.query.filter(Move.game_no == game.id))
-    ]
+    your_turn_games, not_your_turn_games = partition_by_turn(
+            logged_in_email, games_to_moves)
     return render_template_with_email(
             "status.html",
             your_turn_games=your_turn_games,
@@ -188,22 +182,37 @@ def get_player_games(player_email, games):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
 
+def partition_by_turn(player_email, games_to_moves):
+    """Partition games into two lists, player's turn and not player's turn.
+
+    Pure function.  `games_to_moves` is a list of pairs mapping games to the
+    moves for each game, since this function may not access the database
+    itself.
+    """
+    yes_turn = []
+    no_turn = []
+    for (game, moves,) in games_to_moves:
+        if is_players_turn_in_game(player_email, game, moves):
+            yes_turn.append(game)
+        else:
+            no_turn.append(game)
+    return (yes_turn, no_turn,)
+
 def is_players_turn_in_game(player_email, game, moves):
-    """Tests if it's `player_email`'s turn to move in `game` given `moves`.
+    """Test if it's `player_email`'s turn to move in `game` given `moves`.
 
     Pure function.  `moves` should be the list of moves associated with
     `game`, since this function won't access the database itself.
     """
-    try:
-        last_move = (sorted(moves, key=lambda move: move.move_no))[-1]
-        last_move_color = last_move.color
-    except IndexError:
+    if len(moves) == 0:
         last_move_color = Move.Color.white  # black to move
+    else:
+        last_move = max(moves, key=lambda move: move.move_no)
+        last_move_color = last_move.color
     if (game.black == player_email):
         return (last_move_color == Move.Color.white)
     else:  # player is white
         return (last_move_color == Move.Color.black)
-    return False
 
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.
