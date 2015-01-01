@@ -64,7 +64,7 @@ class GameTest(SeleniumTest):
         # user clicks an empty spot, which is a link
         try:
             self.find_empty_point_to_click().click()
-        except AttributeError:
+        except (AssertionError, AttributeError):
             self.fail('no clickable board point found')
 
         # now on the board is one black stone and 19x19 - 1 empty points
@@ -76,7 +76,7 @@ class GameTest(SeleniumTest):
         # clickable links
         try:
             self.find_empty_point_to_click()
-        except AttributeError:
+        except AssertionError:
             pass
         else:
             self.fail("clickable board links found off-turn")
@@ -90,7 +90,7 @@ class GameTest(SeleniumTest):
         # user clicks another empty spot
         try:
             self.find_empty_point_to_click().click()
-        except AttributeError:
+        except (AssertionError, AttributeError):
             self.fail('no clickable board point found')
 
         # now one black stone, one white, rest empty
@@ -114,7 +114,7 @@ class GameTest(SeleniumTest):
         # with no clickable links, since we're white in this game
         try:
             self.find_empty_point_to_click()
-        except AttributeError:
+        except AssertionError:
             pass
         else:
             self.fail("clickable board links found off-turn")

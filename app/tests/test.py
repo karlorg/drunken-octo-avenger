@@ -28,6 +28,15 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
         self.test_client = main.app.test_client()
 
     @contextmanager
+    def set_email(self, email=None):
+        if email is None:
+            email = self.LOGGED_IN_EMAIL
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = email
+            yield test_client
+
+    @contextmanager
     def patch_render_template(self):
         """Patches out render_template with a mock.
 
@@ -192,15 +201,6 @@ class TestStatusIntegrated(TestWithDb):
     def count_pattern_in(self, pattern, string):
         return len(re.split(pattern, string)) - 1
 
-    @contextmanager
-    def set_email(self, email=None):
-        if email is None:
-            email = self.LOGGED_IN_EMAIL
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                session['email'] = email
-            yield test_client
-
     def setup_test_games(self):
         self.LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
         OTHER_EMAIL_1 = 'rando@opponent.net'
@@ -347,11 +347,12 @@ class TestGameIntegrated(TestWithDb):
     def test_writes_passed_valid_move_to_db(self):
         game = self.add_game()
         assert Move.query.all() == []
-        with self.patch_render_template():
-            self.test_client.get(
-                    '/game?game_no={game}&move_no=0&row=16&column=15'
-                    .format(game=game.id)
-            )
+        with self.set_email('black@black.com') as test_client:
+            with self.patch_render_template():
+                test_client.get(
+                        '/game?game_no={game}&move_no=0&row=16&column=15'
+                        .format(game=game.id)
+                )
         moves = Move.query.all()
         assert len(moves) == 1
         move = moves[0]
@@ -362,9 +363,27 @@ class TestGameIntegrated(TestWithDb):
         assert move.color == Move.Color.black
 
     def test_links_go_to_right_move_no(self):
-        response = self.test_client.get(
-                '/game?game_no=1&move_no=0&row=16&column=15')
+        game = self.add_game()
+        move = Move(
+                game_no=game.id, move_no=0,
+                row=16, column=15, color=Move.Color.black)
+        main.db.session.add(move)
+        main.db.session.commit()
+        with self.set_email('white@white.com') as test_client:
+            response = test_client.get(
+                    '/game?game_no={0}'.format(game.id))
         assert 'move_no=1' in str(response.get_data())
+
+    def test_no_links_after_playing_a_move(self):
+        # regression: testing specifically the response to playing a move due
+        # to old bug whereby 'is our turn' testing happened before updating the
+        # move list with the new stone
+        game = self.add_game()
+        with self.set_email('black@black.com') as test_client:
+            response = test_client.get(
+                    '/game?game_no={game}&move_no=0&row=16&column=15'
+                    .format(game=game.id))
+        assert 'move_no=' not in str(response.get_data())
 
     def test_can_add_stones_to_two_games(self):
         game1 = self.add_game()

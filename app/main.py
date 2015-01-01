@@ -46,15 +46,24 @@ def game():
         game_no = int(request.args['game_no'])
     except (KeyError, ValueError):
         return redirect('/')
+    game = Game.query.filter(Game.id == game_no).first()
     moves = Move.query.filter(Move.game_no == game_no).all()
     stone = get_stone_if_args_good(args=request.args, moves=moves)
     if stone is not None:
         db.session.add(stone)
         db.session.commit()
     moves = Move.query.filter(Move.game_no == game_no).all()
+    try:
+        logged_in_email = session['email']
+    except KeyError:
+        is_your_turn = False
+    else:
+        is_your_turn = is_players_turn_in_game(logged_in_email, game, moves)
     goban = get_img_array_from_moves(moves)
     return render_template_with_email(
-            "game.html", game_no=game_no, move_no=len(moves), goban=goban)
+            "game.html",
+            game_no=game_no, move_no=len(moves), goban=goban,
+            with_links=is_your_turn)
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
