@@ -1,9 +1,14 @@
 ## setup
 
-Create a virtualenv outside the repo, install packages from `requirements.txt`
-for Python 2, or `p3req.txt` for Python 3, into it.  I haven't picked a Python
-version (yet); if I haven't messed up, 2.7 and 3.4 should both work.  Trying to
-stay compatible with both.  See 'compatibility' section below.
+I recommend cloning this repository inside an existing directory that's just
+for this project.  The sqlite database will be created one directory up from
+the repo, and that's also where I recommend you put your virtualenv.
+
+So, create a virtualenv outside the repo, install packages from
+`requirements.txt` for Python 2, or `p3req.txt` for Python 3, into it.  I
+haven't picked a Python version (yet); if I haven't messed up, 2.7 and 3.4
+should both work.  Trying to stay compatible with both.  See 'compatibility'
+section below.
 
 ## running
 
