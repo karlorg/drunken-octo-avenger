@@ -47,17 +47,10 @@ def game():
         game_no = int(request.args['game_no'])
     except (KeyError, ValueError):
         return redirect('/')
+    check_args_for_move_and_play_if_good(game_no)
+    # now that new move has been checked, render the board
     game = Game.query.filter(Game.id == game_no).first()
     moves = Move.query.filter(Move.game_no == game_no).all()
-    stone = get_stone_if_args_good(args=request.args, moves=moves)
-    if stone is not None:
-        if is_players_turn_in_game(game, moves):
-            db.session.add(stone)
-            db.session.commit()
-            moves.append(stone)
-        else:  # not turn
-            flash("It's not your turn!")
-            return redirect(url_for('game', game_no=game_no))
     is_your_turn = is_players_turn_in_game(game, moves)
     goban = get_img_array_from_moves(moves)
     return render_template_with_email(
@@ -144,6 +137,25 @@ def process_persona_response(response):
     ):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
+
+
+def check_args_for_move_and_play_if_good(game_no):
+    """If a valid move is in request args, play it (add to db).
+
+    Flashes an error message if a move is given, but the logged in player is
+    not allowed to play it.
+
+    Non-pure: accesses request, session, and db.
+    """
+    game = Game.query.filter(Game.id == game_no).first()
+    moves = Move.query.filter(Move.game_no == game_no).all()
+    stone = get_stone_if_args_good(args=request.args, moves=moves)
+    if stone is not None:
+        if is_players_turn_in_game(game, moves):
+            db.session.add(stone)
+            db.session.commit()
+        else:
+            flash("It's not your turn!")
 
 def get_stone_if_args_good(args, moves):
     """Check GET arguments and if a new move is indicated, return it.
