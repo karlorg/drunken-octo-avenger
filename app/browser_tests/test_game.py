@@ -19,8 +19,12 @@ class GameTest(SeleniumTest):
         ONE_EMAIL = 'player@one.com'
         TWO_EMAIL = 'playa@dos.es'
         ## create a couple of games
+        self.clear_games_for_player(ONE_EMAIL)
+        self.clear_games_for_player(TWO_EMAIL)
         self.create_game(black_email=ONE_EMAIL, white_email=TWO_EMAIL)
         self.create_game(black_email=ONE_EMAIL, white_email=TWO_EMAIL)
+
+        # -- PLAYER ONE
         # player one logs in and gets the front page; should see a page listing
         # games
         self.create_login_session(ONE_EMAIL)
@@ -68,6 +72,16 @@ class GameTest(SeleniumTest):
         self.assertEqual(counts.empty, 19*19-1)
         self.assertEqual(counts.black, 1)
 
+        # since it's not player one's turn any more, there should be no
+        # clickable links
+        try:
+            self.find_empty_point_to_click()
+        except AttributeError:
+            pass
+        else:
+            self.fail("clickable board links found off-turn")
+
+        # -- PLAYER TWO
         # now the white player logs in and visits the same game
         self.create_login_session(TWO_EMAIL)
         self.browser.get(self.get_server_url())
@@ -96,3 +110,11 @@ class GameTest(SeleniumTest):
         self.wait_for(check_goban_exists)
         empty = self.count_stones_and_points().empty
         self.assertEqual(19*19, empty, "second board not empty")
+
+        # with no clickable links, since we're white in this game
+        try:
+            self.find_empty_point_to_click()
+        except AttributeError:
+            pass
+        else:
+            self.fail("clickable board links found off-turn")
