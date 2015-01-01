@@ -362,6 +362,19 @@ class TestGameIntegrated(TestWithDb):
         assert move.column == 15
         assert move.color == Move.Color.black
 
+    def test_rejects_new_move_off_turn(self):
+        game = self.add_game()
+        assert Move.query.all() == []
+        with self.set_email('white@white.com') as test_client:
+            response = test_client.get(
+                    '/game?game_no={game}&move_no=0&row=16&column=15'
+                    .format(game=game.id),
+                    follow_redirects=True
+            )
+        moves = Move.query.all()
+        assert len(moves) == 0
+        assert 'not your turn' in str(response.get_data())
+
     def test_links_go_to_right_move_no(self):
         game = self.add_game()
         move = Move(
@@ -389,18 +402,21 @@ class TestGameIntegrated(TestWithDb):
         game1 = self.add_game()
         game2 = self.add_game()
         with self.patch_render_template():
-            self.test_client.get(
-                    '/game?game_no={game}&move_no=0&row=3&column=15'
-                    .format(game=game1.id)
-            )
-            self.test_client.get(
-                    '/game?game_no={game}&move_no=1&row=15&column=15'
-                    .format(game=game1.id)
-            )
-            self.test_client.get(
-                    '/game?game_no={game}&move_no=0&row=9&column=9'
-                    .format(game=game2.id)
-            )
+            with self.set_email('black@black.com') as test_client:
+                test_client.get(
+                        '/game?game_no={game}&move_no=0&row=3&column=15'
+                        .format(game=game1.id)
+                )
+            with self.set_email('white@white.com') as test_client:
+                test_client.get(
+                        '/game?game_no={game}&move_no=1&row=15&column=15'
+                        .format(game=game1.id)
+                )
+            with self.set_email('black@black.com') as test_client:
+                test_client.get(
+                        '/game?game_no={game}&move_no=0&row=9&column=9'
+                        .format(game=game2.id)
+                )
         assert len(Move.query.filter(Move.game_no == game1.id).all()) == 2
         assert len(Move.query.filter(Move.game_no == game2.id).all()) == 1
 

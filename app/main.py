@@ -8,7 +8,8 @@ from collections import namedtuple
 from enum import IntEnum
 
 from flask import (
-        Flask, abort, redirect, render_template, request, session, url_for
+        Flask, abort, flash, redirect, render_template, request, session,
+        url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
@@ -50,9 +51,13 @@ def game():
     moves = Move.query.filter(Move.game_no == game_no).all()
     stone = get_stone_if_args_good(args=request.args, moves=moves)
     if stone is not None:
-        db.session.add(stone)
-        db.session.commit()
-        moves.append(stone)
+        if is_players_turn_in_game(game, moves):
+            db.session.add(stone)
+            db.session.commit()
+            moves.append(stone)
+        else:  # not turn
+            flash("It's not your turn!")
+            return redirect(url_for('game', game_no=game_no))
     is_your_turn = is_players_turn_in_game(game, moves)
     goban = get_img_array_from_moves(moves)
     return render_template_with_email(
