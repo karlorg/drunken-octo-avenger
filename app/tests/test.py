@@ -295,26 +295,26 @@ class TestIsPlayersTurnInGame(unittest.TestCase):
     def test_black_first_move(self):
         moves = []
         self.assertTrue(main.is_players_turn_in_game(
-            self.TEST_EMAIL, self.black_game, moves))
+            self.black_game, moves, self.TEST_EMAIL))
 
     def test_white_first_move(self):
         moves = []
         self.assertFalse(main.is_players_turn_in_game(
-            self.TEST_EMAIL, self.white_game, moves))
+            self.white_game, moves, self.TEST_EMAIL))
 
     def test_black_second_move(self):
         moves = [Move(
             game_no=self.black_game.id, move_no=0,
             row=9, column=9, color=Move.Color.black)]
         self.assertFalse(main.is_players_turn_in_game(
-            self.TEST_EMAIL, self.black_game, moves))
+            self.black_game, moves, self.TEST_EMAIL))
 
     def test_white_second_move(self):
         moves = [Move(
             game_no=self.white_game.id, move_no=0,
             row=9, column=9, color=Move.Color.black)]
         self.assertTrue(main.is_players_turn_in_game(
-            self.TEST_EMAIL, self.white_game, moves))
+            self.white_game, moves, self.TEST_EMAIL))
 
 
 class TestGameIntegrated(TestWithDb):

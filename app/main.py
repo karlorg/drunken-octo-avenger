@@ -52,13 +52,8 @@ def game():
     if stone is not None:
         db.session.add(stone)
         db.session.commit()
-    moves = Move.query.filter(Move.game_no == game_no).all()
-    try:
-        logged_in_email = session['email']
-    except KeyError:
-        is_your_turn = False
-    else:
-        is_your_turn = is_players_turn_in_game(logged_in_email, game, moves)
+        moves.append(stone)
+    is_your_turn = is_players_turn_in_game(game, moves)
     goban = get_img_array_from_moves(moves)
     return render_template_with_email(
             "game.html",
@@ -212,24 +207,32 @@ def partition_by_turn(player_email, games_to_moves):
     yes_turn = []
     no_turn = []
     for (game, moves,) in games_to_moves:
-        if is_players_turn_in_game(player_email, game, moves):
+        if is_players_turn_in_game(game, moves, email=player_email):
             yes_turn.append(game)
         else:
             no_turn.append(game)
     return (yes_turn, no_turn,)
 
-def is_players_turn_in_game(player_email, game, moves):
+def is_players_turn_in_game(game, moves, email=None):
     """Test if it's `player_email`'s turn to move in `game` given `moves`.
 
-    Pure function.  `moves` should be the list of moves associated with
+    If `email` is passed, this acts as a pure function; otherwise, it reads
+    email from the session.
+
+    `moves` should be the list of moves associated with
     `game`, since this function won't access the database itself.
     """
+    if email is None:
+        try:
+            email = session['email']
+        except KeyError:
+            return False
     if len(moves) == 0:
         last_move_color = Move.Color.white  # black to move
     else:
         last_move = max(moves, key=lambda move: move.move_no)
         last_move_color = last_move.color
-    if (game.black == player_email):
+    if (game.black == email):
         return (last_move_color == Move.Color.white)
     else:  # player is white
         return (last_move_color == Move.Color.black)
