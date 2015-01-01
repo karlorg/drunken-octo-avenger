@@ -14,8 +14,7 @@ import flask.ext.testing
 import requests
 
 from .. import main
-from ..main import Game
-from ..main import Move
+from ..main import Game, Move, db
 
 
 class TestWithTestingApp(flask.ext.testing.TestCase):
@@ -29,7 +28,7 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
         self.test_client = main.app.test_client()
 
     @contextmanager
-    def suppress_render_template(self):
+    def patch_render_template(self):
         """Patches out render_template with a mock.
 
         Use when the return value of the view is not important to the test;
@@ -37,7 +36,7 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
         mock_render = Mock(spec=render_template)
         mock_render.return_value = ''
         with patch('app.main.render_template', mock_render):
-            yield
+            yield mock_render
 
 
 class TestWithDb(TestWithTestingApp):
@@ -193,27 +192,129 @@ class TestStatusIntegrated(TestWithDb):
     def count_pattern_in(self, pattern, string):
         return len(re.split(pattern, string)) - 1
 
+    @contextmanager
+    def set_email(self, email=None):
+        if email is None:
+            email = self.LOGGED_IN_EMAIL
+        with main.app.test_client() as test_client:
+            with test_client.session_transaction() as session:
+                session['email'] = email
+            yield test_client
+
+    def setup_test_games(self):
+        self.LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
+        OTHER_EMAIL_1 = 'rando@opponent.net'
+        OTHER_EMAIL_2 = 'wotsit@thingy.com'
+        game1 = Game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
+        game2 = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
+        game3 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        game4 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        main.db.session.add(game1)
+        main.db.session.add(game2)
+        main.db.session.add(game3)
+        main.db.session.add(game4)
+        main.db.session.commit()
+        main.db.session.add(Move(
+            game_no=game4.id, move_no=0,
+            row=9, column=9, color=Move.Color.black))
+        return (game1, game2, game3, game4,)
+
     def test_anonymous_users_redirected_to_front(self):
         response = self.test_client.get(url_for('status'))
         self.assert_redirects(response, '/')
 
     def test_shows_links_to_existing_games(self):
-        LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
-        OTHER_EMAIL_1 = 'rando@opponent.net'
-        OTHER_EMAIL_2 = 'wotsit@thingy.com'
-        main.db.session.add(main.Game(
-            black=LOGGED_IN_EMAIL, white=OTHER_EMAIL_1))
-        main.db.session.add(main.Game(
-            black=OTHER_EMAIL_1, white=OTHER_EMAIL_2))
-        main.db.session.add(main.Game(
-            black=OTHER_EMAIL_1, white=LOGGED_IN_EMAIL))
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                session['email'] = LOGGED_IN_EMAIL
+        self.setup_test_games()
+        with self.set_email() as test_client:
             response = test_client.get(url_for('status'))
-            assert self.count_pattern_in(
-                    r"Game \d", str(response.get_data())
-            ) == 2
+        self.assertEqual(
+                self.count_pattern_in(r"Game \d", str(response.get_data())),
+                3)
+
+    def test_sends_games_to_correct_template_params(self):
+        game1, game2, game3, game4 = self.setup_test_games()
+        with self.set_email() as test_client:
+            with self.patch_render_template() as mock_render:
+                test_client.get(url_for('status'))
+                args, kwargs = mock_render.call_args
+        assert args[0] == "status.html"
+        your_turn_games = kwargs['your_turn_games']
+        not_your_turn_games = kwargs['not_your_turn_games']
+        assert game1 in your_turn_games
+        assert game4 in your_turn_games
+        assert game3 not in your_turn_games
+        assert game3 in not_your_turn_games
+
+    def test_games_come_out_sorted(self):
+        """Regression test: going via dictionaries can break sorting"""
+        for i in range(5):
+            db.session.add(Game(black='some@one.com', white='some@two.com'))
+            db.session.add(Game(black='some@two.com', white='some@one.com'))
+        with self.set_email('some@one.com') as test_client:
+            with self.patch_render_template() as mock_render:
+                test_client.get(url_for('status'))
+                args, kwargs = mock_render.call_args
+        your_turn_games = kwargs['your_turn_games']
+        not_your_turn_games = kwargs['not_your_turn_games']
+
+        def game_key(game):
+            return game.id
+        self.assertEqual(
+                your_turn_games,
+                sorted(your_turn_games, key=game_key))
+        self.assertEqual(
+                not_your_turn_games,
+                sorted(not_your_turn_games, key=game_key))
+
+
+class TestGetPlayerGames(unittest.TestCase):
+
+    def test_filters_correctly(self):
+        TEST_EMAIL = 'our_guy@our_guy.com'
+        OTHER_EMAIL_1 = 'other@other.com'
+        OTHER_EMAIL_2 = 'other2@other2.com'
+        game_not_involved = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
+        game_black = Game(black=TEST_EMAIL, white=OTHER_EMAIL_1)
+        game_white = Game(black=OTHER_EMAIL_1, white=TEST_EMAIL)
+        games = [game_not_involved, game_black, game_white]
+
+        result = main.get_player_games(TEST_EMAIL, games)
+        assert game_not_involved not in result
+        assert game_black in result
+        assert game_white in result
+
+
+class TestIsPlayersTurnInGame(unittest.TestCase):
+
+    def setUp(self):
+        self.TEST_EMAIL = 'us@we.com'
+        self.OTHER_EMAIL = 'other@other.com'
+        self.black_game = Game(black=self.TEST_EMAIL, white=self.OTHER_EMAIL)
+        self.white_game = Game(black=self.OTHER_EMAIL, white=self.TEST_EMAIL)
+
+    def test_black_first_move(self):
+        moves = []
+        self.assertTrue(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.black_game, moves))
+
+    def test_white_first_move(self):
+        moves = []
+        self.assertFalse(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.white_game, moves))
+
+    def test_black_second_move(self):
+        moves = [Move(
+            game_no=self.black_game.id, move_no=0,
+            row=9, column=9, color=Move.Color.black)]
+        self.assertFalse(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.black_game, moves))
+
+    def test_white_second_move(self):
+        moves = [Move(
+            game_no=self.white_game.id, move_no=0,
+            row=9, column=9, color=Move.Color.black)]
+        self.assertTrue(main.is_players_turn_in_game(
+            self.TEST_EMAIL, self.white_game, moves))
 
 
 class TestGameIntegrated(TestWithDb):
@@ -233,7 +334,8 @@ class TestGameIntegrated(TestWithDb):
 
     def test_passes_correct_goban_format_to_template(self):
         game = self.add_game()
-        mock_render = Mock(wraps=render_template)
+        mock_render = Mock(spec=render_template)
+        mock_render.return_value = ''
         with patch('app.main.render_template', mock_render):
             self.test_client.get('/game?game_no={game}'.format(game=game.id))
         args, kwargs = mock_render.call_args
@@ -245,7 +347,7 @@ class TestGameIntegrated(TestWithDb):
     def test_writes_passed_valid_move_to_db(self):
         game = self.add_game()
         assert Move.query.all() == []
-        with self.suppress_render_template():
+        with self.patch_render_template():
             self.test_client.get(
                     '/game?game_no={game}&move_no=0&row=16&column=15'
                     .format(game=game.id)
@@ -267,7 +369,7 @@ class TestGameIntegrated(TestWithDb):
     def test_can_add_stones_to_two_games(self):
         game1 = self.add_game()
         game2 = self.add_game()
-        with self.suppress_render_template():
+        with self.patch_render_template():
             self.test_client.get(
                     '/game?game_no={game}&move_no=0&row=3&column=15'
                     .format(game=game1.id)
