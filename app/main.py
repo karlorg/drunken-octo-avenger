@@ -73,14 +73,7 @@ def status():
     if 'email' not in session:
         return redirect('/')
     logged_in_email = session['email']
-    all_games = Game.query.all()
-    current_player_games = get_player_games(logged_in_email, all_games)
-    games_to_moves = [
-            (game, Move.query.filter(Move.game_no == game.id).all(),)
-            for game in current_player_games
-    ]
-    your_turn_games, not_your_turn_games = partition_by_turn(
-            logged_in_email, games_to_moves)
+    your_turn_games, not_your_turn_games = get_status_lists(logged_in_email)
     return render_template_with_email(
             "status.html",
             your_turn_games=your_turn_games,
@@ -175,6 +168,21 @@ def get_img_array_from_moves(moves):
         elif move.color == Move.Color.white:
             goban[move.row][move.column] = IMG_PATH_WHITE
     return goban
+
+def get_status_lists(player_email):
+    """Return two lists of games for the player, split by on-turn or not.
+
+    Accesses database.
+    """
+    all_games = Game.query.all()
+    current_player_games = get_player_games(player_email, all_games)
+    games_to_moves = [
+            (game, Move.query.filter(Move.game_no == game.id).all(),)
+            for game in current_player_games
+    ]
+    your_turn_games, not_your_turn_games = partition_by_turn(
+            player_email, games_to_moves)
+    return (your_turn_games, not_your_turn_games,)
 
 def get_player_games(player_email, games):
     """Filter `games` to those involving player_email.
