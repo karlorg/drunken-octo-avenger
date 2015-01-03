@@ -18,6 +18,8 @@ import requests
 from wtforms import StringField
 from wtforms.validators import DataRequired, Email
 
+from config import DOMAIN
+
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
 IMG_PATH_BLACK = '/static/images/goban/b.gif'
@@ -87,7 +89,7 @@ def persona_login():
         abort(400)
     data = {
             'assertion': request.form['assertion'],
-            'audience': 'http://localhost:5000',
+            'audience': DOMAIN,
     }
     response = requests.post(
             'https://verifier.login.persona.org/verify',
