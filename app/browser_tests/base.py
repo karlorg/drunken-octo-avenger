@@ -6,7 +6,10 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 from future import standard_library
 standard_library.install_aliases()
 
+import os
+import sys
 import time
+import unittest
 
 from flask.ext.testing import LiveServerTestCase
 from selenium import webdriver
@@ -18,6 +21,44 @@ from ..main import app, db, Game, Move
 
 
 class SeleniumTest(LiveServerTestCase):
+
+    def __call__(self, result=None):
+        """LiveServerTestCase sets up the server in its __call__ method
+
+        Override to allow testing against remote servers using the LIVESERVER
+        environment variable.
+        """
+        try:
+            server = os.environ['LIVESERVER']
+        except KeyError:
+            server = ''
+        if server != '':
+            # if you change this safety guard of requiring 'staging' in the
+            # hostname, please try to replace it with something that still
+            # prevents testing against the live site
+            if 'staging' in server:
+                self.server_url = 'http://' + server
+                # skipping LiveServerTestCase, which would create the testing
+                # app, and going straight to unittest to run the tests
+                unittest.TestCase.__call__(self, result)
+                # skip usual setup
+                return
+            else:
+                print("'staging' not found in host name, aborting")
+                sys.exit(1)
+        self.server_url = None
+        # super().__call__ runs the tests, so we need to set server_url first
+        super().__call__(result)
+
+    def get_server_url(self):
+        """Return the url of the test server
+
+        Overrides the method from flask-testing
+        """
+        if self.server_url is not None:
+            return self.server_url
+        else:
+            return super(SeleniumTest, self).get_server_url()
 
     def create_app(self):
         ## for some reason the SQL Alchemy URI is removed between setup in the
