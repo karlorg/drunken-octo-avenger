@@ -16,6 +16,20 @@ def _get_manage_dot_py(host):
     )
 
 
+def clear_games_for_player_on_server(email):
+    run('{manage_py} clear_games_for_player {email}'.format(
+        manage_py=_get_manage_dot_py(env.host),
+        email=email,
+    ))
+    return
+
+def create_game_on_server(black_email, white_email):
+    run('{manage_py} create_game {black_email} {white_email}'.format(
+        manage_py=_get_manage_dot_py(env.host),
+        black_email=black_email, white_email=white_email,
+    ))
+    return
+
 def create_session_on_server(email):
     response = run('{manage_py} create_login_session {email}'.format(
         manage_py=_get_manage_dot_py(env.host),

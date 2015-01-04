@@ -45,7 +45,7 @@ def clear_games_for_player_on_server(host, email):
     """Use fabric to clear a player's games on the remote server."""
     _run_fab_command(
             host,
-            'clear_games_for_player:email={}'.format(email))
+            'clear_games_for_player_on_server:email={}'.format(email))
 
 def create_game_on_server(host, black_email, white_email):
     """Use fabric to create a custom game on the remote server."""
