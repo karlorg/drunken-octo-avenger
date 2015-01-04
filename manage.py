@@ -6,9 +6,38 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 
 from flask.ext.script import Manager
 
-from app.main import app
+from app.main import Game, Move, app, db
 
 manager = Manager(app)
+
+@manager.command
+def clear_games_for_player(email):
+    """Clear all of `email`'s games from the database."""
+    clear_games_for_player_internal(email)
+
+def clear_games_for_player_internal(email):
+    """Clear all of `email`'s games from the database."""
+    games_as_black = Game.query.filter(Game.black == email).all()
+    games_as_white = Game.query.filter(Game.white == email).all()
+    games = games_as_black + games_as_white
+    moves = Move.query.filter(Move.game in games).all()
+    for move in moves:
+        db.session.delete(move)
+    for game in games:
+        db.session.delete(game)
+        db.session.commit()
+
+@manager.command
+def create_game(black_email, white_email):
+    """Create a custom game in the database without using the web."""
+    create_game_internal(black_email, white_email)
+
+def create_game_internal(black_email, white_email):
+    game = Game()
+    game.black = black_email
+    game.white = white_email
+    db.session.add(game)
+    db.session.commit()
 
 @manager.command
 def create_login_session(email):
