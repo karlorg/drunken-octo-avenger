@@ -18,6 +18,8 @@ from selenium.common.exceptions import WebDriverException
 from collections import namedtuple
 
 from ..main import app, db, Game, Move
+import manage
+from .server_tools import create_session_on_server
 
 
 class SeleniumTest(LiveServerTestCase):
@@ -33,11 +35,13 @@ class SeleniumTest(LiveServerTestCase):
         except KeyError:
             server = ''
         if server != '':
+            self.server_host = server
+            self.server_url = 'http://' + server
+            self.against_remote = True
             # if you change this safety guard of requiring 'staging' in the
             # hostname, please try to replace it with something that still
             # prevents testing against the live site
             if 'staging' in server:
-                self.server_url = 'http://' + server
                 # skipping LiveServerTestCase, which would create the testing
                 # app, and going straight to unittest to run the tests
                 unittest.TestCase.__call__(self, result)
@@ -46,9 +50,13 @@ class SeleniumTest(LiveServerTestCase):
             else:
                 print("'staging' not found in host name, aborting")
                 sys.exit(1)
-        self.server_url = None
-        # super().__call__ runs the tests, so we need to set server_url first
-        super().__call__(result)
+        else:
+            self.server_host = None
+            self.server_url = None
+            self.against_remote = False
+            # super().__call__ runs the tests, so we need to set server_url
+            # first
+            super().__call__(result)
 
     def get_server_url(self):
         """Return the url of the test server
@@ -106,24 +114,22 @@ class SeleniumTest(LiveServerTestCase):
             remaining = remaining[group_size:]
 
     def create_login_session(self, email):
-        """Set a cookie for a pre-authenticated login session."""
-        interface = app.session_interface
-        session = interface.session_class()
-        session['email'] = email
-        # the following process for creating the cookie value is copied from
-        # the Flask source; if the cookies created by this method stop
-        # working, see if a Flask update has changed the cookie creation
-        # procedure in flask/sessions.py -> SecureCookieSessionInterface
-        # (currently the default) -> save_session
-        cookie_value = (
-                interface.get_signing_serializer(app).dumps(dict(session))
-        )
+        """Set a cookie for a pre-authenticated login session.
+
+        If running locally, simply call the internal login session creator.  If
+        running against a remote server, use the server tools to create the
+        session remotely.
+        """
+        if self.against_remote:
+            cookie = create_session_on_server(self.server_host, email)
+        else:
+            cookie = manage.create_login_session_internal(email)
         # to set a cookie we need to load a page; 404 loads fastest
         self.browser.get(self.get_server_url() + "/404_no_such_url")
         self.browser.add_cookie(dict(
-            name=app.session_cookie_name,
-            value=cookie_value,
-            path=interface.get_cookie_path(app),
+            name=cookie['name'],
+            value=cookie['value'],
+            path=cookie['path'],
         ))
 
     def create_game(self, black_email, white_email):
