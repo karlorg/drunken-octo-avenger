@@ -17,9 +17,9 @@ from selenium.common.exceptions import WebDriverException
 
 from collections import namedtuple
 
-from ..main import app, db, Game, Move
+from ..main import app
 import manage
-from .server_tools import create_session_on_server
+from . import server_tools
 
 
 class SeleniumTest(LiveServerTestCase):
@@ -121,7 +121,8 @@ class SeleniumTest(LiveServerTestCase):
         session remotely.
         """
         if self.against_remote:
-            cookie = create_session_on_server(self.server_host, email)
+            cookie = server_tools.create_session_on_server(
+                    self.server_host, email)
         else:
             cookie = manage.create_login_session_internal(email)
         # to set a cookie we need to load a page; 404 loads fastest
@@ -135,28 +136,24 @@ class SeleniumTest(LiveServerTestCase):
     def create_game(self, black_email, white_email):
         """Create a custom game in the database without using the web.
 
-        This is separated into a method primarily to ease making this a remote
-        command when we get to testing against a staging server."""
-        game = Game()
-        game.black = black_email
-        game.white = white_email
-        db.session.add(game)
-        db.session.commit()
+        Go via fabric if testing against a remote server.
+        """
+        if self.against_remote:
+            server_tools.create_game_on_server(
+                    self.server_host, black_email, white_email)
+        else:
+            manage.create_game_internal(black_email, white_email)
 
     def clear_games_for_player(self, email):
         """Clear all of `email`'s games from the database.
 
-        This is separated into a method primarily to ease making this a remote
-        command when we get to testing against a staging server."""
-        games_as_black = Game.query.filter(Game.black == email).all()
-        games_as_white = Game.query.filter(Game.white == email).all()
-        games = games_as_black + games_as_white
-        moves = Move.query.filter(Move.game in games).all()
-        for move in moves:
-            db.session.delete(move)
-        for game in games:
-            db.session.delete(game)
-        db.session.commit()
+        Go via fabric if testing against a remote server.
+        """
+        if self.against_remote:
+            server_tools.clear_games_for_player_on_server(
+                    self.server_host, email)
+        else:
+            manage.clear_games_for_player_internal(email)
 
     Count = namedtuple('Count', ['white', 'black', 'empty'])
     """Return type for count_stones_and_points"""
