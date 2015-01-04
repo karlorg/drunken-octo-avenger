@@ -6,14 +6,15 @@
 * running a web server
 * web server reverse proxys requests for sites
 * web server aliases requests for /static/ to appropiate dir
+* wsgi server running, hopefully managed by sysvinit, upstart etc.
 
 # doesn't need root
 
-* .ssh/authorized_keys has keys of machines that may auto-deploy here
-* site root dir ~/sites/[SITENAME]/, call this [ROOT]
-* clone repo to [ROOT]/repo
-* make virtualenv in [ROOT]/virtualenv
-* install p3reqs.txt or requirements.txt into virtualenv using pip -r
+* `.ssh/authorized_keys` has keys of machines that may auto-deploy here
+* site root dir `~/sites/[SITENAME]/`, call this `[ROOT]`
+* clone repo to `[ROOT]/repo`
+* make virtualenv in `[ROOT]/virtualenv`
+* install `p3reqs.txt` or `requirements.txt` into virtualenv using `pip -r`
 * generate new secret key in `config.py`
 * disable DEBUG in `config.py`
 * replace `localhost` with correct hostname in `config.py`
