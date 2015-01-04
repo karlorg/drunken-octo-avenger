@@ -30,6 +30,9 @@ Or for an individual module/class/method:
 
     python -m unittest [<component path>]
 
+For notes on running browser automation tests against remote servers, see the
+markdown file in `app/browser_tests`.
+
 ### Javascript code
 
 Open `app/static/tests/tests.html` in your browser.
