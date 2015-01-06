@@ -7,8 +7,7 @@ You'll need to do the following to be able to run browser tests against a
 remote server:
 
 * The directory structure on the server needs to be the default provided by the
-  deployment scripts (at time of writing these don't exist, but see
-  `deployment-notes.markdown` for a description).
+  deployment scripts.
 
 * The user account that owns the files on the remote server should have ssh
   authorized keys set up so that you can ssh to it without a password.  This is

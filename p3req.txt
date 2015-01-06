@@ -13,6 +13,7 @@ argparse==1.2.1
 decorator==3.4.0
 enum34==1.0.4
 future==0.14.2
+gunicorn==19.1.1
 itsdangerous==0.24
 mock==1.0.1
 pbr==0.10.0
