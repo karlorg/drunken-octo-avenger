@@ -13,6 +13,19 @@ from .base import SeleniumTest
 
 class GameTest(SeleniumTest):
 
+    def assert_no_clickable_board_points(self):
+        try:
+            self.find_empty_point_to_click()
+        except (AssertionError, AttributeError):
+            return
+        self.fail('clickable board points found off-turn')
+
+    def assert_and_click_clickable_board_point(self):
+        try:
+            self.find_empty_point_to_click().click()
+        except (AssertionError, AttributeError):
+            self.fail('no clickable board point found')
+
     def test_game_page(self):
         """Test game display and placing stones through the web interface."""
 
@@ -50,7 +63,7 @@ class GameTest(SeleniumTest):
         self.assertEqual(19*19, empty, "did not find 19x19 board imgs")
 
         ## check one of those images can be loaded
-        img = self.browser.find_element_by_css_selector('table.goban a img')
+        img = self.browser.find_element_by_css_selector('table.goban img')
         response = urlopen(img.get_attribute('src'))
         self.assertEqual(response.getcode(), 200)
         try:
@@ -62,10 +75,7 @@ class GameTest(SeleniumTest):
             pass  ## fine, we got image data
 
         # user clicks an empty spot, which is a link
-        try:
-            self.find_empty_point_to_click().click()
-        except (AssertionError, AttributeError):
-            self.fail('no clickable board point found')
+        self.assert_and_click_clickable_board_point()
 
         # now on the board is one black stone and 19x19 - 1 empty points
         counts = self.count_stones_and_points()
@@ -74,12 +84,7 @@ class GameTest(SeleniumTest):
 
         # since it's not player one's turn any more, there should be no
         # clickable links
-        try:
-            self.find_empty_point_to_click()
-        except AssertionError:
-            pass
-        else:
-            self.fail("clickable board links found off-turn")
+        self.assert_no_clickable_board_points()
 
         # -- PLAYER TWO
         # now the white player logs in and visits the same game
@@ -88,10 +93,7 @@ class GameTest(SeleniumTest):
         self.browser.find_element_by_link_text(latest_game_text).click()
 
         # user clicks another empty spot
-        try:
-            self.find_empty_point_to_click().click()
-        except (AssertionError, AttributeError):
-            self.fail('no clickable board point found')
+        self.assert_and_click_clickable_board_point()
 
         # now one black stone, one white, rest empty
         counts = self.count_stones_and_points()
@@ -112,9 +114,4 @@ class GameTest(SeleniumTest):
         self.assertEqual(19*19, empty, "second board not empty")
 
         # with no clickable links, since we're white in this game
-        try:
-            self.find_empty_point_to_click()
-        except AssertionError:
-            pass
-        else:
-            self.fail("clickable board links found off-turn")
+        self.assert_no_clickable_board_points()
