@@ -1,4 +1,4 @@
-/* global $, module, test, equal, ok, navigator, tesuji_charm */
+/* global window, $, module, test, equal, ok, navigator, tesuji_charm */
 (function() {
     "use strict";
 
@@ -55,31 +55,61 @@
 
     module("Basic game page", {
         setup: function() {
-            window.tesuji_charm.game_basic.initialize();
+            tesuji_charm.game_no = 42;
+            tesuji_charm.move_no = 0;
+            tesuji_charm.game_url = '/game';
+            tesuji_charm.game_basic.initialize();
         }
-    });
-
-    test("clicking an empty point shows a black stone", function() {
-        var $point = $("table.goban td").first();
-        var $img = $point.find("img").first();
-        ok($img.attr("src").indexOf("e.gif") > -1,
-           "point is initially empty (e.gif)");
-        $point.click();
-        ok($img.attr("src").indexOf("e.gif") === -1,
-            "after click, no longer empty");
-        ok($img.attr("src").indexOf("b.gif") > -1,
-            "after click, contains b.gif");
     });
 
     test("clicking multiple points moves black stone", function() {
         var $point1 = $("table.goban td").first();
+        var $img1 = $point1.find("img").first();
         var $point2 = $point1.next();
+        var $img2 = $point2.find("img").first();
+        ok($img1.attr('src').indexOf("e.gif") > -1,
+           "first point is initially empty (e.gif)");
         $point1.click();
+        ok($img1.attr('src').indexOf("e.gif") === -1,
+            "after click, no longer empty");
+        ok($img1.attr('src').indexOf("b.gif") > -1,
+            "after click, contains b.gif");
         $point2.click();
-        ok($point1.find("img").attr("src").indexOf("e.gif") > -1,
-           "first clicked point clear");
-        ok($point2.find("img").attr("src").indexOf("b.gif") > -1,
-            "second clicked point black");
+        ok($img1.attr("src").indexOf("e.gif") > -1,
+           "after second click, first clicked point clear");
+        ok($img2.attr("src").indexOf("b.gif") > -1,
+            "after second click, second clicked point black");
+    });
+
+    test("Confirm button disabled until stone placed", function() {
+        var $button = $('button.confirm_button');
+        equal($button.prop('disabled'), true
+            , "starts out disabled");
+        $('table.goban td').first().click();
+        equal($button.prop('disabled'), false
+            , "enabled after stone placed");
+    });
+
+    test("Confirm button sends request with new move", function() {
+        var original_get = $.get;
+        var call_params = null;
+        $.get = function(url, data) {
+            call_params = { url: url, data: data };
+        };
+        $("table.goban td").first().click();
+        $("table.goban td").first().next().click();
+        $("button.confirm_button").first().click();
+        ok(call_params !== null, "ajax request sent");
+        var data = call_params.data;
+        equal(data.game_no, tesuji_charm.game_no
+            , 'game no in request data');
+        equal(data.move_no, tesuji_charm.move_no
+            , 'move no in request data');
+        equal(data.row, 0
+            , 'row no in request data');
+        equal(data.column, 1
+            , 'column no in request data');
+        $.get = original_get;
     });
 
 })();

@@ -95,6 +95,15 @@ class GameTest(SeleniumTest):
         except UnicodeDecodeError:
             pass  ## fine, we got image data
 
+        # no (usable) confirm button appears yet
+        try:
+            button = self.assert_and_get_confirm_button()
+        except AssertionError:
+            pass
+        else:
+            if not button.get_attribute('disabled'):
+                self.fail("Confirm button clickable before stone placed")
+
         # user clicks an empty spot, which is a link
         self.assert_and_click_clickable_board_point()
         # now on the board is one black stone and 19x19 - 1 empty points
@@ -127,6 +136,8 @@ class GameTest(SeleniumTest):
         self.assertEqual(counts.empty, 19*19-2)
         self.assertEqual(counts.black, 1)
         self.assertEqual(counts.white, 1)
+        # confirm move
+        self.assert_and_get_confirm_button().click()
 
         # reload front page and get the other game
         self.browser.get(self.get_server_url())

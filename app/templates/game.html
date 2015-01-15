@@ -17,10 +17,17 @@
     </tr>
     {% endfor %}
 </table>
-<button name='confirm_button'>Confirm</button>
+<button class="confirm_button" name='confirm_button'>Confirm</button>
 {% endblock %}
 
 {% block page_scripts %}
+<script>
+window.tesuji_charm =
+      { game_no: {{ game_no }}
+      , move_no: {{ move_no }}
+      , game_url: "{{ url_for('game') }}"
+};
+</script>
 <script src="static/game_basic.js"></script>
 <script>
 window.tesuji_charm.game_basic.initialize();
