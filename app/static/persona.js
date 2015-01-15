@@ -39,7 +39,7 @@
                     { type: 'POST'
                     , url: '/persona/login' // This is a URL on your website.
                     , data: {assertion: assertion}
-                    , success: function(res, status, xhr) {
+                    , success: function(res, status, xhr) { 
                         window.location.reload();
                     }
                     , error: function(xhr, status, err) {
@@ -57,7 +57,7 @@
                 $.ajax(
                     { type: 'POST'
                     , url: '/logout' // This is a URL on your website.
-                    , success: function(res, status, xhr) {
+                    , success: function(res, status, xhr) { 
                         window.location.reload();
                     }
                     , error: function(xhr, status, err) {

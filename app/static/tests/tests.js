@@ -1,6 +1,8 @@
-/* global $, test, equal, navigator, tesuji_charm */
+/* global $, module, test, equal, ok, navigator, tesuji_charm */
 (function() {
     "use strict";
+
+    module("Persona");
 
     test("init function sets request and logout callbacks", function() {
         var request_called = false;
@@ -49,6 +51,35 @@
         equal(logout_called, false);
         $("#logout").click();
         equal(logout_called, true, "logout callback called correctly");
+    });
+
+    module("Basic game page", {
+        setup: function() {
+            window.tesuji_charm.game_basic.initialize();
+        }
+    });
+
+    test("clicking an empty point shows a black stone", function() {
+        var $point = $("table.goban td").first();
+        var $img = $point.find("img").first();
+        ok($img.attr("src").indexOf("e.gif") > -1,
+           "point is initially empty (e.gif)");
+        $point.click();
+        ok($img.attr("src").indexOf("e.gif") === -1,
+            "after click, no longer empty");
+        ok($img.attr("src").indexOf("b.gif") > -1,
+            "after click, contains b.gif");
+    });
+
+    test("clicking multiple points moves black stone", function() {
+        var $point1 = $("table.goban td").first();
+        var $point2 = $point1.next();
+        $point1.click();
+        $point2.click();
+        ok($point1.find("img").attr("src").indexOf("e.gif") > -1,
+           "first clicked point clear");
+        ok($point2.find("img").attr("src").indexOf("b.gif") > -1,
+            "second clicked point black");
     });
 
 })();

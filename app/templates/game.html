@@ -19,3 +19,10 @@
 </table>
 <button name='confirm_button'>Confirm</button>
 {% endblock %}
+
+{% block page_scripts %}
+<script src="static/game_basic.js"></script>
+<script>
+window.tesuji_charm.game_basic.initialize();
+</script>
+{% endblock %}
