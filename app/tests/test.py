@@ -332,7 +332,7 @@ class TestGameIntegrated(TestWithDb):
         response = self.test_client.get('/game')
         self.assert_redirects(response, '/')
 
-    def test_passes_correct_goban_format_to_template(self):
+    def test_passes_correct_goban_format_and_params_to_template(self):
         game = self.add_game()
         mock_render = Mock(spec=render_template)
         mock_render.return_value = ''
@@ -343,6 +343,7 @@ class TestGameIntegrated(TestWithDb):
         goban = kwargs['goban']
         assert goban[0][0] == str(goban[0][0])
         assert kwargs['move_no'] == int(kwargs['move_no'])
+        assert int(kwargs['move_no']) == 0
 
     def test_writes_passed_valid_move_to_db(self):
         game = self.add_game()
@@ -374,19 +375,6 @@ class TestGameIntegrated(TestWithDb):
         moves = Move.query.all()
         assert len(moves) == 0
         assert 'not your turn' in str(response.get_data())
-
-    @unittest.skip('points should now trigger JS')
-    def test_links_go_to_right_move_no(self):
-        game = self.add_game()
-        move = Move(
-                game_no=game.id, move_no=0,
-                row=16, column=15, color=Move.Color.black)
-        main.db.session.add(move)
-        main.db.session.commit()
-        with self.set_email('white@white.com') as test_client:
-            response = test_client.get(
-                    '/game?game_no={0}'.format(game.id))
-        assert 'move_no=1' in str(response.get_data())
 
     def test_no_links_after_playing_a_move(self):
         # regression: testing specifically the response to playing a move due
