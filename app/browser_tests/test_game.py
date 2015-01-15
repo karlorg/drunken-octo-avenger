@@ -26,6 +26,27 @@ class GameTest(SeleniumTest):
         except (AssertionError, AttributeError):
             self.fail('no clickable board point found')
 
+    def find_confirm_button(self):
+        """On a game board page, return the Confirm button.
+
+        If the button is not available, raise AssertionError so that `wait_for`
+        can retry this.
+        """
+        buttons = self.browser.find_elements_by_tag_name('button')
+        for button in buttons:
+            if 'Confirm' in button.text:
+                return button
+        else:
+            raise AssertionError
+
+    def assert_and_get_confirm_button(self):
+        try:
+            button = self.find_confirm_button()
+        except (AssertionError, AttributeError):
+            self.fail('Confirm button not found')
+        return button
+
+
     def test_game_page(self):
         """Test game display and placing stones through the web interface."""
 
@@ -76,15 +97,21 @@ class GameTest(SeleniumTest):
 
         # user clicks an empty spot, which is a link
         self.assert_and_click_clickable_board_point()
-
         # now on the board is one black stone and 19x19 - 1 empty points
         counts = self.count_stones_and_points()
         self.assertEqual(counts.empty, 19*19-1)
         self.assertEqual(counts.black, 1)
-
-        # since it's not player one's turn any more, there should be no
-        # clickable links
-        self.assert_no_clickable_board_points()
+        # a Confirm button is now available
+        self.assert_and_get_confirm_button()
+        # we click a different point, and now our new stone is on that point
+        # instead of the previous one
+        self.assert_and_click_clickable_board_point()
+        counts = self.count_stones_and_points()
+        self.assertEqual(counts.empty, 19*19-1)
+        self.assertEqual(counts.black, 1)
+        ## TODO: compare locations of stone to previous one
+        # we confirm this new move
+        self.assert_and_get_confirm_button().click()
 
         # -- PLAYER TWO
         # now the white player logs in and visits the same game

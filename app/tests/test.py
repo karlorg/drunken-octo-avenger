@@ -375,6 +375,7 @@ class TestGameIntegrated(TestWithDb):
         assert len(moves) == 0
         assert 'not your turn' in str(response.get_data())
 
+    @unittest.skip('points should now trigger JS')
     def test_links_go_to_right_move_no(self):
         game = self.add_game()
         move = Move(

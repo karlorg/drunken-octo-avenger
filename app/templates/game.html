@@ -8,8 +8,7 @@
         {% for point in row %}
         <td>
             {% if with_links %}
-            <a href="{{ url_for('game', column=loop.index0, row=rowloop.index0,
-                game_no=game_no, move_no=move_no) }}"><img src="{{ point }}" /></a>
+            <a href="#"><img src="{{ point }}" /></a>
             {% else %}
             <img src="{{ point }}" />
             {% endif %}
@@ -18,4 +17,5 @@
     </tr>
     {% endfor %}
 </table>
+<button name='confirm_button'>Confirm</button>
 {% endblock %}
