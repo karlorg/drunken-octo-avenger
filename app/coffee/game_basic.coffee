@@ -1,9 +1,7 @@
-unless window.tesuji_charm?
-  window.tesuji_charm = {}
+window.tesuji_charm ?= {}
 tesuji_charm = window.tesuji_charm
 
-unless tesuji_charm.game_basic?
-  tesuji_charm.game_basic = {}
+tesuji_charm.game_basic ?= {}
 game_basic = tesuji_charm.game_basic
 
 $new_stone = null

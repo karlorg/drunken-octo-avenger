@@ -1,9 +1,7 @@
-unless window.tesuji_charm?
-  window.tesuji_charm = {}
+window.tesuji_charm ?= {}
 tesuji_charm = window.tesuji_charm
 
-unless tesuji_charm.persona?
-  tesuji_charm.persona = {}
+tesuji_charm.persona ?= {}
 persona = tesuji_charm.persona
 
 persona.initialize = (navigator) ->
