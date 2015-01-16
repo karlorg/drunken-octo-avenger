@@ -10,6 +10,15 @@ haven't picked a Python version (yet); if I haven't messed up, 2.7 and 3.4
 should both work.  Trying to stay compatible with both.  See 'compatibility'
 section below.
 
+## compilation
+
+So far the only code that needs compiling is the coffeescript in `app/coffee`
+(and at time of writing, the resulting Javascript is still included in the
+repo, so unless you're editing it, you shouldn't need to compile even that).
+In the repository root directory, run
+
+    cake build
+
 ## running
 
 (from virtualenv)
