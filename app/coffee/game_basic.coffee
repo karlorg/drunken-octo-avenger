@@ -1,3 +1,7 @@
+# Javascript controlling the 'basic' interface used to select a move on a game
+# display page (as opposed to more complex interfaces that may be used for
+# conditional move selection etc.)
+
 window.tesuji_charm ?= {}
 tesuji_charm = window.tesuji_charm
 
