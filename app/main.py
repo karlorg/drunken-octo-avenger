@@ -190,6 +190,8 @@ def get_img_array_from_moves(moves):
             goban[move.row][move.column] = IMG_PATH_BLACK
         elif move.color == Move.Color.white:
             goban[move.row][move.column] = IMG_PATH_WHITE
+        else:
+            assert False, "unknown move color"
     return goban
 
 def get_status_lists(player_email):
