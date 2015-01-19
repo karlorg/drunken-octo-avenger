@@ -52,7 +52,7 @@ def game():
     check_args_for_move_and_play_if_good(game_no)
     # now that new move has been checked, render the board
     game = Game.query.filter(Game.id == game_no).first()
-    moves = Move.query.filter(Move.game_no == game_no).all()
+    moves = game.moves
     is_your_turn = is_players_turn_in_game(game, moves)
     goban = get_img_array_from_moves(moves)
     return render_template_with_email(
@@ -150,7 +150,7 @@ def check_args_for_move_and_play_if_good(game_no):
     Non-pure: accesses request, session, and db.
     """
     game = Game.query.filter(Game.id == game_no).first()
-    moves = Move.query.filter(Move.game_no == game_no).all()
+    moves = game.moves
     stone = get_stone_if_args_good(args=request.args, moves=moves)
     if stone is not None:
         if is_players_turn_in_game(game, moves):
@@ -200,7 +200,7 @@ def get_status_lists(player_email):
     all_games = Game.query.all()
     current_player_games = get_player_games(player_email, all_games)
     games_to_moves = [
-            (game, Move.query.filter(Move.game_no == game.id).all(),)
+            (game, game.moves,)
             for game in current_player_games
     ]
     your_turn_games, not_your_turn_games = partition_by_turn(
