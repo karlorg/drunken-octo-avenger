@@ -233,13 +233,13 @@ def partition_by_turn(player_email, games_to_moves):
     return (yes_turn, no_turn,)
 
 def is_players_turn_in_game(game, moves, email=None):
-    """Test if it's `player_email`'s turn to move in `game` given `moves`.
+    """Test if it's `email`'s turn to move in `game` given `moves`.
 
     If `email` is passed, this acts as a pure function; otherwise, it reads
     email from the session.
 
-    `moves` should be the list of moves associated with
-    `game`, since this function won't access the database itself.
+    `moves` should be the list of moves associated with `game`, since this
+    function won't access the database itself.
     """
     if email is None:
         try:
