@@ -83,3 +83,4 @@ test 'Confirm button sends request with new move', ->
   equal data.move_no, tesuji_charm.move_no, 'move no in request data'
   equal data.row, 0, 'row no in request data'
   equal data.column, 1, 'column no in request data'
+  $.get = original_get
