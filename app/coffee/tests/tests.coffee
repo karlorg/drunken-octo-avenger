@@ -36,6 +36,7 @@ test 'init function sets request and logout callbacks', ->
   $('#logout').click()
   equal logout_called, true, 'logout callback called correctly'
 
+
 module 'Basic game page',
   setup: ->
     tesuji_charm.game_no = 42
