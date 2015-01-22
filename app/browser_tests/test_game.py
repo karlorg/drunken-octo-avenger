@@ -68,10 +68,12 @@ class GameTest(SeleniumTest):
             return self.browser.find_element_by_id('your_turn_games')
         your_turn_games = self.wait_for(find_your_turn_games)
         # select the most recent game
-        latest_game_link = (
-                your_turn_games.find_elements_by_partial_link_text('Game ')[-1]
+        game_links = (
+                your_turn_games.find_elements_by_partial_link_text('Game ')
         )
+        latest_game_link = game_links[-1]
         latest_game_text = latest_game_link.text
+        other_game_text = game_links[-2].text
         latest_game_link.click()
 
         # on the game page is a table with class 'goban'
@@ -143,7 +145,7 @@ class GameTest(SeleniumTest):
         self.browser.get(self.get_server_url())
         self.wait_for(find_your_turn_games)
         # select the most recent game
-        link = self.browser.find_elements_by_partial_link_text('Game ')[-2]
+        link = self.browser.find_element_by_link_text(other_game_text)
         link.click()
 
         # we should be back to an empty board
