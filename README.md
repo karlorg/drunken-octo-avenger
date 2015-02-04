@@ -10,6 +10,9 @@ haven't picked a Python version (yet); if I haven't messed up, 2.7 and 3.4
 should both work.  Trying to stay compatible with both.  See 'compatibility'
 section below.
 
+Run `db_remake.py` to create the database (by default it will appear one
+directory level higher than your repository root).
+
 ## compilation
 
 So far the only code that needs compiling is the coffeescript in `app/coffee`
