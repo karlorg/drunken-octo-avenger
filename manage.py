@@ -3,6 +3,7 @@ from __future__ import (
 from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
+import os
 
 from flask.ext.script import Manager
 
@@ -73,6 +74,16 @@ def create_login_session_internal(email):
             value=cookie_value,
             path=interface.get_cookie_path(app),
     )
+
+@manager.command
+def test(module):
+	os.system("python -m unittest discover " + module)
+
+
+@manager.command
+def test_all():
+	test(' ')
+
 
 if __name__ == "__main__":
     manager.run()
