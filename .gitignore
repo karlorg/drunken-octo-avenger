@@ -12,3 +12,6 @@ venv/
 
 Cakefile.js
 app/coffee/*.js
+
+node_modules/
+npm-debug.log
