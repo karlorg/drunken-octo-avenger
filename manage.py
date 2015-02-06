@@ -76,13 +76,17 @@ def create_login_session_internal(email):
     )
 
 @manager.command
-def test(module):
-	os.system("python -m unittest discover " + module)
+def test_module(module):
+	os.system("python -m unittest " + module)
 
+@manager.command
+def test_package(directory):
+	os.system("python -m unittest discover " + directory)
 
 @manager.command
 def test_all():
-	test(' ')
+	os.system("python -m unittest discover")
+	
 
 
 if __name__ == "__main__":
