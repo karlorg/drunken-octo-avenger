@@ -49,14 +49,21 @@ class FrontPageTest(SeleniumTest):
         ## we won't use the fake login session creator for this test; we want
         ## to test the actual login procedure.
 
+        def find_login():
+            return self.browser.find_element_by_id('persona_login')
+
+        def find_email_entry():
+            return self.browser.find_element_by_id('authentication_email')
+
         # loading the site's base url for the first time shows a button
         # to log in with Mozilla Persona
         self.browser.get(self.get_server_url())
-        persona_button = self.browser.find_element_by_id('persona_login')
+        persona_button = find_login()
         # push the button and enter mockmyid login details
         persona_button.click()
         self.switch_to_new_window('Mozilla Persona')
-        email_input = self.browser.find_element_by_id('authentication_email')
+        email_input = self.wait_for(find_email_entry)
+        print(email_input)
         ## mockmyid.com will approve any email in its domain
         self.careful_keys(email_input, 'test@mockmyid.com')
         self.browser.find_element_by_tag_name('button').click()
@@ -74,9 +81,7 @@ class FrontPageTest(SeleniumTest):
         plogout_link.click()
         # we're back to a login link...
 
-        def find_login():
-            return self.browser.find_element_by_id('persona_login')
-        persona_button = self.wait_for(find_login, timeout=15)
+        persona_button = self.wait_for(find_login)
         # and no email display...
         try:
             email_display = self.browser.find_element_by_class_name(
