@@ -3,6 +3,7 @@ from __future__ import (
 from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
+import os
 
 from flask.ext.script import Manager
 
@@ -73,6 +74,25 @@ def create_login_session_internal(email):
             value=cookie_value,
             path=interface.get_cookie_path(app),
     )
+
+@manager.command
+def test_module(module):
+    os.system("python -m unittest " + module)
+
+@manager.command
+def test_package(directory):
+    os.system("python -m unittest discover " + directory)
+
+@manager.command
+def test_all():
+    os.system("python -m unittest discover")
+
+@manager.command
+def coverage():
+    os.system("COVERAGE_PROCESS_START='.coveragerc' coverage run --source app manage.py test_all")
+    os.system("coverage combine")
+    os.system("coverage report -m")
+    os.system("coverage html")
 
 if __name__ == "__main__":
     manager.run()
