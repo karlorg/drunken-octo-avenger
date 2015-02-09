@@ -29,6 +29,7 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
 
     @contextmanager
     def set_email(self, email=None):
+        """Set the logged in email value in the session object."""
         if email is None:
             email = self.LOGGED_IN_EMAIL
         with main.app.test_client() as test_client:
@@ -38,7 +39,7 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
 
     @contextmanager
     def patch_render_template(self):
-        """Patches out render_template with a mock.
+        """Patch out render_template with a mock.
 
         Use when the return value of the view is not important to the test;
         rendering templates uses a ton of runtime."""
