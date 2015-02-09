@@ -77,17 +77,22 @@ def create_login_session_internal(email):
 
 @manager.command
 def test_module(module):
-	os.system("python -m unittest " + module)
+    os.system("python -m unittest " + module)
 
 @manager.command
 def test_package(directory):
-	os.system("python -m unittest discover " + directory)
+    os.system("python -m unittest discover " + directory)
 
 @manager.command
 def test_all():
-	os.system("python -m unittest discover")
-	
+    os.system("python -m unittest discover")
 
+@manager.command
+def coverage():
+    os.system("COVERAGE_PROCESS_START='.coveragerc' coverage run --source app manage.py test_all")
+    os.system("coverage combine")
+    os.system("coverage report -m")
+    os.system("coverage html")
 
 if __name__ == "__main__":
     manager.run()
