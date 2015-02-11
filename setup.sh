@@ -12,9 +12,9 @@ fi
 # virtual environment in.
 if [ $# -gt 1 ]
 then
-    VENV=$2
+    VENV="../$2"
 else
-    VENV="tmpvenv"
+    VENV="../tmpvenv"
 fi
 
 # Creating a virtual environment and which requirements file to use depends
@@ -30,7 +30,6 @@ fi
 
 # Finally we can go about creating the virtual environment and installing
 # all of the dependencies.
-cd ../
 ${PYVENV} ${VENV}
 source ${VENV}/bin/activate
 
@@ -39,5 +38,4 @@ source ${VENV}/bin/activate
 SITECUSTOMIZE="${VENV}/lib/python${PYTHONVERSION}/site-packages/sitecustomize.py"
 echo import coverage >> ${SITECUSTOMIZE}
 echo "coverage.process_startup()" >> ${SITECUSTOMIZE}
-cd drunken-octo-avenger
 pip install -r ${REQUIREMENTS}
