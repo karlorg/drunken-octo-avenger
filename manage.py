@@ -90,12 +90,15 @@ def test_all():
     os.system("python -m unittest discover")
 
 @manager.command
-def coverage():
+def coverage(quick=False):
     rcpath = os.path.abspath('.coveragerc')
+    manage_command = (
+            'test_package app.tests' if quick else 'test_all'
+    )
     os.system((
-            "COVERAGE_PROCESS_START='{}' "
-            "coverage run manage.py test_all"
-            ).format(rcpath))
+            "COVERAGE_PROCESS_START='{0}' "
+            "coverage run manage.py {1}"
+            ).format(rcpath, manage_command))
     os.system("coverage combine")
     os.system("coverage report -m")
     os.system("coverage html")
