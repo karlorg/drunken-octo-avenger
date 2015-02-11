@@ -76,6 +76,11 @@ def create_login_session_internal(email):
     )
 
 @manager.command
+def remake_db():
+    db.drop_all()
+    db.create_all()
+
+@manager.command
 def test_module(module):
     """ For example you might do `python manage.py test_module app.tests.test'
     """

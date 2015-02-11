@@ -81,7 +81,7 @@ def _set_domain_name(config_file):
 
 def _reset_db(repo_folder):
     with cd(repo_folder):
-        run('../virtualenv/bin/python db_remake.py')
+        run('../virtualenv/bin/python manage.py remake_db')
 
 def _reload_gunicorn():
     pid = run('cat /var/run/gunicorn-{}.pid'.format(env.host)).decode().strip()
