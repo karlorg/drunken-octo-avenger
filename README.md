@@ -1,11 +1,10 @@
 ## setup
 
 I recommend cloning this repository inside an existing directory that's just
-for this project.  The sqlite database will be created one directory up from
-the repo, and that's also where I recommend you put your virtualenv and the
-setup script below will do the that.
+for this project.  The setup scripts (see below) will create the database file
+and Python virtual environments one level up from the repository root.
 
-## setup script
+### setup script
 
 Run the setup script, give the python version you wish to use as the only
 argument.
@@ -15,16 +14,7 @@ argument.
 This will create a virtual environment, activate it, and install all of the
 dependencies.
 
-## Test Python Versions
-
-The `test_python_versions` script will test different versions of python. It
-will call the setup script with different arguments, currently just the 2.7 and
-3.4 versions are called but more can easily be added. Worth looking in the
-script to see the arguments, but none will cause it to call the entire test
-suite, `quick` will just run a single test module and `coverage` will run the
-coverage analysis in both versions.
-
-## Database
+### database
 
 Run `db_remake.py` to create the database (by default it will appear one
 directory level higher than your repository root).
@@ -48,15 +38,28 @@ In the repository root directory, run
 
 ### Python code
 
-    python -m unittest discover [<package path>]
+#### testing multiple Python versions
 
-Omit the package path to run all Python tests.  (Please run this before each
-commit.  Committing with expected failures is OK, but do check there are no
-unexpected failures.)
+The `test_python_versions` script will run tests against several versions of
+python. It will call the setup script with different arguments, currently just
+the 2.7 and 3.4 versions are called but more can easily be added. Worth looking
+in the script to see the arguments, but none will cause it to call the entire
+test suite, `quick` will just run a single test module and `coverage` will run
+the coverage analysis in both versions.
 
-Or for an individual module/class/method:
+#### without the script
 
-    python -m unittest [<component path>]
+You can also use
+
+    python -m unittest discover [package]
+
+or
+
+    python -m unittest [module]
+
+to run tests without switching Python versions.
+
+#### testing against a remote server
 
 For notes on running browser automation tests against remote servers, see the
 markdown file in `app/browser_tests`.
