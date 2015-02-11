@@ -157,8 +157,6 @@ class TestLogoutIntegrated(TestWithTestingApp):
     def test_no_error_when_email_not_set(self):
         with main.app.test_client() as test_client:
             test_client.post('/logout')
-            assert 'email' not in session
-            assert 'persona_email' not in session
 
 
 class TestProcessPersonaResponse(unittest.TestCase):
