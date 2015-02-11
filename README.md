@@ -32,7 +32,7 @@ In the repository root directory, run
 
 (from virtualenv)
 
-    python run.py
+    python manage.py runserver [-d]
 
 ## testing
 
