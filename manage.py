@@ -79,15 +79,18 @@ def create_login_session_internal(email):
 def test_module(module):
     """ For example you might do `python manage.py test_module app.tests.test'
     """
-    os.system("python -m unittest " + module)
+    result = os.system("python -m unittest " + module)
+    return (0 if result == 0 else 1)
 
 @manager.command
 def test_package(directory):
-    os.system("python -m unittest discover " + directory)
+    result = os.system("python -m unittest discover " + directory)
+    return (0 if result == 0 else 1)
 
 @manager.command
 def test_all():
-    os.system("python -m unittest discover")
+    result = os.system("python -m unittest discover")
+    return (0 if result == 0 else 1)
 
 @manager.command
 def coverage(quick=False):
