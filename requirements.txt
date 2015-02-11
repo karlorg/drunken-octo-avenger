@@ -22,3 +22,5 @@ selenium==2.44.0
 six==1.8.0
 sqlparse==0.1.14
 wsgiref==0.1.2
+coverage==3.7.1
+

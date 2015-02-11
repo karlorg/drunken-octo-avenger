@@ -77,6 +77,8 @@ def create_login_session_internal(email):
 
 @manager.command
 def test_module(module):
+    """ For example you might do `python manage.py test_module app.tests.test'
+    """
     os.system("python -m unittest " + module)
 
 @manager.command

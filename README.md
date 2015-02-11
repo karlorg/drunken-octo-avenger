@@ -2,13 +2,29 @@
 
 I recommend cloning this repository inside an existing directory that's just
 for this project.  The sqlite database will be created one directory up from
-the repo, and that's also where I recommend you put your virtualenv.
+the repo, and that's also where I recommend you put your virtualenv and the
+setup script below will do the that.
 
-So, create a virtualenv outside the repo, install packages from
-`requirements.txt` for Python 2, or `p3req.txt` for Python 3, into it.  I
-haven't picked a Python version (yet); if I haven't messed up, 2.7 and 3.4
-should both work.  Trying to stay compatible with both.  See 'compatibility'
-section below.
+## setup script
+
+Run the setup script, give the python version you wish to use as the only
+argument.
+
+    source setup.sh 3.4
+
+This will create a virtual environment, activate it, and install all of the
+dependencies.
+
+## Test Python Versions
+
+The `test_python_versions` script will test different versions of python. It
+will call the setup script with different arguments, currently just the 2.7 and
+3.4 versions are called but more can easily be added. Worth looking in the
+script to see the arguments, but none will cause it to call the entire test
+suite, `quick` will just run a single test module and `coverage` will run the
+coverage analysis in both versions.
+
+## Database
 
 Run `db_remake.py` to create the database (by default it will appear one
 directory level higher than your repository root).
