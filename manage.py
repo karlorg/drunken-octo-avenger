@@ -91,7 +91,11 @@ def test_all():
 
 @manager.command
 def coverage():
-    os.system("COVERAGE_PROCESS_START='.coveragerc' coverage run --source app manage.py test_all")
+    rcpath = os.path.abspath('.coveragerc')
+    os.system((
+            "COVERAGE_PROCESS_START='{}' "
+            "coverage run manage.py test_all"
+            ).format(rcpath))
     os.system("coverage combine")
     os.system("coverage report -m")
     os.system("coverage html")
