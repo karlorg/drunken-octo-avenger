@@ -332,7 +332,6 @@ class TestGameIntegrated(TestWithDb):
         main.db.session.commit()
         return game
 
-
     def test_redirects_to_home_if_no_game_specified(self):
         response = self.test_client.get('/game')
         self.assert_redirects(response, '/')
@@ -350,15 +349,25 @@ class TestGameIntegrated(TestWithDb):
         assert kwargs['move_no'] == int(kwargs['move_no'])
         assert int(kwargs['move_no']) == 0
 
+
+class TestPlayStoneIntegrated(TestWithDb):
+
+    def add_game(self):
+        game = Game()
+        game.black = 'black@black.com'
+        game.white = 'white@white.com'
+        main.db.session.add(game)
+        main.db.session.commit()
+        return game
+
     def test_writes_passed_valid_move_to_db(self):
         game = self.add_game()
         assert Move.query.all() == []
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                test_client.get(
-                        '/game?game_no={game}&move_no=0&row=16&column=15'
-                        .format(game=game.id)
-                )
+                test_client.post('/playstone', data=dict(
+                    game_no=game.id, move_no=0, row=16, column=15
+                ))
         moves = Move.query.all()
         assert len(moves) == 1
         move = moves[0]
@@ -372,15 +381,16 @@ class TestGameIntegrated(TestWithDb):
         game = self.add_game()
         assert Move.query.all() == []
         with self.set_email('white@white.com') as test_client:
-            response = test_client.get(
-                    '/game?game_no={game}&move_no=0&row=16&column=15'
-                    .format(game=game.id),
-                    follow_redirects=True
-            )
+            response = test_client.post('/playstone', data=dict(
+                game_no=game.id, move_no=0, row=16, column=15
+            ), follow_redirects=True)
         moves = Move.query.all()
         assert len(moves) == 0
         assert 'not your turn' in str(response.get_data())
 
+    @unittest.skip(
+            """haven't decided yet what should be returned after a move is
+            played""")
     def test_no_links_after_playing_a_move(self):
         # regression: testing specifically the response to playing a move due
         # to old bug whereby 'is our turn' testing happened before updating the
@@ -397,20 +407,17 @@ class TestGameIntegrated(TestWithDb):
         game2 = self.add_game()
         with self.patch_render_template():
             with self.set_email('black@black.com') as test_client:
-                test_client.get(
-                        '/game?game_no={game}&move_no=0&row=3&column=15'
-                        .format(game=game1.id)
-                )
+                test_client.post('/playstone', data=dict(
+                    game_no=game1.id, move_no=0, row=3, column=15
+                ))
             with self.set_email('white@white.com') as test_client:
-                test_client.get(
-                        '/game?game_no={game}&move_no=1&row=15&column=15'
-                        .format(game=game1.id)
-                )
+                test_client.post('/playstone', data=dict(
+                    game_no=game1.id, move_no=1, row=15, column=15
+                ))
             with self.set_email('black@black.com') as test_client:
-                test_client.get(
-                        '/game?game_no={game}&move_no=0&row=9&column=9'
-                        .format(game=game2.id)
-                )
+                test_client.post('/playstone', data=dict(
+                    game_no=game2.id, move_no=0, row=9, column=9
+                ))
         assert len(Move.query.filter(Move.game_no == game1.id).all()) == 2
         assert len(Move.query.filter(Move.game_no == game2.id).all()) == 1
 
