@@ -16,8 +16,8 @@ dependencies.
 
 ### database
 
-Run `db_remake.py` to create the database (by default it will appear one
-directory level higher than your repository root).
+Run `python manage.py remake_db` to create the database (by default it will
+appear one directory level higher than your repository root).
 
 ## compilation
 
@@ -32,7 +32,7 @@ In the repository root directory, run
 
 (from virtualenv)
 
-    python run.py
+    python manage.py runserver [-d]
 
 ## testing
 

@@ -21,12 +21,11 @@ fi
 # upon which version of python we are using.
 if [ $(echo "$PYTHONVERSION < 3.0" | bc) -ne 0 ] 
 then
-    PYVENV=virtualenv
     REQUIREMENTS=requirements.txt
 else
-    PYVENV=pyvenv
     REQUIREMENTS=p3req.txt
 fi
+PYVENV="virtualenv -p python${PYTHONVERSION}"
 
 # Finally we can go about creating the virtual environment and installing
 # all of the dependencies.

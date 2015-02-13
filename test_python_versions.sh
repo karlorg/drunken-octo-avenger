@@ -18,8 +18,22 @@ test_python(){
     rm -fr ../testvenv$1
     source setup.sh $1 testvenv$1
     $TEST_COMMAND
+    test_result=$?
     deactivate
+    rm -fr ../testvenv$1
+    return $test_result
 }
 
-test_python 3.4
-test_python 2.7
+test_series() {
+    for version in "$@"
+    do
+        test_python $version
+        if [[ $? != 0 ]]
+        then
+            echo Tests failed for Python ${PYTHONVERSION}
+            return 1
+        fi
+    done
+}
+
+test_series 3.4 2.7
