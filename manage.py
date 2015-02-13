@@ -98,11 +98,22 @@ def test_all():
     return (0 if result == 0 else 1)
 
 @manager.command
-def coverage(quick=False):
+def coverage(quick=False, browser=False):
     rcpath = os.path.abspath('.coveragerc')
-    manage_command = (
-            'test_package app.tests' if quick else 'test_all'
-    )
+
+    quick_command = 'test_package app.tests'
+    browser_command = 'test_package app.browser_tests'
+    full_command = 'test_all'
+
+    if quick:
+        manage_command = quick_command
+    elif browser:
+        manage_command = browser_command
+    else:
+        manage_command = full_command
+
+    if os.path.exists('.coverage'):
+        os.remove('.coverage')
     os.system((
             "COVERAGE_PROCESS_START='{0}' "
             "coverage run manage.py {1}"
