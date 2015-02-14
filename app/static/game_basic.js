@@ -66,7 +66,7 @@
         row: $new_stone.data('row'),
         column: $new_stone.data('column')
       };
-      return $.get(tesuji_charm.game_url, data);
+      return $.post(tesuji_charm.playstone_url, data);
     });
   };
 

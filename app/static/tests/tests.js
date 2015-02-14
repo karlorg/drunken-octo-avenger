@@ -45,7 +45,7 @@
     setup: function() {
       tesuji_charm.game_no = 42;
       tesuji_charm.move_no = 0;
-      tesuji_charm.game_url = '/game';
+      tesuji_charm.playstone_url = '/playstone';
       return tesuji_charm.game_basic.initialize();
     }
   });
@@ -74,10 +74,10 @@
   });
 
   test('Confirm button sends request with new move', function() {
-    var call_params, data, original_get;
-    original_get = $.get;
+    var call_params, data, original_post;
+    original_post = $.post;
     call_params = null;
-    $.get = function(url, data) {
+    $.post = function(url, data) {
       return call_params = {
         url: url,
         data: data
@@ -86,13 +86,13 @@
     $('table.goban td').first().click();
     $('table.goban td').first().next().click();
     $('button.confirm_button').first().click();
-    ok(call_params !== null, 'ajax request sent');
+    ok(call_params !== null, 'ajax POST request sent');
     data = call_params.data;
     equal(data.game_no, tesuji_charm.game_no, 'game no in request data');
     equal(data.move_no, tesuji_charm.move_no, 'move no in request data');
     equal(data.row, 0, 'row no in request data');
     equal(data.column, 1, 'column no in request data');
-    return $.get = original_get;
+    return $.post = original_post;
   });
 
 }).call(this);

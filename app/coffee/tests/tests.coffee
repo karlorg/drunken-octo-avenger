@@ -41,7 +41,7 @@ module 'Basic game page',
   setup: ->
     tesuji_charm.game_no = 42
     tesuji_charm.move_no = 0
-    tesuji_charm.game_url = '/game'
+    tesuji_charm.playstone_url = '/playstone'
     tesuji_charm.game_basic.initialize()
 
 test 'clicking multiple points moves black stone', ->
@@ -72,16 +72,16 @@ test 'Confirm button disabled until stone placed', ->
     'enabled after stone placed'
 
 test 'Confirm button sends request with new move', ->
-  original_get = $.get
+  original_post = $.post
   call_params = null
-  $.get = (url, data) -> call_params = { url: url, data: data }
+  $.post = (url, data) -> call_params = { url: url, data: data }
   $('table.goban td').first().click()
   $('table.goban td').first().next().click()
   $('button.confirm_button').first().click()
-  ok call_params isnt null, 'ajax request sent'
+  ok call_params isnt null, 'ajax POST request sent'
   data = call_params.data
   equal data.game_no, tesuji_charm.game_no, 'game no in request data'
   equal data.move_no, tesuji_charm.move_no, 'move no in request data'
   equal data.row, 0, 'row no in request data'
   equal data.column, 1, 'column no in request data'
-  $.get = original_get
+  $.post = original_post

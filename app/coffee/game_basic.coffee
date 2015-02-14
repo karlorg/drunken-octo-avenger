@@ -51,4 +51,4 @@ game_basic.initialize = ->
       move_no: tesuji_charm.move_no
       row: $new_stone.data 'row'
       column: $new_stone.data 'column'
-    $.get tesuji_charm.game_url, data
+    $.post tesuji_charm.playstone_url, data
