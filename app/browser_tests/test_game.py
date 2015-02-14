@@ -50,6 +50,9 @@ class GameTest(SeleniumTest):
     def test_game_page(self):
         """Test game display and placing stones through the web interface."""
 
+        def find_your_turn_games():
+            return self.browser.find_element_by_id('your_turn_games')
+
         ONE_EMAIL = 'player@one.com'
         TWO_EMAIL = 'playa@dos.es'
         ## create a couple of games
@@ -64,8 +67,6 @@ class GameTest(SeleniumTest):
         self.create_login_session(ONE_EMAIL)
         self.browser.get(self.get_server_url())
 
-        def find_your_turn_games():
-            return self.browser.find_element_by_id('your_turn_games')
         your_turn_games = self.wait_for(find_your_turn_games)
         # select the most recent game
         game_links = (
@@ -123,6 +124,8 @@ class GameTest(SeleniumTest):
         ## TODO: compare locations of stone to previous one
         # we confirm this new move
         self.assert_and_get_confirm_button().click()
+        # now we're taken back to the status page
+        self.wait_for(find_your_turn_games)
 
         # -- PLAYER TWO
         # now the white player logs in and visits the same game
