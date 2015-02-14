@@ -29,7 +29,13 @@
             <td><img src="static/images/goban/e.gif" /></td>
         </tr>
     </table>
-    <button class="confirm_button"></button>
+    <form method="POST" action="/playstone">
+        <input type="hidden" id="move_no"></input>
+        <input type="hidden" id="row"></input>
+        <input type="hidden" id="column"></input>
+        <button type="submit"
+                class="confirm_button" name='confirm_button'>Confirm</button>
+    </form>
 </div>
 <script src="../jquery.js"></script>
 <script src="../persona.js"></script>

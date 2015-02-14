@@ -347,8 +347,9 @@ class TestGameIntegrated(TestWithDb):
         assert args[0] == "game.html"
         goban = kwargs['goban']
         assert goban[0][0] == str(goban[0][0])
-        assert kwargs['move_no'] == int(kwargs['move_no'])
-        assert int(kwargs['move_no']) == 0
+        formdata = kwargs['form'].data
+        self.assertEqual(int(formdata['game_no']), game.id)
+        self.assertEqual(int(formdata['move_no']), 0)
 
 
 class TestPlayStoneIntegrated(TestWithDb):

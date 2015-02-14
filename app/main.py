@@ -15,8 +15,9 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
 import jinja2
 import requests
-from wtforms import StringField
+from wtforms import IntegerField, StringField
 from wtforms.validators import DataRequired, Email
+from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
 
@@ -53,18 +54,17 @@ def game():
     moves = game.moves
     is_your_turn = is_players_turn_in_game(game, moves)
     goban = get_img_array_from_moves(moves)
+    form = PlayStoneForm(data=dict(
+        game_no=game.id,
+        move_no=len(moves)
+    ))
     return render_template_with_email(
             "game.html",
-            game_no=game_no, move_no=len(moves), goban=goban,
-            with_links=is_your_turn)
+            form=form, goban=goban, with_links=is_your_turn)
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
-    """If a valid move was specified, play it (add to db).
-
-    Flash an error message if a move is given, but the logged in player is
-    not allowed to play it.
-    """
+    """If a valid move was specified, play it (add to db)."""
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
@@ -80,7 +80,7 @@ def playstone():
     else:
         db.session.add(stone)
         db.session.commit()
-    return redirect('/game?game_no={}'.format(game.id))
+    return redirect(url_for('status'))
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
@@ -317,3 +317,12 @@ class Move(db.Model):
 class ChallengeForm(Form):
     opponent_email = StringField(
             "Opponent's email", validators=[DataRequired(), Email()])
+
+class HiddenInteger(IntegerField):
+    widget = HiddenInput()
+
+class PlayStoneForm(Form):
+    game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    row = HiddenInteger("row", validators=[DataRequired()])
+    column = HiddenInteger("column", validators=[DataRequired()])

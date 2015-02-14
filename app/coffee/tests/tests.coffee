@@ -39,10 +39,9 @@ test 'init function sets request and logout callbacks', ->
 
 module 'Basic game page',
   setup: ->
-    tesuji_charm.game_no = 42
-    tesuji_charm.move_no = 0
     tesuji_charm.playstone_url = '/playstone'
     tesuji_charm.game_basic.initialize()
+    $('input#move_no').val "0"
 
 test 'clicking multiple points moves black stone', ->
   $point1 = $('table.goban td').first()
@@ -63,6 +62,19 @@ test 'clicking multiple points moves black stone', ->
   ok $img2.attr('src').indexOf('b.gif') > -1,
     'after second click, second clicked point black'
 
+test 'clicking multiple points updates hidden form', ->
+  $point1 = $('table.goban td').first()
+  $point2 = $point1.next()
+  $row = $('input#row')
+  $column = $('input#column')
+
+  $point1.click()
+  equal $row.val(), 0, "first stone sets correct row"
+  equal $column.val(), 0, "first stone sets correct column"
+  $point2.click()
+  equal $row.val(), 0, "second stone sets correct row"
+  equal $column.val(), 1, "second stone sets correct column"
+
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
   equal $button.prop('disabled'), true,
@@ -70,18 +82,3 @@ test 'Confirm button disabled until stone placed', ->
   $('table.goban td').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'
-
-test 'Confirm button sends request with new move', ->
-  original_post = $.post
-  call_params = null
-  $.post = (url, data) -> call_params = { url: url, data: data }
-  $('table.goban td').first().click()
-  $('table.goban td').first().next().click()
-  $('button.confirm_button').first().click()
-  ok call_params isnt null, 'ajax POST request sent'
-  data = call_params.data
-  equal data.game_no, tesuji_charm.game_no, 'game no in request data'
-  equal data.move_no, tesuji_charm.move_no, 'move no in request data'
-  equal data.row, 0, 'row no in request data'
-  equal data.column, 1, 'column no in request data'
-  $.post = original_post
