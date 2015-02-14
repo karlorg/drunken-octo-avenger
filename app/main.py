@@ -49,8 +49,6 @@ def game():
         game_no = int(request.args['game_no'])
     except (KeyError, ValueError):
         return redirect('/')
-    check_args_for_move_and_play_if_good(game_no)
-    # now that new move has been checked, render the board
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
     is_your_turn = is_players_turn_in_game(game, moves)
@@ -59,6 +57,30 @@ def game():
             "game.html",
             game_no=game_no, move_no=len(moves), goban=goban,
             with_links=is_your_turn)
+
+@app.route('/playstone', methods=['POST'])
+def playstone():
+    """If a valid move was specified, play it (add to db).
+
+    Flash an error message if a move is given, but the logged in player is
+    not allowed to play it.
+    """
+    arguments = request.form.to_dict()
+    try:
+        game_no = int(arguments['game_no'])
+    except (KeyError, ValueError):
+        return redirect('/')
+    game = Game.query.filter(Game.id == game_no).first()
+    moves = game.moves
+    stone = get_stone_if_args_good(args=arguments, moves=moves)
+    if stone is None:
+        flash("Invalid move received")
+    elif not is_players_turn_in_game(game, moves):
+        flash("It's not your turn!")
+    else:
+        db.session.add(stone)
+        db.session.commit()
+    return redirect('/game?game_no={}'.format(game.id))
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
@@ -139,25 +161,6 @@ def process_persona_response(response):
     ):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
-
-
-def check_args_for_move_and_play_if_good(game_no):
-    """If a valid move is in request args, play it (add to db).
-
-    Flashes an error message if a move is given, but the logged in player is
-    not allowed to play it.
-
-    Non-pure: accesses request, session, and db.
-    """
-    game = Game.query.filter(Game.id == game_no).first()
-    moves = game.moves
-    stone = get_stone_if_args_good(args=request.args, moves=moves)
-    if stone is not None:
-        if is_players_turn_in_game(game, moves):
-            db.session.add(stone)
-            db.session.commit()
-        else:
-            flash("It's not your turn!")
 
 def get_stone_if_args_good(args, moves):
     """Check GET arguments and if a new move is indicated, return it.

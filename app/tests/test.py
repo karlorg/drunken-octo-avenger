@@ -12,6 +12,7 @@ import unittest
 from flask import render_template, session, url_for
 import flask.ext.testing
 import requests
+from werkzeug.datastructures import MultiDict
 
 from .. import main
 from ..main import Game, Move, db
@@ -360,22 +361,34 @@ class TestPlayStoneIntegrated(TestWithDb):
         main.db.session.commit()
         return game
 
-    def test_writes_passed_valid_move_to_db(self):
-        game = self.add_game()
-        assert Move.query.all() == []
-        with self.set_email('black@black.com') as test_client:
-            with self.patch_render_template():
+    def test_can_add_stones_to_two_games(self):
+        game1 = self.add_game()
+        game2 = self.add_game()
+        with self.patch_render_template():
+            with self.set_email('black@black.com') as test_client:
                 test_client.post('/playstone', data=dict(
-                    game_no=game.id, move_no=0, row=16, column=15
+                    game_no=game1.id, move_no=0, row=3, column=15
                 ))
+            with self.set_email('black@black.com') as test_client:
+                test_client.post('/playstone', data=dict(
+                    game_no=game2.id, move_no=0, row=9, column=9
+                ))
+            with self.set_email('white@white.com') as test_client:
+                test_client.post('/playstone', data=dict(
+                    game_no=game1.id, move_no=1, row=15, column=15
+                ))
+        game1moves = Move.query.filter(Move.game_no == game1.id).all()
+        game2moves = Move.query.filter(Move.game_no == game2.id).all()
+        self.assertEqual(len(game1moves), 2)
+        self.assertEqual(len(game2moves), 1)
+        # also check the data in one of the moves
         moves = Move.query.all()
-        assert len(moves) == 1
         move = moves[0]
-        assert move.game_no == game.id
-        assert move.move_no == 0
-        assert move.row == 16
-        assert move.column == 15
-        assert move.color == Move.Color.black
+        self.assertEqual(move.game_no, game1.id)
+        self.assertEqual(move.move_no, 0)
+        self.assertEqual(move.row, 3)
+        self.assertEqual(move.column, 15)
+        self.assertEqual(move.color, Move.Color.black)
 
     def test_rejects_new_move_off_turn(self):
         game = self.add_game()
@@ -387,6 +400,44 @@ class TestPlayStoneIntegrated(TestWithDb):
         moves = Move.query.all()
         assert len(moves) == 0
         assert 'not your turn' in str(response.get_data())
+
+    def test_rejects_missing_args(self):
+        game = self.add_game()
+        assert Move.query.all() == []
+        with self.set_email('black@black.com') as test_client:
+            response = test_client.post('/playstone', data=dict(
+                game_no=game.id
+            ), follow_redirects=True)
+        moves = Move.query.all()
+        assert len(moves) == 0
+        assert 'Invalid' in str(response.get_data())
+
+    def test_handles_missing_game_no(self):
+        with self.set_email('white@white.com') as test_client:
+            with self.patch_render_template():
+                test_client.post('/playstone', data=dict(
+                    move_no=0, row=16, column=15
+                ))
+        # should not raise
+
+    def test_passes_ordinary_dict_to_helper(self):
+        """Regression test: request.form is a werkzeug MultiDict that doesn't
+        always raise KeyError for missing arguments; need to check we're
+        converting it to an ordinary dict for the helper function."""
+        game = self.add_game()
+        with self.set_email('black@black.com') as test_client:
+            with self.patch_render_template():
+                mock_get_stone = Mock(spec=main.get_stone_if_args_good)
+                mock_get_stone.return_value = None
+                with patch(
+                        'app.main.get_stone_if_args_good', mock_get_stone
+                ):
+                    test_client.post('/playstone', data=dict(
+                        game_no=game.id, move_no=0, row=9, column=9
+                    ))
+                assert mock_get_stone.call_args is not None
+                passed_dict = mock_get_stone.call_args[1]['args']
+                assert not isinstance(passed_dict, MultiDict)
 
     @unittest.skip(
             """haven't decided yet what should be returned after a move is
@@ -401,25 +452,6 @@ class TestPlayStoneIntegrated(TestWithDb):
                     '/game?game_no={game}&move_no=0&row=16&column=15'
                     .format(game=game.id))
         assert 'move_no=' not in str(response.get_data())
-
-    def test_can_add_stones_to_two_games(self):
-        game1 = self.add_game()
-        game2 = self.add_game()
-        with self.patch_render_template():
-            with self.set_email('black@black.com') as test_client:
-                test_client.post('/playstone', data=dict(
-                    game_no=game1.id, move_no=0, row=3, column=15
-                ))
-            with self.set_email('white@white.com') as test_client:
-                test_client.post('/playstone', data=dict(
-                    game_no=game1.id, move_no=1, row=15, column=15
-                ))
-            with self.set_email('black@black.com') as test_client:
-                test_client.post('/playstone', data=dict(
-                    game_no=game2.id, move_no=0, row=9, column=9
-                ))
-        assert len(Move.query.filter(Move.game_no == game1.id).all()) == 2
-        assert len(Move.query.filter(Move.game_no == game2.id).all()) == 1
 
 
 class TestGetStoneIfArgsGood(unittest.TestCase):
