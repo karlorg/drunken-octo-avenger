@@ -18,8 +18,8 @@
 
   new_stone_image_path = null;
 
-  set_image = function($a, filename) {
-    return $a.find('img').attr('src', "static/images/goban/" + filename);
+  set_image = function($td, filename) {
+    return $td.find('img').attr('src', "static/images/goban/" + filename);
   };
 
   coordFromChr = function(chr) {
@@ -45,7 +45,7 @@
       new_stone_image_path = 'w.gif';
     }
     $('button.confirm_button').prop('disabled', true);
-    return $('table.goban a').click(function() {
+    return $('table.goban td').click(function() {
       var $old_new_stone, col, row, _ref;
       if (!hasCoordClass($(this))) {
         return;

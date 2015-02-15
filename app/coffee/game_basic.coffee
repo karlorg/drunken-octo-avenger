@@ -11,8 +11,8 @@ game_basic = tesuji_charm.game_basic
 $new_stone = null
 new_stone_image_path = null
 
-set_image = ($a, filename) ->
-  $a.find('img').attr 'src', "static/images/goban/#{filename}"
+set_image = ($td, filename) ->
+  $td.find('img').attr 'src', "static/images/goban/#{filename}"
 
 coordFromChr = (chr) -> chr.charCodeAt(0) - 'a'.charCodeAt(0)
 
@@ -33,7 +33,7 @@ game_basic.initialize = ->
 
   $('button.confirm_button').prop 'disabled', true
 
-  $('table.goban a').click ->
+  $('table.goban td').click ->
     return unless hasCoordClass $(this)
 
     $old_new_stone = $new_stone

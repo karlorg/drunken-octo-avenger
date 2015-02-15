@@ -43,9 +43,9 @@ module 'Basic game page',
     $('input#move_no').val "0"
 
 test 'clicking multiple points moves black stone', ->
-  $point1 = $('a.coord-aa').first()
+  $point1 = $('td.coord-aa').first()
   $img1 = $point1.find('img').first()
-  $point2 = $('a.coord-bb').first()
+  $point2 = $('td.coord-bb').first()
   $img2 = $point2.find('img').first()
 
   ok $img1.attr('src').indexOf('e.gif') > -1,
@@ -62,8 +62,8 @@ test 'clicking multiple points moves black stone', ->
     'after second click, second clicked point black'
 
 test 'clicking multiple points updates hidden form', ->
-  $point1 = $('a.coord-aa').first()
-  $point2 = $('a.coord-bb').first()
+  $point1 = $('td.coord-aa').first()
+  $point2 = $('td.coord-bb').first()
   $row = $('input#row')
   $column = $('input#column')
 
@@ -78,6 +78,6 @@ test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
   equal $button.prop('disabled'), true,
     'starts out disabled'
-  $('table.goban a').first().click()
+  $('table.goban td').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'

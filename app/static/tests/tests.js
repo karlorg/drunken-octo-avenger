@@ -50,9 +50,9 @@
 
   test('clicking multiple points moves black stone', function() {
     var $img1, $img2, $point1, $point2;
-    $point1 = $('a.coord-aa').first();
+    $point1 = $('td.coord-aa').first();
     $img1 = $point1.find('img').first();
-    $point2 = $('a.coord-bb').first();
+    $point2 = $('td.coord-bb').first();
     $img2 = $point2.find('img').first();
     ok($img1.attr('src').indexOf('e.gif') > -1, 'first point is initially empty (e.gif)');
     $point1.click();
@@ -65,8 +65,8 @@
 
   test('clicking multiple points updates hidden form', function() {
     var $column, $point1, $point2, $row;
-    $point1 = $('a.coord-aa').first();
-    $point2 = $('a.coord-bb').first();
+    $point1 = $('td.coord-aa').first();
+    $point2 = $('td.coord-bb').first();
     $row = $('input#row');
     $column = $('input#column');
     $point1.click();
@@ -81,7 +81,7 @@
     var $button;
     $button = $('button.confirm_button');
     equal($button.prop('disabled'), true, 'starts out disabled');
-    $('table.goban a').first().click();
+    $('table.goban td').first().click();
     return equal($button.prop('disabled'), false, 'enabled after stone placed');
   });
 
