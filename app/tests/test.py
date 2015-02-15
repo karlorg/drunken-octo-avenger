@@ -337,19 +337,46 @@ class TestGameIntegrated(TestWithDb):
         response = self.test_client.get('/game')
         self.assert_redirects(response, '/')
 
-    def test_passes_correct_goban_format_and_params_to_template(self):
+    def test_annotates_points_with_coords(self):
         game = self.add_game()
-        mock_render = Mock(spec=render_template)
-        mock_render.return_value = ''
-        with patch('app.main.render_template', mock_render):
-            self.test_client.get('/game?game_no={game}'.format(game=game.id))
-        args, kwargs = mock_render.call_args
-        assert args[0] == "game.html"
-        goban = kwargs['goban']
-        assert goban[0][0] == str(goban[0][0])
-        formdata = kwargs['form'].data
-        self.assertEqual(int(formdata['game_no']), game.id)
-        self.assertEqual(int(formdata['move_no']), 0)
+        # test the logged-in and on-turn case, that's the most interesting
+        with self.set_email('black@black.com') as test_client:
+            response = test_client.get(url_for('game', game_no=game.id))
+        response_str = str(response.get_data())
+        pos_aa = response_str.index('class="coord-aa"')
+        pos_as = response_str.index('class="coord-as"')
+        pos_sa = response_str.index('class="coord-sa"')
+        pos_ss = response_str.index('class="coord-ss"')
+        assert pos_aa < pos_as
+        assert pos_as < pos_sa
+        assert pos_sa < pos_ss
+
+
+class TestGetImgArrayFromMoves(unittest.TestCase):
+
+    def test_imgs_appear_on_expected_points(self):
+        goban = main.get_img_array_from_moves([
+            Move(
+                game_no=1, move_no=0,
+                row=3, column=4, color=Move.Color.black),
+            Move(
+                game_no=1, move_no=1,
+                row=15, column=16, color=Move.Color.white)
+        ])
+        assert 'e.gif' in goban[3][3]
+        assert 'w.gif' in goban[15][16]
+        assert 'b.gif' in goban[3][4]
+        ## regression: shared list pointers cause stones to appear on all rows
+        assert 'e.gif' in goban[4][4]
+
+
+class TestAnnotateWithCoords(unittest.TestCase):
+
+    def test_simple_2x2_array(self):
+        input_ = [[0, 0], [0, 0]]
+        expected = [[(0, "aa"), (0, "ab")], [(0, "ba"), (0, "bb")]]
+        output = main.annotate_with_coords(input_)
+        self.assertEqual(output, expected)
 
 
 class TestPlayStoneIntegrated(TestWithDb):
@@ -492,21 +519,3 @@ class TestGetStoneIfArgsGood(unittest.TestCase):
         assert stone.row == 3
         assert stone.column == 3
         assert stone.color == Move.Color.white
-
-
-class TestGetImgArrayFromMoves(unittest.TestCase):
-
-    def test_imgs_appear_on_expected_points(self):
-        goban = main.get_img_array_from_moves([
-            Move(
-                game_no=1, move_no=0,
-                row=3, column=4, color=Move.Color.black),
-            Move(
-                game_no=1, move_no=1,
-                row=15, column=16, color=Move.Color.white)
-        ])
-        assert 'e.gif' in goban[3][3]
-        assert 'w.gif' in goban[15][16]
-        assert 'b.gif' in goban[3][4]
-        ## regression: shared list pointers cause stones to appear on all rows
-        assert 'e.gif' in goban[4][4]

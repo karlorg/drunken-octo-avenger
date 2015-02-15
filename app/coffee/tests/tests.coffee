@@ -39,14 +39,13 @@ test 'init function sets request and logout callbacks', ->
 
 module 'Basic game page',
   setup: ->
-    tesuji_charm.playstone_url = '/playstone'
     tesuji_charm.game_basic.initialize()
     $('input#move_no').val "0"
 
 test 'clicking multiple points moves black stone', ->
-  $point1 = $('table.goban td').first()
+  $point1 = $('a.coord-aa').first()
   $img1 = $point1.find('img').first()
-  $point2 = $point1.next()
+  $point2 = $('a.coord-bb').first()
   $img2 = $point2.find('img').first()
 
   ok $img1.attr('src').indexOf('e.gif') > -1,
@@ -63,22 +62,22 @@ test 'clicking multiple points moves black stone', ->
     'after second click, second clicked point black'
 
 test 'clicking multiple points updates hidden form', ->
-  $point1 = $('table.goban td').first()
-  $point2 = $point1.next()
+  $point1 = $('a.coord-aa').first()
+  $point2 = $('a.coord-bb').first()
   $row = $('input#row')
   $column = $('input#column')
 
   $point1.click()
-  equal $row.val(), 0, "first stone sets correct row"
-  equal $column.val(), 0, "first stone sets correct column"
+  equal $row.val(), "0", "first stone sets correct row"
+  equal $column.val(), "0", "first stone sets correct column"
   $point2.click()
-  equal $row.val(), 0, "second stone sets correct row"
-  equal $column.val(), 1, "second stone sets correct column"
+  equal $row.val(), "1", "second stone sets correct row"
+  equal $column.val(), "1", "second stone sets correct column"
 
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
   equal $button.prop('disabled'), true,
     'starts out disabled'
-  $('table.goban td').first().click()
+  $('table.goban a').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'

@@ -43,7 +43,6 @@
 
   module('Basic game page', {
     setup: function() {
-      tesuji_charm.playstone_url = '/playstone';
       tesuji_charm.game_basic.initialize();
       return $('input#move_no').val("0");
     }
@@ -51,9 +50,9 @@
 
   test('clicking multiple points moves black stone', function() {
     var $img1, $img2, $point1, $point2;
-    $point1 = $('table.goban td').first();
+    $point1 = $('a.coord-aa').first();
     $img1 = $point1.find('img').first();
-    $point2 = $point1.next();
+    $point2 = $('a.coord-bb').first();
     $img2 = $point2.find('img').first();
     ok($img1.attr('src').indexOf('e.gif') > -1, 'first point is initially empty (e.gif)');
     $point1.click();
@@ -66,23 +65,23 @@
 
   test('clicking multiple points updates hidden form', function() {
     var $column, $point1, $point2, $row;
-    $point1 = $('table.goban td').first();
-    $point2 = $point1.next();
+    $point1 = $('a.coord-aa').first();
+    $point2 = $('a.coord-bb').first();
     $row = $('input#row');
     $column = $('input#column');
     $point1.click();
-    equal($row.val(), 0, "first stone sets correct row");
-    equal($column.val(), 0, "first stone sets correct column");
+    equal($row.val(), "0", "first stone sets correct row");
+    equal($column.val(), "0", "first stone sets correct column");
     $point2.click();
-    equal($row.val(), 0, "second stone sets correct row");
-    return equal($column.val(), 1, "second stone sets correct column");
+    equal($row.val(), "1", "second stone sets correct row");
+    return equal($column.val(), "1", "second stone sets correct column");
   });
 
   test('Confirm button disabled until stone placed', function() {
     var $button;
     $button = $('button.confirm_button');
     equal($button.prop('disabled'), true, 'starts out disabled');
-    $('table.goban td').first().click();
+    $('table.goban a').first().click();
     return equal($button.prop('disabled'), false, 'enabled after stone placed');
   });
 

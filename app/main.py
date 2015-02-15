@@ -53,7 +53,8 @@ def game():
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
     is_your_turn = is_players_turn_in_game(game, moves)
-    goban = get_img_array_from_moves(moves)
+    imgs = get_img_array_from_moves(moves)
+    goban = annotate_with_coords(imgs)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
         move_no=len(moves)
@@ -196,6 +197,24 @@ def get_img_array_from_moves(moves):
         else:
             assert False, "unknown move color"
     return goban
+
+def annotate_with_coords(two_d_array):
+    """Add coord strings to each element of a 2d array (using tuples).
+
+    Pure function.
+    """
+
+    def coord_chr(n):
+        return chr(n + ord('a'))
+
+    def coord_str(rowno, colno):
+        return "{row}{col}".format(
+                row=coord_chr(rowno),
+                col=coord_chr(colno))
+
+    return [[(data, coord_str(rowno, colno))
+             for colno, data in enumerate(column_array)]
+            for rowno, column_array in enumerate(two_d_array)]
 
 def get_status_lists(player_email):
     """Return two lists of games for the player, split by on-turn or not.
