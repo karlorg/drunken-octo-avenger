@@ -14,15 +14,18 @@ new_stone_image_path = null
 set_image = ($td, filename) ->
   $td.find('img').attr 'src', "static/images/goban/#{filename}"
 
-coordFromChr = (chr) -> chr.charCodeAt(0) - 'a'.charCodeAt(0)
+rowRe = /row-(\d+)/
+colRe = /col-(\d+)/
 
-coordRe = /coord-(\w)(\w)/
-
-hasCoordClass = ($obj) -> coordRe.test $obj.attr("class")
+hasCoordClass = ($obj) ->
+  classStr = $obj.attr "class"
+  return rowRe.test(classStr) and colRe.test(classStr)
 
 parseCoordClass = ($obj) ->
-  [_, rowStr, colStr] = coordRe.exec $obj.attr("class")
-  return [coordFromChr(rowStr), coordFromChr(colStr)]
+  classStr = $obj.attr "class"
+  [_, rowStr] = rowRe.exec $obj.attr("class")
+  [_, colStr] = colRe.exec $obj.attr("class")
+  return [parseInt(rowStr, 10), parseInt(colStr, 10)]
 
 game_basic.initialize = ->
 

@@ -50,9 +50,9 @@
 
   test('clicking multiple points moves black stone', function() {
     var $img1, $img2, $point1, $point2;
-    $point1 = $('td.coord-aa').first();
+    $point1 = $('td.row-0.col-0').first();
     $img1 = $point1.find('img').first();
-    $point2 = $('td.coord-bb').first();
+    $point2 = $('td.row-2.col-1').first();
     $img2 = $point2.find('img').first();
     ok($img1.attr('src').indexOf('e.gif') > -1, 'first point is initially empty (e.gif)');
     $point1.click();
@@ -65,15 +65,15 @@
 
   test('clicking multiple points updates hidden form', function() {
     var $column, $point1, $point2, $row;
-    $point1 = $('td.coord-aa').first();
-    $point2 = $('td.coord-bb').first();
+    $point1 = $('td.row-0.col-0').first();
+    $point2 = $('td.row-2.col-1').first();
     $row = $('input#row');
     $column = $('input#column');
     $point1.click();
     equal($row.val(), "0", "first stone sets correct row");
     equal($column.val(), "0", "first stone sets correct column");
     $point2.click();
-    equal($row.val(), "1", "second stone sets correct row");
+    equal($row.val(), "2", "second stone sets correct row");
     return equal($column.val(), "1", "second stone sets correct column");
   });
 

@@ -343,13 +343,12 @@ class TestGameIntegrated(TestWithDb):
         with self.set_email('black@black.com') as test_client:
             response = test_client.get(url_for('game', game_no=game.id))
         response_str = str(response.get_data())
-        pos_aa = response_str.index('class="coord-aa"')
-        pos_as = response_str.index('class="coord-as"')
-        pos_sa = response_str.index('class="coord-sa"')
-        pos_ss = response_str.index('class="coord-ss"')
-        assert pos_aa < pos_as
-        assert pos_as < pos_sa
-        assert pos_sa < pos_ss
+        pos_row0 = response_str.index('row-0')
+        pos_row1 = response_str.index('row-1')
+        pos_col0 = response_str.index('col-0')
+        pos_col1 = response_str.index('col-1')
+        assert pos_row0 < pos_row1
+        assert pos_col0 < pos_col1
 
 
 class TestGetImgArrayFromMoves(unittest.TestCase):
@@ -373,8 +372,12 @@ class TestGetImgArrayFromMoves(unittest.TestCase):
 class TestAnnotateWithCoords(unittest.TestCase):
 
     def test_simple_2x2_array(self):
+        from app.main import _GobanCoord as gc
         input_ = [[0, 0], [0, 0]]
-        expected = [[(0, "aa"), (0, "ab")], [(0, "ba"), (0, "bb")]]
+        expected = [
+                [(0, gc(row=0, column=0)), (0, gc(row=0, column=1))],
+                [(0, gc(row=1, column=0)), (0, gc(row=1, column=1))]
+        ]
         output = main.annotate_with_coords(input_)
         self.assertEqual(output, expected)
 

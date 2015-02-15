@@ -6,7 +6,7 @@
     <tr>
         {% set rowloop = loop %}
         {% for point, coord in row %}
-        <td class="coord-{{ coord }}">
+        <td class="row-{{ coord.row }} col-{{ coord.column }}">
             {% if with_links %}
             <a href="#"><img src="{{ point }}" /></a>
             {% else %}

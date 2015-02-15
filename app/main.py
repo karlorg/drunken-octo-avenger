@@ -198,21 +198,14 @@ def get_img_array_from_moves(moves):
             assert False, "unknown move color"
     return goban
 
+_GobanCoord = namedtuple('_GobanCoord', ['row', 'column'])
 def annotate_with_coords(two_d_array):
-    """Add coord strings to each element of a 2d array (using tuples).
+    """Add coord pairs to each element of a 2d array (using tuples).
 
     Pure function.
     """
 
-    def coord_chr(n):
-        return chr(n + ord('a'))
-
-    def coord_str(rowno, colno):
-        return "{row}{col}".format(
-                row=coord_chr(rowno),
-                col=coord_chr(colno))
-
-    return [[(data, coord_str(rowno, colno))
+    return [[(data, _GobanCoord(row=rowno, column=colno))
              for colno, data in enumerate(column_array)]
             for rowno, column_array in enumerate(two_d_array)]
 

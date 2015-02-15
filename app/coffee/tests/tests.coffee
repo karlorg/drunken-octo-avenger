@@ -43,9 +43,9 @@ module 'Basic game page',
     $('input#move_no').val "0"
 
 test 'clicking multiple points moves black stone', ->
-  $point1 = $('td.coord-aa').first()
+  $point1 = $('td.row-0.col-0').first()
   $img1 = $point1.find('img').first()
-  $point2 = $('td.coord-bb').first()
+  $point2 = $('td.row-2.col-1').first()
   $img2 = $point2.find('img').first()
 
   ok $img1.attr('src').indexOf('e.gif') > -1,
@@ -62,8 +62,8 @@ test 'clicking multiple points moves black stone', ->
     'after second click, second clicked point black'
 
 test 'clicking multiple points updates hidden form', ->
-  $point1 = $('td.coord-aa').first()
-  $point2 = $('td.coord-bb').first()
+  $point1 = $('td.row-0.col-0').first()
+  $point2 = $('td.row-2.col-1').first()
   $row = $('input#row')
   $column = $('input#column')
 
@@ -71,7 +71,7 @@ test 'clicking multiple points updates hidden form', ->
   equal $row.val(), "0", "first stone sets correct row"
   equal $column.val(), "0", "first stone sets correct column"
   $point2.click()
-  equal $row.val(), "1", "second stone sets correct row"
+  equal $row.val(), "2", "second stone sets correct row"
   equal $column.val(), "1", "second stone sets correct column"
 
 test 'Confirm button disabled until stone placed', ->
