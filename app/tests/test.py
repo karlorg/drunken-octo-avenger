@@ -351,10 +351,22 @@ class TestGameIntegrated(TestWithDb):
         assert pos_col0 < pos_col1
 
 
-class TestGetImgArrayFromMoves(unittest.TestCase):
+class TestGetGobanFromMoves(unittest.TestCase):
 
-    def test_imgs_appear_on_expected_points(self):
-        goban = main.get_img_array_from_moves([
+    def assert_in(self, substr, string):
+        assert substr in string, '{exp} not found in {act}'.format(
+                exp=substr, act=string)
+
+    def assert_point(self, goban, row, col, img, stone_class=''):
+        point = goban[row][col]
+        self.assert_in(img, point['img'])
+        self.assert_in('row-{}'.format(str(row)), point['classes'])
+        self.assert_in('col-{}'.format(str(col)), point['classes'])
+        self.assert_in(stone_class, point['classes'])
+
+
+    def test_simple_example_game(self):
+        goban = main.get_goban_from_moves([
             Move(
                 game_no=1, move_no=0,
                 row=3, column=4, color=Move.Color.black),
@@ -362,23 +374,11 @@ class TestGetImgArrayFromMoves(unittest.TestCase):
                 game_no=1, move_no=1,
                 row=15, column=16, color=Move.Color.white)
         ])
-        assert 'e.gif' in goban[3][3]
-        assert 'w.gif' in goban[15][16]
-        assert 'b.gif' in goban[3][4]
+        self.assert_point(goban, 3, 3, 'e.gif')
+        self.assert_point(goban, 15, 16, 'w.gif', 'whitestone')
+        self.assert_point(goban, 3, 4, 'b.gif', 'blackstone')
         ## regression: shared list pointers cause stones to appear on all rows
-        assert 'e.gif' in goban[4][4]
-
-
-class TestAnnotateWithClasses(unittest.TestCase):
-
-    def test_simple_2x2_array(self):
-        input_ = [['e.gif', 'b.gif'], ['w.gif', 'e.gif']]
-        expected = [[('e.gif', "row-0 col-0"),
-                     ('b.gif', "row-0 col-1 blackstone")],
-                    [('w.gif', "row-1 col-0 whitestone"),
-                     ('e.gif', "row-1 col-1")]]
-        output = main.annotate_with_classes(input_)
-        self.assertEqual(output, expected)
+        self.assert_point(goban, 4, 4, 'e.gif')
 
 
 class TestPlayStoneIntegrated(TestWithDb):

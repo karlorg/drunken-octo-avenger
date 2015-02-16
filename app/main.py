@@ -53,8 +53,9 @@ def game():
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
     is_your_turn = is_players_turn_in_game(game, moves)
-    imgs = get_img_array_from_moves(moves)
-    goban = annotate_with_classes(imgs)
+    # imgs = get_img_array_from_moves(moves)
+    # goban = annotate_with_classes(imgs)
+    goban = get_goban_from_moves(moves)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
         move_no=len(moves)
@@ -182,43 +183,27 @@ def get_stone_if_args_good(args, moves):
             game_no=game_no, move_no=move_no,
             row=row, column=column, color=color)
 
-def get_img_array_from_moves(moves):
+def get_goban_from_moves(moves):
     """Given the moves for a game, return a 2d array of image paths.
 
     Pure function.
     """
-    goban = [[IMG_PATH_EMPTY for j in range(19)]
+    goban = [[dict(
+        img=IMG_PATH_EMPTY,
+        classes='row-{row} col-{col}'.format(row=str(j), col=str(i))
+    )
              for i in range(19)]
+             for j in range(19)]
     for move in moves:
         if move.color == Move.Color.black:
-            goban[move.row][move.column] = IMG_PATH_BLACK
+            goban[move.row][move.column]['img'] = IMG_PATH_BLACK
+            goban[move.row][move.column]['classes'] += ' blackstone'
         elif move.color == Move.Color.white:
-            goban[move.row][move.column] = IMG_PATH_WHITE
+            goban[move.row][move.column]['img'] = IMG_PATH_WHITE
+            goban[move.row][move.column]['classes'] += ' whitestone'
         else:
             assert False, "unknown move color"
     return goban
-
-def annotate_with_classes(two_d_array):
-    """Add CSS class strings to each element of a 2d array of stone images.
-
-    ie. convert each image name to a tuple of image name and classes.
-
-    Pure function.
-    """
-    def class_string(img_name, rowno, colno):
-        coord_string = "row-{row} col-{col}".format(
-                row=str(rowno), col=str(colno))
-        if 'b.gif' in img_name:
-            stone_string = ' blackstone'
-        elif 'w.gif' in img_name:
-            stone_string = ' whitestone'
-        else:
-            stone_string = ''
-        return coord_string + stone_string
-
-    return [[(data, class_string(data, rowno, colno))
-             for colno, data in enumerate(column_array)]
-            for rowno, column_array in enumerate(two_d_array)]
 
 def get_status_lists(player_email):
     """Return two lists of games for the player, split by on-turn or not.

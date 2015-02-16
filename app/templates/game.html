@@ -5,12 +5,12 @@
     {% for row in goban %}
     <tr>
         {% set rowloop = loop %}
-        {% for point, classes in row %}
-        <td class="{{ classes }}">
+        {% for point in row %}
+        <td class="{{ point['classes'] }}">
             {% if with_links %}
-            <a href="#"><img src="{{ point }}" /></a>
+            <a href="#"><img src="{{ point['img'] }}" /></a>
             {% else %}
-            <img src="{{ point }}" />
+            <img src="{{ point['img'] }}" />
             {% endif %}
         </td>
         {% endfor %}
