@@ -44,7 +44,9 @@
   module('Basic game page', {
     setup: function() {
       tesuji_charm.game_basic.initialize();
-      return $('input#move_no').val("0");
+      $('input#move_no').val("0");
+      $('input#row').val("");
+      return $('input#column').val("");
     }
   });
 
@@ -83,6 +85,17 @@
     equal($button.prop('disabled'), true, 'starts out disabled');
     $('table.goban td').first().click();
     return equal($button.prop('disabled'), false, 'enabled after stone placed');
+  });
+
+  test("clicking a pre-existing stone does nothing", function(assert) {
+    var $img, $point;
+    $point = $('.row-1.col-1');
+    $img = $point.find('img');
+    $point.addClass('whitestone');
+    $point.click();
+    assert.ok($img.attr('src').indexOf('b.gif') === -1, "point has not become black");
+    assert.notEqual($('input#row').val(), "1", "row not set");
+    return assert.notEqual($('input#column').val(), "1", "column not set");
   });
 
 }).call(this);

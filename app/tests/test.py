@@ -369,16 +369,15 @@ class TestGetImgArrayFromMoves(unittest.TestCase):
         assert 'e.gif' in goban[4][4]
 
 
-class TestAnnotateWithCoords(unittest.TestCase):
+class TestAnnotateWithClasses(unittest.TestCase):
 
     def test_simple_2x2_array(self):
-        from app.main import _GobanCoord as gc
-        input_ = [[0, 0], [0, 0]]
-        expected = [
-                [(0, gc(row=0, column=0)), (0, gc(row=0, column=1))],
-                [(0, gc(row=1, column=0)), (0, gc(row=1, column=1))]
-        ]
-        output = main.annotate_with_coords(input_)
+        input_ = [['e.gif', 'b.gif'], ['w.gif', 'e.gif']]
+        expected = [[('e.gif', "row-0 col-0"),
+                     ('b.gif', "row-0 col-1 blackstone")],
+                    [('w.gif', "row-1 col-0 whitestone"),
+                     ('e.gif', "row-1 col-1")]]
+        output = main.annotate_with_classes(input_)
         self.assertEqual(output, expected)
 
 

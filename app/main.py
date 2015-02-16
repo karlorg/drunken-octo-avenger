@@ -54,7 +54,7 @@ def game():
     moves = game.moves
     is_your_turn = is_players_turn_in_game(game, moves)
     imgs = get_img_array_from_moves(moves)
-    goban = annotate_with_coords(imgs)
+    goban = annotate_with_classes(imgs)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
         move_no=len(moves)
@@ -198,14 +198,25 @@ def get_img_array_from_moves(moves):
             assert False, "unknown move color"
     return goban
 
-_GobanCoord = namedtuple('_GobanCoord', ['row', 'column'])
-def annotate_with_coords(two_d_array):
-    """Add coord pairs to each element of a 2d array (using tuples).
+def annotate_with_classes(two_d_array):
+    """Add CSS class strings to each element of a 2d array of stone images.
+
+    ie. convert each image name to a tuple of image name and classes.
 
     Pure function.
     """
+    def class_string(img_name, rowno, colno):
+        coord_string = "row-{row} col-{col}".format(
+                row=str(rowno), col=str(colno))
+        if 'b.gif' in img_name:
+            stone_string = ' blackstone'
+        elif 'w.gif' in img_name:
+            stone_string = ' whitestone'
+        else:
+            stone_string = ''
+        return coord_string + stone_string
 
-    return [[(data, _GobanCoord(row=rowno, column=colno))
+    return [[(data, class_string(data, rowno, colno))
              for colno, data in enumerate(column_array)]
             for rowno, column_array in enumerate(two_d_array)]
 

@@ -41,6 +41,8 @@ module 'Basic game page',
   setup: ->
     tesuji_charm.game_basic.initialize()
     $('input#move_no').val "0"
+    $('input#row').val ""
+    $('input#column').val ""
 
 test 'clicking multiple points moves black stone', ->
   $point1 = $('td.row-0.col-0').first()
@@ -81,3 +83,14 @@ test 'Confirm button disabled until stone placed', ->
   $('table.goban td').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'
+
+test "clicking a pre-existing stone does nothing", (assert) ->
+  $point = $('.row-1.col-1')
+  $img = $point.find('img')
+  # indicate a pre-existing stone with a class
+  $point.addClass('whitestone')
+  $point.click()
+  assert.ok $img.attr('src').indexOf('b.gif') == -1,
+    "point has not become black"
+  assert.notEqual $('input#row').val(), "1", "row not set"
+  assert.notEqual $('input#column').val(), "1", "column not set"

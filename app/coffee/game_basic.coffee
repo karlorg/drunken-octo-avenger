@@ -27,6 +27,12 @@ parseCoordClass = ($obj) ->
   [_, colStr] = colRe.exec $obj.attr("class")
   return [parseInt(rowStr, 10), parseInt(colStr, 10)]
 
+hasStoneClass = ($obj) ->
+  classStr = $obj.attr "class"
+  return true if classStr.indexOf('blackstone') > -1
+  return true if classStr.indexOf('whitestone') > -1
+  return false
+
 game_basic.initialize = ->
 
   if parseInt($('input#move_no').val()) % 2 == 0
@@ -38,6 +44,7 @@ game_basic.initialize = ->
 
   $('table.goban td').click ->
     return unless hasCoordClass $(this)
+    return if hasStoneClass $(this)
 
     $old_new_stone = $new_stone
     $new_stone = $(this)
