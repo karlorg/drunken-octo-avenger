@@ -1,0 +1,2 @@
+app/static/jquery.js linguist-vendored
+app/static/tests/qunit.* linguist-vendored
