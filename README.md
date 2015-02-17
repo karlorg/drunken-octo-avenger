@@ -34,6 +34,9 @@ In the repository root directory, run
 
     python manage.py runserver [-d]
 
+Access the local server at `http://localhost:5000` by default (other domains
+will need to be set in `config.py` to avoid confusing the login system).
+
 ## testing
 
 ### Python code
