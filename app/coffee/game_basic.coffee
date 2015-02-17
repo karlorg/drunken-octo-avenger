@@ -12,7 +12,7 @@ $new_stone = null
 new_stone_image_path = null
 
 set_image = ($td, filename) ->
-  $td.find('img').attr 'src', "static/images/goban/#{filename}"
+  $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/

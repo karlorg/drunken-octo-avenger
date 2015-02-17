@@ -19,7 +19,7 @@
   new_stone_image_path = null;
 
   set_image = function($td, filename) {
-    return $td.find('img').attr('src', "static/images/goban/" + filename);
+    return $td.find('img').attr('src', "/static/images/goban/" + filename);
   };
 
   rowRe = /row-(\d+)/;
