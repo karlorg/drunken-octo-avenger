@@ -5,6 +5,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       str, super, zip)
 
 from contextlib import contextmanager
+from itertools import chain
 from mock import ANY, Mock, patch
 import re
 import unittest
@@ -335,6 +336,11 @@ class TestGameIntegrated(TestWithDb):
 
     def test_redirects_to_home_if_no_game_specified(self):
         response = self.test_client.get('/game')
+        self.assert_redirects(response, '/')
+
+    def test_redirects_to_home_if_game_not_found(self):
+        out_of_range = max(chain([0], Game.query.filter(Game.id))) + 1
+        response = self.test_client.get(url_for('game', game_no=out_of_range))
         self.assert_redirects(response, '/')
 
     def test_annotates_points_with_coords(self):

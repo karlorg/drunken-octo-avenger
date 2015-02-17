@@ -51,6 +51,9 @@ def game():
     except (KeyError, ValueError):
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
+    if game is None:
+        flash("Game #{game_no} not found".format(game_no=game_no))
+        return redirect('/')
     moves = game.moves
     is_your_turn = is_players_turn_in_game(game, moves)
     # imgs = get_img_array_from_moves(moves)
