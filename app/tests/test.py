@@ -334,9 +334,9 @@ class TestGameIntegrated(TestWithDb):
         main.db.session.commit()
         return game
 
-    def test_redirects_to_home_if_no_game_specified(self):
+    def test_404_if_no_game_specified(self):
         response = self.test_client.get('/game')
-        self.assert_redirects(response, '/')
+        self.assert404(response)
 
     def test_redirects_to_home_if_game_not_found(self):
         out_of_range = max(chain([0], Game.query.filter(Game.id))) + 1

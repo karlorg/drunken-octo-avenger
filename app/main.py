@@ -44,12 +44,8 @@ def front_page():
         return redirect(url_for('status'))
     return render_template_with_email("frontpage.html")
 
-@app.route('/game')
-def game():
-    try:
-        game_no = int(request.args['game_no'])
-    except (KeyError, ValueError):
-        return redirect('/')
+@app.route('/game/<int:game_no>')
+def game(game_no):
     game = Game.query.filter(Game.id == game_no).first()
     if game is None:
         flash("Game #{game_no} not found".format(game_no=game_no))
