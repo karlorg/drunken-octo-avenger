@@ -87,10 +87,72 @@ test 'Confirm button disabled until stone placed', ->
 test "clicking a pre-existing stone does nothing", (assert) ->
   $point = $('.row-1.col-1')
   $img = $point.find('img')
-  # indicate a pre-existing stone with a class
   $point.addClass('whitestone')
+  tesuji_charm.game_basic._reload_board()
+  # test
   $point.click()
   assert.ok $img.attr('src').indexOf('b.gif') == -1,
     "point has not become black"
   assert.notEqual $('input#row').val(), "1", "row not set"
   assert.notEqual $('input#column').val(), "1", "column not set"
+
+test "captured stones are removed from the board", (assert) ->
+  # place existing stones
+  $('.row-0.col-1').addClass "blackstone"
+  $('.row-0.col-1 img').attr 'src', '/static/images/goban/b.gif'
+  $('.row-0.col-0').addClass "whitestone"
+  $('.row-0.col-0 img').attr 'src', '/static/images/goban/w.gif'
+  tesuji_charm.game_basic._reload_board()
+  # now make the capture
+  $('.row-1.col-0').click()
+  # corner should be blank now
+  assert.ok $('.row-0.col-0 img').attr('src').indexOf('e.gif') > -1,
+    "#{$('.row-0.col-0 img').attr('src')}"
+
+test "helper function read_board_state", (assert) ->
+  # place existing stones
+  $('.row-0.col-1').addClass "blackstone"
+  $('.row-0.col-0').addClass "whitestone"
+  # test
+  expected = [
+    ['white', 'black', 'empty']
+    ['empty', 'empty', 'empty']
+    ['empty', 'empty', 'empty']
+  ]
+  assert.deepEqual tesuji_charm.game_basic._read_board_state(), expected
+
+test "helper function update_board", (assert) ->
+  tesuji_charm.game_basic._update_board [
+    ['empty', 'black', 'empty']
+    ['black', 'white', 'empty']
+    ['empty', 'black', 'empty']
+  ]
+  assert.ok $('.row-0.col-1 img').attr('src').indexOf('b.gif') > -1
+  assert.ok $('.row-1.col-1 img').attr('src').indexOf('w.gif') > -1
+  assert.ok $('.row-1.col-2 img').attr('src').indexOf('e.gif') > -1
+  tesuji_charm.game_basic._update_board [
+    ['empty', 'empty', 'empty']
+    ['empty', 'empty', 'empty']
+    ['empty', 'empty', 'empty']
+  ]
+  assert.ok $('.row-0.col-1 img').attr('src').indexOf('e.gif') > -1
+  assert.ok $('.row-1.col-1 img').attr('src').indexOf('e.gif') > -1
+
+
+module 'Go rules'
+
+go_rules = tesuji_charm.go_rules
+
+test "playing on an existing stone is illegal", (assert) ->
+  board = [ ['empty', 'black'], ['empty', 'empty'] ]
+  assert.equal go_rules.is_legal('white', 0, 1, board), true
+  assert.equal go_rules.is_legal('white', 1, 0, board), false
+
+test "playing a move sets the point color", (assert) ->
+  board = [ ['empty', 'black'], ['empty', 'empty'] ]
+  plusBlack = [ ['empty', 'black'], ['black', 'empty'] ]
+  plusWhite = [ ['empty', 'black'], ['white', 'empty'] ]
+  assert.deepEqual(
+    tesuji_charm.go_rules.get_new_state('black', 0, 1, board), plusBlack)
+  assert.deepEqual(
+    tesuji_charm.go_rules.get_new_state('white', 0, 1, board), plusWhite)
