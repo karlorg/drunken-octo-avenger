@@ -6,6 +6,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 from future import standard_library
 standard_library.install_aliases()
 
+import logging
 import os
 import sys
 import time
@@ -21,6 +22,9 @@ from ..main import app
 import manage
 from . import server_tools
 
+# importing main enables logging, we switch it off again here to prevent
+# selenium debug lines from flooding the test output
+logging.disable(logging.CRITICAL)
 
 class SeleniumTest(LiveServerTestCase):
 
@@ -72,6 +76,9 @@ class SeleniumTest(LiveServerTestCase):
         ## for some reason the SQL Alchemy URI is removed between setup in the
         ## main app and here
         app.config.from_object('config')
+        # running the server in debug mode during testing fails for some reason
+        app.config['DEBUG'] = False
+        app.config['TESTING'] = True
         return app
 
     def setUp(self):
