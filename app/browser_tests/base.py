@@ -82,19 +82,10 @@ class SeleniumTest(LiveServerTestCase):
         return app
 
     def setUp(self):
-        self.active_browsers = []
-        self.browser = self.get_new_browser()
+        self.browser = webdriver.Firefox()
 
     def tearDown(self):
-        for browser in self.active_browsers:
-            browser.quit()
-        time.sleep(0.5)
-
-    def get_new_browser(self):
-        """Return a new browser object that will be cleaned up on teardown"""
-        browser = webdriver.Firefox()
-        self.active_browsers.append(browser)
-        return browser
+        self.browser.quit()
 
     # credit to Harry Percival for this wait_for
     # from his book, Test-Driven Development with Python
