@@ -39,10 +39,10 @@ test 'init function sets request and logout callbacks', ->
 
 module 'Basic game page',
   setup: ->
-    tesuji_charm.game_basic.initialize()
     $('input#move_no').val "0"
     $('input#row').val ""
     $('input#column').val ""
+    tesuji_charm.game_basic.initialize()
 
 test 'clicking multiple points moves black stone', ->
   $point1 = $('td.row-0.col-0').first()

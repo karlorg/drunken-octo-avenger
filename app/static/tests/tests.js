@@ -43,10 +43,10 @@
 
   module('Basic game page', {
     setup: function() {
-      tesuji_charm.game_basic.initialize();
       $('input#move_no').val("0");
       $('input#row').val("");
-      return $('input#column').val("");
+      $('input#column').val("");
+      return tesuji_charm.game_basic.initialize();
     }
   });
 
