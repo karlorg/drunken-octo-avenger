@@ -32,7 +32,7 @@ In the repository root directory, run
 
 (from virtualenv)
 
-    python manage.py runserver [-d]
+    python manage.py runserver
 
 Access the local server at `http://localhost:5000` by default (other domains
 will need to be set in `config.py` to avoid confusing the login system).
