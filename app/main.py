@@ -6,6 +6,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 
 from collections import namedtuple
 from enum import IntEnum
+import logging
 
 from flask import (
         Flask, abort, flash, redirect, render_template, request, session,
@@ -29,6 +30,8 @@ IMG_PATH_WHITE = '/static/images/goban/w.gif'
 app = Flask(__name__)
 app.config.from_object('config')
 app.jinja_env.undefined = jinja2.StrictUndefined
+if app.debug:
+    logging.basicConfig(level=logging.DEBUG)
 db = SQLAlchemy(app)
 
 
@@ -153,6 +156,7 @@ def process_persona_response(response):
     Pure function.
     """
     if not response.ok:
+        logging.debug("Response not 'ok' for persona login attempt")
         return _SessionUpdate(do=False, email='')
     verification_data = response.json()
     if (
@@ -160,6 +164,8 @@ def process_persona_response(response):
             verification_data['status'] != 'okay' or
             'email' not in verification_data
     ):
+        logging.debug("Persona login has a problem with the verification data")
+        logging.debug(str(verification_data))
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
