@@ -153,6 +153,12 @@ test "playing a move sets the point color", (assert) ->
   plusBlack = [ ['empty', 'black'], ['black', 'empty'] ]
   plusWhite = [ ['empty', 'black'], ['white', 'empty'] ]
   assert.deepEqual(
-    tesuji_charm.go_rules.getNewState('black', 0, 1, board), plusBlack)
+    go_rules.getNewState('black', 0, 1, board), plusBlack)
   assert.deepEqual(
-    tesuji_charm.go_rules.getNewState('white', 0, 1, board), plusWhite)
+    go_rules.getNewState('white', 0, 1, board), plusWhite)
+
+test "removing a single stone's last liberty removes it", (assert) ->
+  board = [ ['white', 'black'], ['empty', 'empty'] ]
+  afterCapture = [ ['empty', 'black'], ['black', 'empty'] ]
+  assert.deepEqual(
+    go_rules.getNewState('black', 0, 1, board), afterCapture)
