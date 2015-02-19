@@ -77,7 +77,13 @@ markdown file in `app/browser_tests`.
 
 ### Javascript code
 
-Open `app/static/tests/tests.html` in your browser.
+To enable the coverage options for Javascript, run a local server as above and
+open `http://localhost:5000/static/tests/tests.html`.  This may later become
+the only way to run the tests if we start doing clever things that get the
+server involved in JS testing.
+
+If you don't care about coverage, you can also just open the local file
+`app/static/tests/tests.html` in your browser.
 
 ## Compatibility (Python 2/3)
 
