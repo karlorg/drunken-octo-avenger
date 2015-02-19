@@ -1,16 +1,16 @@
 module 'Persona'
 
 test 'init function sets request and logout callbacks', ->
-  request_called = false
-  logout_called = false
-  watch_called = false
-  mock_navigator =
+  requestCalled = false
+  logoutCalled = false
+  watchCalled = false
+  mockNavigator =
     id:
-      logout: -> logout_called = true
-      request: -> request_called = true
+      logout: -> logoutCalled = true
+      request: -> requestCalled = true
       watch: (params) ->
         p_user = params.loggedInUser
-        t_user = tesuji_charm.current_persona_email
+        t_user = tesuji_charm.currentPersonaEmail
         ok(
           (t_user == '' and p_user == null) or
           (t_user != '' and p_user == t_user),
@@ -19,22 +19,22 @@ test 'init function sets request and logout callbacks', ->
           'navigator.id.watch passed function for onlogin'
         ok typeof params.onlogout is 'function',
           'navigator.id.watch passed function for onlogout'
-        watch_called = true
+        watchCalled = true
   # main test sequence begins here
-  equal watch_called, false
-  tesuji_charm.current_persona_email = ''
-  tesuji_charm.persona.initialize mock_navigator
-  equal watch_called, true, 'navigator.id.watch called'
-  tesuji_charm.current_persona_email = 'bob@example.com'
-  tesuji_charm.persona.initialize mock_navigator
+  equal watchCalled, false
+  tesuji_charm.currentPersonaEmail = ''
+  tesuji_charm.persona.initialize mockNavigator
+  equal watchCalled, true, 'navigator.id.watch called'
+  tesuji_charm.currentPersonaEmail = 'bob@example.com'
+  tesuji_charm.persona.initialize mockNavigator
 
-  equal request_called, false
-  equal logout_called, false
+  equal requestCalled, false
+  equal logoutCalled, false
   $('#persona_login').click()
-  equal request_called, true, 'login request called correctly'
-  equal logout_called, false
+  equal requestCalled, true, 'login request called correctly'
+  equal logoutCalled, false
   $('#logout').click()
-  equal logout_called, true, 'logout callback called correctly'
+  equal logoutCalled, true, 'logout callback called correctly'
 
 
 module 'Basic game page',
@@ -88,7 +88,7 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   $point = $('.row-1.col-1')
   $img = $point.find('img')
   $point.addClass('whitestone')
-  tesuji_charm.game_basic._reload_board()
+  tesuji_charm.game_basic._reloadBoard()
   # test
   $point.click()
   assert.ok $img.attr('src').indexOf('b.gif') == -1,
@@ -102,14 +102,14 @@ test "captured stones are removed from the board", (assert) ->
   $('.row-0.col-1 img').attr 'src', '/static/images/goban/b.gif'
   $('.row-0.col-0').addClass "whitestone"
   $('.row-0.col-0 img').attr 'src', '/static/images/goban/w.gif'
-  tesuji_charm.game_basic._reload_board()
+  tesuji_charm.game_basic._reloadBoard()
   # now make the capture
   $('.row-1.col-0').click()
   # corner should be blank now
   assert.ok $('.row-0.col-0 img').attr('src').indexOf('e.gif') > -1,
     "#{$('.row-0.col-0 img').attr('src')}"
 
-test "helper function read_board_state", (assert) ->
+test "helper function readBoardState", (assert) ->
   # place existing stones
   $('.row-0.col-1').addClass "blackstone"
   $('.row-0.col-0').addClass "whitestone"
@@ -119,10 +119,10 @@ test "helper function read_board_state", (assert) ->
     ['empty', 'empty', 'empty']
     ['empty', 'empty', 'empty']
   ]
-  assert.deepEqual tesuji_charm.game_basic._read_board_state(), expected
+  assert.deepEqual tesuji_charm.game_basic._readBoardState(), expected
 
-test "helper function update_board", (assert) ->
-  tesuji_charm.game_basic._update_board [
+test "helper function updateBoard", (assert) ->
+  tesuji_charm.game_basic._updateBoard [
     ['empty', 'black', 'empty']
     ['black', 'white', 'empty']
     ['empty', 'black', 'empty']
@@ -130,7 +130,7 @@ test "helper function update_board", (assert) ->
   assert.ok $('.row-0.col-1 img').attr('src').indexOf('b.gif') > -1
   assert.ok $('.row-1.col-1 img').attr('src').indexOf('w.gif') > -1
   assert.ok $('.row-1.col-2 img').attr('src').indexOf('e.gif') > -1
-  tesuji_charm.game_basic._update_board [
+  tesuji_charm.game_basic._updateBoard [
     ['empty', 'empty', 'empty']
     ['empty', 'empty', 'empty']
     ['empty', 'empty', 'empty']
@@ -145,14 +145,14 @@ go_rules = tesuji_charm.go_rules
 
 test "playing on an existing stone is illegal", (assert) ->
   board = [ ['empty', 'black'], ['empty', 'empty'] ]
-  assert.equal go_rules.is_legal('white', 0, 1, board), true
-  assert.equal go_rules.is_legal('white', 1, 0, board), false
+  assert.equal go_rules.isLegal('white', 0, 1, board), true
+  assert.equal go_rules.isLegal('white', 1, 0, board), false
 
 test "playing a move sets the point color", (assert) ->
   board = [ ['empty', 'black'], ['empty', 'empty'] ]
   plusBlack = [ ['empty', 'black'], ['black', 'empty'] ]
   plusWhite = [ ['empty', 'black'], ['white', 'empty'] ]
   assert.deepEqual(
-    tesuji_charm.go_rules.get_new_state('black', 0, 1, board), plusBlack)
+    tesuji_charm.go_rules.getNewState('black', 0, 1, board), plusBlack)
   assert.deepEqual(
-    tesuji_charm.go_rules.get_new_state('white', 0, 1, board), plusWhite)
+    tesuji_charm.go_rules.getNewState('white', 0, 1, board), plusWhite)

@@ -14,15 +14,15 @@
 
   go_rules = tesuji_charm.go_rules;
 
-  go_rules.is_legal = function(color, x, y, state) {
+  go_rules.isLegal = function(color, x, y, state) {
     return state[y][x] === 'empty';
   };
 
-  go_rules.get_new_state = function(color, x, y, state) {
-    var new_state;
-    new_state = $.extend(true, [], state);
-    new_state[y][x] = color;
-    return new_state;
+  go_rules.getNewState = function(color, x, y, state) {
+    var newState;
+    newState = $.extend(true, [], state);
+    newState[y][x] = color;
+    return newState;
   };
 
 }).call(this);
