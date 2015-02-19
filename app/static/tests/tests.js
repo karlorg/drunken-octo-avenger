@@ -156,6 +156,16 @@
     return assert.deepEqual(go_rules.getNewState('black', 0, 1, board), afterCapture);
   });
 
+  test("removing a group's last liberty removes the group", function(assert) {
+    var b1, b2, board, expected;
+    board = [['empty', 'empty', 'black', 'empty'], ['black', 'white', 'white', 'empty'], ['empty', 'black', 'black', 'empty']];
+    b1 = go_rules.getNewState('black', 3, 1, board);
+    assert.equal(b1[1][2], 'white', "white stones still around with one liberty remaining");
+    b2 = go_rules.getNewState('black', 1, 0, b1);
+    expected = [['empty', 'black', 'black', 'empty'], ['black', 'empty', 'empty', 'black'], ['empty', 'black', 'black', 'empty']];
+    return assert.deepEqual(b2, expected, "group capture succeeded");
+  });
+
   test("helper function neighboringPoints", function(assert) {
     var board;
     board = [['empty', 'empty', 'empty'], ['empty', 'empty', 'empty'], ['empty', 'empty', 'empty']];
@@ -164,12 +174,34 @@
     return assert.equal(go_rules._neighbouringPoints(1, 1, board).length, 4);
   });
 
-  test("helper function countLiberties", function(assert) {
+  test("_countLiberties: single stones", function(assert) {
     var board;
     board = [['black', 'empty', 'black'], ['empty', 'black', 'white'], ['empty', 'empty', 'empty']];
     assert.equal(go_rules._countLiberties(0, 0, board), 2);
     assert.equal(go_rules._countLiberties(1, 1, board), 3);
     return assert.equal(go_rules._countLiberties(2, 1, board), 1);
+  });
+
+  test("_countLiberties: groups share liberties", function(assert) {
+    var board;
+    board = [['black', 'black', 'empty'], ['black', 'white', 'white'], ['empty', 'black', 'empty']];
+    assert.equal(go_rules._countLiberties(1, 0, board), 2);
+    return assert.equal(go_rules._countLiberties(1, 1, board), 2);
+  });
+
+  test("_countLiberties: regression test: shared liberties not double counted", function(assert) {
+    var board;
+    board = [['black', 'black', 'empty'], ['black', 'empty', 'white'], ['empty', 'black', 'empty']];
+    return assert.equal(go_rules._countLiberties(1, 0, board), 3, "centre liberty counts only once, for total of 3");
+  });
+
+  test("_groupPoints: identifies groups correctly", function(assert) {
+    var blackGroup, board, whiteGroup;
+    board = [['black', 'black', 'empty'], ['black', 'white', 'white'], ['empty', 'black', 'empty']];
+    blackGroup = [[1, 0], [0, 0], [0, 1]];
+    whiteGroup = [[1, 1], [2, 1]];
+    assert.deepEqual(go_rules._groupPoints(1, 0, board), blackGroup, "black group");
+    return assert.deepEqual(go_rules._groupPoints(1, 1, board), whiteGroup, "white group");
   });
 
 }).call(this);
