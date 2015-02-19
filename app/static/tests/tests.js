@@ -140,6 +140,20 @@
     return assert.equal(go_rules.isLegal('white', 1, 0, board), false);
   });
 
+  test("playing a stone with no liberties is illegal", function(assert) {
+    var board;
+    board = [['empty', 'black'], ['black', 'empty']];
+    assert.equal(go_rules.isLegal('white', 0, 0, board), false, "white stone surrounded by black");
+    board = [['empty', 'black'], ['black', 'black']];
+    return assert.equal(go_rules.isLegal('black', 0, 0, board), false, "black stone filling the board with black");
+  });
+
+  test("a move that would have no liberties is legal if it captures", function(assert) {
+    var board;
+    board = [['empty', 'black'], ['black', 'black']];
+    return assert.equal(go_rules.isLegal('white', 0, 0, board), true);
+  });
+
   test("playing a move sets the point color", function(assert) {
     var board, plusBlack, plusWhite;
     board = [['empty', 'black'], ['empty', 'empty']];

@@ -5,7 +5,8 @@ tesuji_charm.go_rules ?= {}
 go_rules = tesuji_charm.go_rules
 
 go_rules.isLegal = (color, x, y, state) ->
-  return state[y][x] is 'empty'
+  return state[y][x] is 'empty' and
+    countLiberties(x, y, go_rules.getNewState(color, x, y, state)) > 0
 
 go_rules.getNewState = (color, x, y, state) ->
   # given a color stone to play at (x,y), return the new board state

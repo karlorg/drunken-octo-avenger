@@ -16,7 +16,7 @@
   go_rules = tesuji_charm.go_rules;
 
   go_rules.isLegal = function(color, x, y, state) {
-    return state[y][x] === 'empty';
+    return state[y][x] === 'empty' && countLiberties(x, y, go_rules.getNewState(color, x, y, state)) > 0;
   };
 
   go_rules.getNewState = function(color, x, y, state) {

@@ -148,6 +148,18 @@ test "playing on an existing stone is illegal", (assert) ->
   assert.equal go_rules.isLegal('white', 0, 1, board), true
   assert.equal go_rules.isLegal('white', 1, 0, board), false
 
+test "playing a stone with no liberties is illegal", (assert) ->
+  board = [ ['empty', 'black'], ['black', 'empty'] ]
+  assert.equal go_rules.isLegal('white', 0, 0, board), false,
+    "white stone surrounded by black"
+  board = [ ['empty', 'black'], ['black', 'black'] ]
+  assert.equal go_rules.isLegal('black', 0, 0, board), false,
+    "black stone filling the board with black"
+
+test "a move that would have no liberties is legal if it captures", (assert) ->
+  board = [ ['empty', 'black'], ['black', 'black'] ]
+  assert.equal go_rules.isLegal('white', 0, 0, board), true
+
 test "playing a move sets the point color", (assert) ->
   board = [ ['empty', 'black'], ['empty', 'empty'] ]
   plusBlack = [ ['empty', 'black'], ['black', 'empty'] ]
