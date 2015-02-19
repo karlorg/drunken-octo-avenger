@@ -8,6 +8,7 @@ go_rules.isLegal = (color, x, y, state) ->
   return state[y][x] is 'empty'
 
 go_rules.getNewState = (color, x, y, state) ->
+  # given a color stone to play at (x,y), return the new board state
   newState = $.extend(true, [], state)  # deep copy
   newState[y][x] = color
   for [xn, yn] in neighboringPoints(x, y, newState)
