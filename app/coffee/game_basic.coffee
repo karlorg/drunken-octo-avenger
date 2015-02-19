@@ -31,12 +31,6 @@ parseCoordClass = ($obj) ->
   [_, colStr] = colRe.exec $obj.attr("class")
   return [parseInt(rowStr, 10), parseInt(colStr, 10)]
 
-hasStoneClass = ($obj) ->
-  classStr = $obj.attr "class"
-  return true if classStr.indexOf('blackstone') > -1
-  return true if classStr.indexOf('whitestone') > -1
-  return false
-
 getStoneClass = ($obj) ->
   classStr = $obj.attr "class"
   return 'blackstone' if classStr.indexOf('blackstone') > -1
