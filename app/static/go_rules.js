@@ -47,6 +47,8 @@
     return _results;
   };
 
+  go_rules._neighbouringPoints = neighboringPoints;
+
   enemyColor = function(color) {
     switch (color) {
       case 'black':
@@ -70,5 +72,7 @@
     }
     return count;
   };
+
+  go_rules._countLiberties = countLiberties;
 
 }).call(this);

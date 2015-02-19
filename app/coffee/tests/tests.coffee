@@ -162,3 +162,23 @@ test "removing a single stone's last liberty removes it", (assert) ->
   afterCapture = [ ['empty', 'black'], ['black', 'empty'] ]
   assert.deepEqual(
     go_rules.getNewState('black', 0, 1, board), afterCapture)
+
+test "helper function neighboringPoints", (assert) ->
+  board = [
+    ['empty', 'empty', 'empty']
+    ['empty', 'empty', 'empty']
+    ['empty', 'empty', 'empty']
+  ]
+  assert.equal(go_rules._neighbouringPoints(0, 0, board).length, 2)
+  assert.equal(go_rules._neighbouringPoints(1, 0, board).length, 3)
+  assert.equal(go_rules._neighbouringPoints(1, 1, board).length, 4)
+
+test "helper function countLiberties", (assert) ->
+  board = [
+    ['black', 'empty', 'black']
+    ['empty', 'black', 'white']
+    ['empty', 'empty', 'empty']
+  ]
+  assert.equal(go_rules._countLiberties(0, 0, board), 2)
+  assert.equal(go_rules._countLiberties(1, 1, board), 3)
+  assert.equal(go_rules._countLiberties(2, 1, board), 1)
