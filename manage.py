@@ -17,6 +17,13 @@ def remake_db():
     db.create_all()
 
 @manager.command
+def test_browser(name):
+    """Run a single browser test, given its name (excluding `test_`)"""
+    result = os.system(
+            "python -m unittest app.browser_tests.test_{}".format(name))
+    return (0 if result == 0 else 1)
+
+@manager.command
 def test_module(module):
     """ For example you might do `python manage.py test_module app.tests.test'
     """
@@ -34,9 +41,11 @@ def test_all():
     return (0 if result == 0 else 1)
 
 @manager.command
-def test(module=None, package=None):
+def test(browser=None, module=None, package=None):
     """For convenience, you can use `test -x` as a shorthand for other tests"""
-    if module is not None:
+    if browser is not None:
+        return test_browser(browser)
+    elif module is not None:
         return test_module(module)
     elif package is not None:
         return test_package(package)
