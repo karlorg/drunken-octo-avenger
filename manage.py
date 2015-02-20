@@ -34,6 +34,16 @@ def test_all():
     return (0 if result == 0 else 1)
 
 @manager.command
+def test(module=None, package=None):
+    """For convenience, you can use `test -x` as a shorthand for other tests"""
+    if module is not None:
+        return test_module(module)
+    elif package is not None:
+        return test_package(package)
+    else:
+        return test_all()
+
+@manager.command
 def coverage(quick=False, browser=False):
     rcpath = os.path.abspath('.coveragerc')
 
