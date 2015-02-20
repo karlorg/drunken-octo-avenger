@@ -12,6 +12,54 @@ from app.main import Game, Move, app, db
 manager = Manager(app)
 
 @manager.command
+def remake_db():
+    db.drop_all()
+    db.create_all()
+
+@manager.command
+def test_module(module):
+    """ For example you might do `python manage.py test_module app.tests.test'
+    """
+    result = os.system("python -m unittest " + module)
+    return (0 if result == 0 else 1)
+
+@manager.command
+def test_package(directory):
+    result = os.system("python -m unittest discover " + directory)
+    return (0 if result == 0 else 1)
+
+@manager.command
+def test_all():
+    result = os.system("python -m unittest discover")
+    return (0 if result == 0 else 1)
+
+@manager.command
+def coverage(quick=False, browser=False):
+    rcpath = os.path.abspath('.coveragerc')
+
+    quick_command = 'test_package app.tests'
+    browser_command = 'test_package app.browser_tests'
+    full_command = 'test_all'
+
+    if quick:
+        manage_command = quick_command
+    elif browser:
+        manage_command = browser_command
+    else:
+        manage_command = full_command
+
+    if os.path.exists('.coverage'):
+        os.remove('.coverage')
+    os.system((
+            "COVERAGE_PROCESS_START='{0}' "
+            "coverage run manage.py {1}"
+            ).format(rcpath, manage_command))
+    os.system("coverage combine")
+    os.system("coverage report -m")
+    os.system("coverage html")
+
+
+@manager.command
 def clear_games_for_player(email):
     """Clear all of `email`'s games from the database."""
     clear_games_for_player_internal(email)
@@ -74,53 +122,6 @@ def create_login_session_internal(email):
             value=cookie_value,
             path=interface.get_cookie_path(app),
     )
-
-@manager.command
-def remake_db():
-    db.drop_all()
-    db.create_all()
-
-@manager.command
-def test_module(module):
-    """ For example you might do `python manage.py test_module app.tests.test'
-    """
-    result = os.system("python -m unittest " + module)
-    return (0 if result == 0 else 1)
-
-@manager.command
-def test_package(directory):
-    result = os.system("python -m unittest discover " + directory)
-    return (0 if result == 0 else 1)
-
-@manager.command
-def test_all():
-    result = os.system("python -m unittest discover")
-    return (0 if result == 0 else 1)
-
-@manager.command
-def coverage(quick=False, browser=False):
-    rcpath = os.path.abspath('.coveragerc')
-
-    quick_command = 'test_package app.tests'
-    browser_command = 'test_package app.browser_tests'
-    full_command = 'test_all'
-
-    if quick:
-        manage_command = quick_command
-    elif browser:
-        manage_command = browser_command
-    else:
-        manage_command = full_command
-
-    if os.path.exists('.coverage'):
-        os.remove('.coverage')
-    os.system((
-            "COVERAGE_PROCESS_START='{0}' "
-            "coverage run manage.py {1}"
-            ).format(rcpath, manage_command))
-    os.system("coverage combine")
-    os.system("coverage report -m")
-    os.system("coverage html")
 
 if __name__ == "__main__":
     manager.run()
