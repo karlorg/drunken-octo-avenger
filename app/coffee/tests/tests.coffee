@@ -143,22 +143,35 @@ module 'Go rules'
 
 go_rules = tesuji_charm.go_rules
 
+QUnit.assert.legal = (color, x, y, state, message) ->
+  go_rules.getNewState(color, x, y, state)
+  @push true, true, true, message ? "move is legal"
+
+QUnit.assert.illegal = (color, x, y, state, message) ->
+  try
+    go_rules.getNewState(color, x, y, state)
+  catch error
+    if error.message is 'illegal move'
+      @push true, false, false, message ? "move is illegal"
+      return
+  @push false, true, false, message ? "move is illegal"
+
 test "playing on an existing stone is illegal", (assert) ->
   board = [ ['empty', 'black'], ['empty', 'empty'] ]
-  assert.equal go_rules.isLegal('white', 0, 1, board), true
-  assert.equal go_rules.isLegal('white', 1, 0, board), false
+  assert.legal('white', 0, 1, board)
+  assert.illegal('white', 1, 0, board)
 
 test "playing a stone with no liberties is illegal", (assert) ->
   board = [ ['empty', 'black'], ['black', 'empty'] ]
-  assert.equal go_rules.isLegal('white', 0, 0, board), false,
+  assert.illegal 'white', 0, 0, board,
     "white stone surrounded by black"
   board = [ ['empty', 'black'], ['black', 'black'] ]
-  assert.equal go_rules.isLegal('black', 0, 0, board), false,
+  assert.illegal 'black', 0, 0, board,
     "black stone filling the board with black"
 
 test "a move that would have no liberties is legal if it captures", (assert) ->
   board = [ ['empty', 'black'], ['black', 'black'] ]
-  assert.equal go_rules.isLegal('white', 0, 0, board), true
+  assert.legal 'white', 0, 0, board
 
 test "playing a move sets the point color", (assert) ->
   board = [ ['empty', 'black'], ['empty', 'empty'] ]

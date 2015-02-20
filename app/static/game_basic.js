@@ -124,20 +124,21 @@
     }
     $('button.confirm_button').prop('disabled', true);
     return $('table.goban td').click(function() {
-      var $oldNewStone, col, newBoardState, row, _ref;
+      var col, error, newBoardState, row, _ref;
       if (!hasCoordClass($(this))) {
         return;
       }
       _ref = parseCoordClass($(this)), row = _ref[0], col = _ref[1];
-      if (!go_rules.isLegal(newStoneColor, col, row, initialBoardState)) {
-        return;
+      try {
+        newBoardState = go_rules.getNewState(newStoneColor, col, row, initialBoardState);
+      } catch (_error) {
+        error = _error;
+        if (error.message === 'illegal move') {
+          return;
+        } else {
+          throw error;
+        }
       }
-      $oldNewStone = $newStone;
-      $newStone = $(this);
-      if ($oldNewStone !== null) {
-        setImage($oldNewStone, 'e.gif');
-      }
-      newBoardState = go_rules.getNewState(newStoneColor, col, row, initialBoardState);
       updateBoard(newBoardState);
       $('input#row').val(row.toString());
       $('input#column').val(col.toString());

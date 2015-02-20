@@ -83,17 +83,15 @@ game_basic.initialize = ->
   $('table.goban td').click ->
     return unless hasCoordClass $(this)
     [row, col] = parseCoordClass $(this)
-    return unless go_rules.isLegal(
-      newStoneColor, col, row, initialBoardState)
 
-    $oldNewStone = $newStone
-    $newStone = $(this)
-
-    if $oldNewStone != null
-      setImage $oldNewStone, 'e.gif'
-
-    newBoardState = go_rules.getNewState(
-      newStoneColor, col, row, initialBoardState)
+    try
+      newBoardState = go_rules.getNewState(
+        newStoneColor, col, row, initialBoardState)
+    catch error
+      if error.message is 'illegal move'
+        return
+      else
+        throw error
     updateBoard newBoardState
 
     $('input#row').val row.toString()

@@ -4,19 +4,22 @@ tesuji_charm = window.tesuji_charm
 tesuji_charm.go_rules ?= {}
 go_rules = tesuji_charm.go_rules
 
-go_rules.isLegal = (color, x, y, state) ->
-  return state[y][x] is 'empty' and
-    countLiberties(x, y, go_rules.getNewState(color, x, y, state)) > 0
-
 go_rules.getNewState = (color, x, y, state) ->
   # given a color stone to play at (x,y), return the new board state
+  if state[y][x] isnt 'empty'
+    throw Error 'illegal move'
   newState = $.extend(true, [], state)  # deep copy
   newState[y][x] = color
+
+  # process captures
   for [xn, yn] in neighboringPoints(x, y, newState)
     if newState[yn][xn] is enemyColor(color)
       if countLiberties(xn, yn, newState) is 0
         for [xg, yg] in groupPoints(xn, yn, newState)
           newState[yg][xg] = 'empty'
+
+  if countLiberties(x, y, newState) is 0
+    throw Error 'illegal move'
   return newState
 
 neighboringPoints = (x, y, state) ->

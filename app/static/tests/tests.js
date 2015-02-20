@@ -133,25 +133,44 @@
 
   go_rules = tesuji_charm.go_rules;
 
+  QUnit.assert.legal = function(color, x, y, state, message) {
+    go_rules.getNewState(color, x, y, state);
+    return this.push(true, true, true, message != null ? message : "move is legal");
+  };
+
+  QUnit.assert.illegal = function(color, x, y, state, message) {
+    var error;
+    try {
+      go_rules.getNewState(color, x, y, state);
+    } catch (_error) {
+      error = _error;
+      if (error.message === 'illegal move') {
+        this.push(true, false, false, message != null ? message : "move is illegal");
+        return;
+      }
+    }
+    return this.push(false, true, false, message != null ? message : "move is illegal");
+  };
+
   test("playing on an existing stone is illegal", function(assert) {
     var board;
     board = [['empty', 'black'], ['empty', 'empty']];
-    assert.equal(go_rules.isLegal('white', 0, 1, board), true);
-    return assert.equal(go_rules.isLegal('white', 1, 0, board), false);
+    assert.legal('white', 0, 1, board);
+    return assert.illegal('white', 1, 0, board);
   });
 
   test("playing a stone with no liberties is illegal", function(assert) {
     var board;
     board = [['empty', 'black'], ['black', 'empty']];
-    assert.equal(go_rules.isLegal('white', 0, 0, board), false, "white stone surrounded by black");
+    assert.illegal('white', 0, 0, board, "white stone surrounded by black");
     board = [['empty', 'black'], ['black', 'black']];
-    return assert.equal(go_rules.isLegal('black', 0, 0, board), false, "black stone filling the board with black");
+    return assert.illegal('black', 0, 0, board, "black stone filling the board with black");
   });
 
   test("a move that would have no liberties is legal if it captures", function(assert) {
     var board;
     board = [['empty', 'black'], ['black', 'black']];
-    return assert.equal(go_rules.isLegal('white', 0, 0, board), true);
+    return assert.legal('white', 0, 0, board);
   });
 
   test("playing a move sets the point color", function(assert) {

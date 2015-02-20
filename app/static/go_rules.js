@@ -15,12 +15,11 @@
 
   go_rules = tesuji_charm.go_rules;
 
-  go_rules.isLegal = function(color, x, y, state) {
-    return state[y][x] === 'empty' && countLiberties(x, y, go_rules.getNewState(color, x, y, state)) > 0;
-  };
-
   go_rules.getNewState = function(color, x, y, state) {
     var newState, xg, xn, yg, yn, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    if (state[y][x] !== 'empty') {
+      throw Error('illegal move');
+    }
     newState = $.extend(true, [], state);
     newState[y][x] = color;
     _ref = neighboringPoints(x, y, newState);
@@ -35,6 +34,9 @@
           }
         }
       }
+    }
+    if (countLiberties(x, y, newState) === 0) {
+      throw Error('illegal move');
     }
     return newState;
   };
