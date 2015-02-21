@@ -5,19 +5,19 @@ tesuji_charm.persona ?= {}
 persona = tesuji_charm.persona
 
 persona.initialize = (navigator) ->
-  signin_link = $('#persona_login')
-  if signin_link.length > 0
-    signin_link.click -> navigator.id.request()
-  signout_link = $('#logout')
-  if signout_link.length > 0
-    signout_link.click -> navigator.id.logout()
+  signinLink = $('#persona_login')
+  if signinLink.length > 0
+    signinLink.click -> navigator.id.request()
+  signoutLink = $('#logout')
+  if signoutLink.length > 0
+    signoutLink.click -> navigator.id.logout()
 
-  logged_in_user = tesuji_charm.current_persona_email
-  if logged_in_user == ''
-    logged_in_user = null
+  loggedInUser = tesuji_charm.currentPersonaEmail
+  if loggedInUser == ''
+    loggedInUser = null
 
   navigator.id.watch {
-    loggedInUser: logged_in_user
+    loggedInUser: loggedInUser
     onlogin: (assertion) ->
       $.ajax {
         type: 'POST'
