@@ -63,7 +63,12 @@ class GameTest(SeleniumTest):
         self.clear_games_for_player(ONE_EMAIL)
         self.clear_games_for_player(TWO_EMAIL)
         self.create_game(black_email=ONE_EMAIL, white_email=TWO_EMAIL)
-        self.create_game(black_email=ONE_EMAIL, white_email=TWO_EMAIL)
+        self.create_game(
+                black_email=ONE_EMAIL, white_email=TWO_EMAIL, stones=[
+                    'wwb',
+                    'b..'
+                ])
+        initial_empty_count = 19*19-4
 
         # -- PLAYER ONE
         # player one logs in and gets the front page; should see a page listing
@@ -87,8 +92,11 @@ class GameTest(SeleniumTest):
         self.wait_for(check_goban_exists)
 
         # on the game page are 19x19 imgs representing board points/stones
+        # counts depend on the stone setup above
         empty = self.count_stones_and_points().empty
-        self.assertEqual(19*19, empty, "did not find 19x19 board imgs")
+        self.assertEqual(
+                initial_empty_count, empty,
+                "did not find expected # of empty imgs")
 
         ## check one of those images can be loaded
         img = self.browser.find_element_by_css_selector('table.goban img')
@@ -111,21 +119,29 @@ class GameTest(SeleniumTest):
             if not button.get_attribute('disabled'):
                 self.fail("Confirm button clickable before stone placed")
 
-        # user clicks an empty spot, which is a link
-        self.get_point(15, 3).click()
-        # now on the board is one black stone and 19x19 - 1 empty points
+        # user clicks an empty point; the board updates to show a stone there
+        # and other stones captured
+        self.get_point(1, 1).click()
         counts = self.count_stones_and_points()
-        self.assertEqual(counts.empty, 19*19-1)
-        self.assertEqual(counts.black, 1)
+        self.assertEqual(counts.empty, initial_empty_count+1)
+        self.assertEqual(counts.white, 0)
+        self.assertEqual(counts.black, 3)
         # a Confirm button is now available
         self.assert_and_get_confirm_button()
-        # we click a different point, and now our new stone is on that point
-        # instead of the previous one
-        self.get_point(15, 2).click()
+        # user clicks an empty spot, which is a link
+        self.get_point(15, 3).click()
+        # now on the board is one more black stone and one less empty point
         counts = self.count_stones_and_points()
-        self.assertEqual(counts.empty, 19*19-1)
-        self.assertEqual(counts.black, 1)
-        ## TODO: compare locations of stone to previous one
+        self.assertEqual(counts.empty, initial_empty_count-1)
+        self.assertEqual(counts.white, 2)
+        self.assertEqual(counts.black, 3)
+        # we click the capturing point again, as we'll want to see what happens
+        # when we confirm a capturing move.
+        self.get_point(1, 1).click()
+        counts = self.count_stones_and_points()
+        self.assertEqual(counts.empty, initial_empty_count+1)
+        self.assertEqual(counts.white, 0)
+        self.assertEqual(counts.black, 3)
         # we confirm this new move
         self.assert_and_get_confirm_button().click()
         # now we're taken back to the status page
@@ -137,20 +153,23 @@ class GameTest(SeleniumTest):
         self.browser.get(self.get_server_url())
         self.browser.find_element_by_link_text(latest_game_text).click()
 
-        # clicking the point with a black stone does nothing
-        self.get_point(15, 2).click()
+        # the captured stones are still captured
+        counts = self.count_stones_and_points()
+        self.assertEqual(counts.empty, initial_empty_count+1)
+        self.assertEqual(counts.white, 0)
+        self.assertEqual(counts.black, 3)
+        # clicking a point with a black stone does nothing
+        self.get_point(1, 1).click()
         # still one black stone, no white, rest empty
         counts = self.count_stones_and_points()
-        self.assertEqual(counts.empty, 19*19-1)
-        self.assertEqual(counts.black, 1)
+        self.assertEqual(counts.empty, initial_empty_count+1)
         self.assertEqual(counts.white, 0)
+        self.assertEqual(counts.black, 3)
 
-        # user clicks another empty spot
+        # user clicks an empty spot
         self.get_point(3, 3).click()
         # now one black stone, one white, rest empty
         counts = self.count_stones_and_points()
-        self.assertEqual(counts.empty, 19*19-2)
-        self.assertEqual(counts.black, 1)
         self.assertEqual(counts.white, 1)
 
         # confirm move
