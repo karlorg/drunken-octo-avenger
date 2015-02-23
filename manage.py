@@ -9,7 +9,7 @@ import pickle
 
 from flask.ext.script import Manager
 
-from app.main import Game, Move, SetupStone, app, db
+from app.main import Game, Move, add_stones_from_text_map_to_game, app, db
 
 manager = Manager(app)
 
@@ -113,24 +113,7 @@ def create_game_internal(black_email, white_email, stones=None):
     db.session.add(game)
     db.session.commit()
     if stones is not None:
-        add_stones_to_game(stones, game)
-
-def add_stones_to_game(stones, game):
-    for rowno, row in enumerate(stones):
-        for colno, stone in enumerate(row):
-            if stone not in ['b', 'w']:
-                continue
-            game_no = game.id
-            before_move = 0
-            color = {
-                    'b': Move.Color.black,
-                    'w': Move.Color.white
-            }[stone]
-            row = rowno
-            column = colno
-            setup_stone = SetupStone(game_no, before_move, row, column, color)
-            db.session.add(setup_stone)
-    db.session.commit()
+        add_stones_from_text_map_to_game(stones, game)
 
 @manager.command
 def create_login_session(email):

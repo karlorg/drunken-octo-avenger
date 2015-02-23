@@ -288,6 +288,38 @@ def is_players_turn_in_game(game, moves, email=None):
     else:  # player is white
         return (last_move_color == Move.Color.black)
 
+def add_stones_from_text_map_to_game(text_map, game):
+    """Given a list of strings, add setup stones to the given game.
+
+    An example text map is [[".b.","bw.",".b."]]
+    """
+    stones = get_stones_from_text_map(text_map, game)
+    for stone in stones:
+        db.session.add(stone)
+    db.session.commit()
+
+def get_stones_from_text_map(text_map, game):
+    """Given a list of strings, return a list of setup stones for `game`.
+
+    An example text map is [[".b.","bw.",".b."]]
+    """
+    stones = []
+    for rowno, row in enumerate(text_map):
+        for colno, stone in enumerate(row):
+            if stone not in ['b', 'w']:
+                continue
+            game_no = game.id
+            before_move = 0
+            color = {
+                    'b': Move.Color.black,
+                    'w': Move.Color.white
+            }[stone]
+            row = rowno
+            column = colno
+            setup_stone = SetupStone(game_no, before_move, row, column, color)
+            stones.append(setup_stone)
+    return stones
+
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.
 
