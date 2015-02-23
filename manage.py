@@ -3,7 +3,9 @@ from __future__ import (
 from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
+
 import os
+import pickle
 
 from flask.ext.script import Manager
 
@@ -96,11 +98,15 @@ def clear_games_for_player_internal(email):
         db.session.commit()
 
 @manager.command
-def create_game(black_email, white_email):
+def create_game(black_email, white_email, pickled_stones=None):
     """Create a custom game in the database without using the web."""
-    create_game_internal(black_email, white_email)
+    if pickled_stones is None:
+        stones = None
+    else:
+        stones = pickle.loads(stones)
+    create_game_internal(black_email, white_email, stones)
 
-def create_game_internal(black_email, white_email):
+def create_game_internal(black_email, white_email, stones=None):
     game = Game()
     game.black = black_email
     game.white = white_email

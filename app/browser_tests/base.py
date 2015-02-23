@@ -131,16 +131,16 @@ class SeleniumTest(LiveServerTestCase):
             path=cookie['path'],
         ))
 
-    def create_game(self, black_email, white_email):
+    def create_game(self, black_email, white_email, stones=None):
         """Create a custom game in the database without using the web.
 
         Go via fabric if testing against a remote server.
         """
         if self.against_remote:
             server_tools.create_game_on_server(
-                    self.server_host, black_email, white_email)
+                    self.server_host, black_email, white_email, stones)
         else:
-            manage.create_game_internal(black_email, white_email)
+            manage.create_game_internal(black_email, white_email, stones)
 
     def clear_games_for_player(self, email):
         """Clear all of `email`'s games from the database.
