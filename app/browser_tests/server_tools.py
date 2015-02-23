@@ -5,6 +5,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       str, super, zip)
 
 from os import path
+import pickle
 import subprocess
 
 THIS_FOLDER = path.dirname(path.abspath(__file__))
@@ -47,12 +48,12 @@ def clear_games_for_player_on_server(host, email):
             host,
             'clear_games_for_player_on_server:email={}'.format(email))
 
-def create_game_on_server(host, black_email, white_email):
+def create_game_on_server(host, black_email, white_email, stones=None):
     """Use fabric to create a custom game on the remote server."""
     _run_fab_command(
             host,
-            'create_game_on_server:black_email={0},white_email={1}'
-            .format(black_email, white_email))
+            'create_game_on_server:black_email={0},white_email={1},stones={2}'
+            .format(black_email, white_email, pickle.dumps(stones)))
 
 def create_session_on_server(host, email):
     """Use fabric to create a login session on the remote server.
