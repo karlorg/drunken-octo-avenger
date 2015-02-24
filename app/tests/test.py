@@ -386,6 +386,23 @@ class TestGetGobanFromMoves(unittest.TestCase):
         ## regression: shared list pointers cause stones to appear on all rows
         self.assert_point(goban, 4, 4, 'e.gif')
 
+    def test_applies_go_rules(self):
+        game = Game()
+        goban = main.get_goban_from_moves([
+            Move(
+                game_no=1, move_no=0,
+                row=1, column=1, color=Move.Color.black),
+            Move(
+                game_no=1, move_no=1,
+                row=1, column=3, color=Move.Color.white)
+        ], setup_stones=main.get_stones_from_text_map([
+            '.ww.',
+            'w.b.',
+            '.ww.'
+        ], game))
+        self.assert_point(goban, 1, 2, 'e.gif')
+        self.assert_point(goban, 1, 3, 'w.gif', 'whitestone')
+
 
 class TestPlayStoneIntegrated(TestWithDb):
 
