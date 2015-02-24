@@ -5,7 +5,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       str, super, zip)
 
 from collections import namedtuple
-from enum import IntEnum
+from enum import Enum, IntEnum
 import logging
 
 from flask import (
@@ -205,21 +205,53 @@ def get_goban_from_moves(moves, setup_stones=None):
     """
     if setup_stones is None:
         setup_stones = []
+    goban_colors = get_goban_colors_from_moves(moves, setup_stones)
+    goban = get_goban_from_colors(goban_colors)
+    return goban
+
+class _GobanColor(Enum):
+    empty = 1
+    black = 2
+    white = 3
+
+def get_goban_colors_from_moves(moves, setup_stones):
+    """Play the moves given and return the resulting board.
+
+    Return format is a dict of {(r,c): color}.
+
+    Pure function.
+    """
+    empty = _GobanColor.empty
+    black = _GobanColor.black
+    white = _GobanColor.white
+    colors = {(r, c): empty for r in range(19) for c in range(19)}
+    for move in moves + setup_stones:
+        if move.color == Move.Color.black:
+            colors[(move.row, move.column)] = black
+        elif move.color == Move.Color.white:
+            colors[(move.row, move.column)] = white
+    return colors
+
+def get_goban_from_colors(goban_colors):
+    """Transform a dict of {(r,c): color} to a template-ready list of lists.
+
+    Pure function.
+    """
+    black = _GobanColor.black
+    white = _GobanColor.white
     goban = [[dict(
         img=IMG_PATH_EMPTY,
         classes='row-{row} col-{col}'.format(row=str(j), col=str(i))
     )
              for i in range(19)]
              for j in range(19)]
-    for move in moves + setup_stones:
-        if move.color == Move.Color.black:
-            goban[move.row][move.column]['img'] = IMG_PATH_BLACK
-            goban[move.row][move.column]['classes'] += ' blackstone'
-        elif move.color == Move.Color.white:
-            goban[move.row][move.column]['img'] = IMG_PATH_WHITE
-            goban[move.row][move.column]['classes'] += ' whitestone'
-        else:
-            assert False, "unknown move color"
+    for (r, c), color in goban_colors.items():
+        if color == black:
+            goban[r][c]['img'] = IMG_PATH_BLACK
+            goban[r][c]['classes'] += ' blackstone'
+        elif color == white:
+            goban[r][c]['img'] = IMG_PATH_WHITE
+            goban[r][c]['classes'] += ' whitestone'
     return goban
 
 def get_status_lists(player_email):
