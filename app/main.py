@@ -56,8 +56,6 @@ def game(game_no):
     moves = game.moves
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game, moves)
-    # imgs = get_img_array_from_moves(moves)
-    # goban = annotate_with_classes(imgs)
     goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
