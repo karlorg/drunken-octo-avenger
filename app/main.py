@@ -206,11 +206,11 @@ def get_goban_from_moves(moves, setup_stones=None):
     """
     if setup_stones is None:
         setup_stones = []
-    goban_colors = get_goban_colors_from_moves(moves, setup_stones)
-    goban = get_goban_from_colors(goban_colors)
+    rules_board = get_rules_board_from_db_objects(moves, setup_stones)
+    goban = get_goban_data_from_rules_board(rules_board)
     return goban
 
-def get_goban_colors_from_moves(moves, setup_stones):
+def get_rules_board_from_db_objects(moves, setup_stones):
     """Play the moves given and return the resulting board.
 
     Pure function.
@@ -242,7 +242,7 @@ def get_goban_colors_from_moves(moves, setup_stones):
     board = go_rules.board_from(rules_moves, rules_setup_stones)
     return board
 
-def get_goban_from_colors(goban_colors):
+def get_goban_data_from_rules_board(rules_board):
     """Transform a dict of {(r,c): color} to a template-ready list of lists.
 
     Pure function.
@@ -255,7 +255,7 @@ def get_goban_from_colors(goban_colors):
     )
              for i in range(19)]
              for j in range(19)]
-    for (r, c), color in goban_colors.items():
+    for (r, c), color in rules_board.items():
         if color == black:
             goban[r][c]['img'] = IMG_PATH_BLACK
             goban[r][c]['classes'] += ' blackstone'
