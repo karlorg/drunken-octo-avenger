@@ -193,7 +193,7 @@ def get_goban_from_moves(moves, setup_stones=None):
     Each dictionary contains information needed to render the corresponding
     board point.
 
-    `.classes` contains CSS classes used by the client-side scripts and browser
+    `classes` contains CSS classes used by the client-side scripts and browser
     tests to read the board state and locate specific points.  Currently:
 
     * each point should have classes `row-y` and `col-x` where `y` and `x` are
