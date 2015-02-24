@@ -4,8 +4,8 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
-from collections import namedtuple
-from enum import Enum, IntEnum
+from collections import defaultdict, namedtuple
+from enum import IntEnum
 import logging
 
 from flask import (
@@ -21,6 +21,7 @@ from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
+from app import go_rules
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -209,36 +210,45 @@ def get_goban_from_moves(moves, setup_stones=None):
     goban = get_goban_from_colors(goban_colors)
     return goban
 
-class _GobanColor(Enum):
-    empty = 1
-    black = 2
-    white = 3
-
 def get_goban_colors_from_moves(moves, setup_stones):
     """Play the moves given and return the resulting board.
 
-    Return format is a dict of {(r,c): color}.
-
     Pure function.
     """
-    empty = _GobanColor.empty
-    black = _GobanColor.black
-    white = _GobanColor.white
-    colors = {(r, c): empty for r in range(19) for c in range(19)}
-    for move in moves + setup_stones:
-        if move.color == Move.Color.black:
-            colors[(move.row, move.column)] = black
-        elif move.color == Move.Color.white:
-            colors[(move.row, move.column)] = white
-    return colors
+    def rules_color_from_db_color(db_color):
+        if db_color == Move.Color.black:
+            color = go_rules.Color.black
+        elif db_color == Move.Color.white:
+            color = go_rules.Color.white
+        else:
+            color = go_rules.Color.empty
+        return color
+
+    def rules_move_from_db_move(db_move):
+        color = rules_color_from_db_color(db_move.color)
+        return go_rules.Move(color, db_move.row, db_move.column)
+
+    def rules_stone_from_db_setup_stone(db_stone):
+        color = rules_color_from_db_color(db_stone.color)
+        return db_stone.before_move, go_rules.SetupStone(
+                color, db_stone.row, db_stone.column)
+
+    rules_moves = list(map(
+            rules_move_from_db_move, sorted(moves, key=lambda m: m.move_no)))
+    rules_setup_stones = defaultdict(list)
+    for move_no, stone in map(rules_stone_from_db_setup_stone, setup_stones):
+        rules_setup_stones[move_no].append(stone)
+    rules_setup_stones = dict(rules_setup_stones)
+    board = go_rules.board_from(rules_moves, rules_setup_stones)
+    return board
 
 def get_goban_from_colors(goban_colors):
     """Transform a dict of {(r,c): color} to a template-ready list of lists.
 
     Pure function.
     """
-    black = _GobanColor.black
-    white = _GobanColor.white
+    black = go_rules.Color.black
+    white = go_rules.Color.white
     goban = [[dict(
         img=IMG_PATH_EMPTY,
         classes='row-{row} col-{col}'.format(row=str(j), col=str(i))
@@ -402,7 +412,7 @@ class Move(db.Model):
 
     def __repr__(self):
         return '<Move {0}: {1} at ({2},{3})>'.format(
-                self.move_no, self.Color(self.color).name,
+                self.move_no, self.color.name,
                 self.column, self.row)
 
 class SetupStone(db.Model):
@@ -423,7 +433,7 @@ class SetupStone(db.Model):
 
     def __repr__(self):
         return '<SetupStone {0}: {1} at ({2},{3})>'.format(
-                self.before_move, self.Color(self.color).name,
+                self.before_move, self.color.name,
                 self.column, self.row)
 
 
