@@ -300,6 +300,8 @@ def get_stones_from_text_map(text_map, game):
     """Given a list of strings, return a list of setup stones for `game`.
 
     An example text map is [[".b.","bw.",".b."]]
+
+    Pure function; does not commit stones to the database.
     """
     stones = []
     for rowno, row in enumerate(text_map):
