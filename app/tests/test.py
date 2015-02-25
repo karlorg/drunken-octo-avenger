@@ -571,35 +571,3 @@ class TestGetStoneIfArgsGood(unittest.TestCase):
         assert stone.row == 3
         assert stone.column == 3
         assert stone.color == Move.Color.white
-
-
-class TestGoRulesBoardFrom(unittest.TestCase):
-
-    def test_setup_stones_can_be_one_move_ahead(self):
-        """Regression: need to process setup stones for move following the last
-        one, eg. if there are setup stones before move 0 but no move 0 yet."""
-        moves = []
-        setup = {
-                0: [go_rules.Stone(go_rules.Color.white, 2, 3),
-                    go_rules.Stone(go_rules.Color.black, 3, 4)]
-        }
-        board = go_rules.board_from(moves, setup)
-        self.assertEqual(board[(2, 3)], go_rules.Color.white)
-        self.assertEqual(board[(3, 4)], go_rules.Color.black)
-
-
-    def test_simple_moves_and_setup(self):
-        moves = [
-                go_rules.Stone(go_rules.Color.black, 0, 1),
-                go_rules.Stone(go_rules.Color.white, 1, 2),
-        ]
-        setup = {
-                0: [go_rules.Stone(go_rules.Color.white, 2, 3),
-                    go_rules.Stone(go_rules.Color.black, 3, 4)]
-        }
-        board = go_rules.board_from(moves, setup)
-        self.assertEqual(board[(0, 0)], go_rules.Color.empty)
-        self.assertEqual(board[(0, 1)], go_rules.Color.black)
-        self.assertEqual(board[(1, 2)], go_rules.Color.white)
-        self.assertEqual(board[(2, 3)], go_rules.Color.white)
-        self.assertEqual(board[(3, 4)], go_rules.Color.black)
