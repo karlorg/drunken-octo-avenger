@@ -412,7 +412,7 @@ class TestGetGobanColorsFromMoves(unittest.TestCase):
         game = Game()
         moves = []
         setup_stones = main.get_stones_from_text_map(['.bw'], game)
-        board = main.get_goban_colors_from_moves(moves, setup_stones)
+        board = main.get_rules_board_from_db_objects(moves, setup_stones)
         self.assertEqual(board[(0, 0)], go_rules.Color.empty)
         self.assertEqual(board[(0, 1)], go_rules.Color.black)
         self.assertEqual(board[(0, 2)], go_rules.Color.white)
@@ -424,7 +424,7 @@ class TestGetGobanFromColors(unittest.TestCase):
         board = go_rules.empty_board()
         board[(0, 1)] = go_rules.Color.black
         board[(1, 2)] = go_rules.Color.white
-        goban = main.get_goban_from_colors(board)
+        goban = main.get_goban_data_from_rules_board(board)
         assert 'b.gif' in goban[0][1]['img']
         assert 'blackstone' in goban[0][1]['classes']
         assert 'w.gif' in goban[1][2]['img']
@@ -580,8 +580,8 @@ class TestGoRulesBoardFrom(unittest.TestCase):
         one, eg. if there are setup stones before move 0 but no move 0 yet."""
         moves = []
         setup = {
-                0: [go_rules.SetupStone(go_rules.Color.white, 2, 3),
-                    go_rules.SetupStone(go_rules.Color.black, 3, 4)]
+                0: [go_rules.Stone(go_rules.Color.white, 2, 3),
+                    go_rules.Stone(go_rules.Color.black, 3, 4)]
         }
         board = go_rules.board_from(moves, setup)
         self.assertEqual(board[(2, 3)], go_rules.Color.white)
@@ -590,12 +590,12 @@ class TestGoRulesBoardFrom(unittest.TestCase):
 
     def test_simple_moves_and_setup(self):
         moves = [
-                go_rules.Move(go_rules.Color.black, 0, 1),
-                go_rules.Move(go_rules.Color.white, 1, 2),
+                go_rules.Stone(go_rules.Color.black, 0, 1),
+                go_rules.Stone(go_rules.Color.white, 1, 2),
         ]
         setup = {
-                0: [go_rules.SetupStone(go_rules.Color.white, 2, 3),
-                    go_rules.SetupStone(go_rules.Color.black, 3, 4)]
+                0: [go_rules.Stone(go_rules.Color.white, 2, 3),
+                    go_rules.Stone(go_rules.Color.black, 3, 4)]
         }
         board = go_rules.board_from(moves, setup)
         self.assertEqual(board[(0, 0)], go_rules.Color.empty)

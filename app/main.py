@@ -224,19 +224,19 @@ def get_rules_board_from_db_objects(moves, setup_stones):
             color = go_rules.Color.empty
         return color
 
-    def rules_move_from_db_move(db_move):
-        color = rules_color_from_db_color(db_move.color)
-        return go_rules.Move(color, db_move.row, db_move.column)
-
-    def rules_stone_from_db_setup_stone(db_stone):
+    def rules_stone_from_db_stone(db_stone):
+        """Given a Move or SetupStone from the db, make a go_rules Stone"""
         color = rules_color_from_db_color(db_stone.color)
-        return db_stone.before_move, go_rules.SetupStone(
-                color, db_stone.row, db_stone.column)
+        try:
+            move_no = db_stone.move_no
+        except AttributeError:
+            move_no = db_stone.before_move
+        return move_no, go_rules.Stone(color, db_stone.row, db_stone.column)
 
-    rules_moves = list(map(
-            rules_move_from_db_move, sorted(moves, key=lambda m: m.move_no)))
+    rules_moves = [rules_stone_from_db_stone(move)[1]
+                   for move in sorted(moves, key=lambda m: m.move_no)]
     rules_setup_stones = defaultdict(list)
-    for move_no, stone in map(rules_stone_from_db_setup_stone, setup_stones):
+    for move_no, stone in map(rules_stone_from_db_stone, setup_stones):
         rules_setup_stones[move_no].append(stone)
     rules_setup_stones = dict(rules_setup_stones)
     board = go_rules.board_from(rules_moves, rules_setup_stones)

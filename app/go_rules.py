@@ -11,20 +11,14 @@ class Color(Enum):
     black = 1
     white = 2
 
-class Move:
-    def __init__(self, color, row, column):
-        self.color = color
-        self.row = row
-        self.column = column
-
-class SetupStone:
+class Stone:
     def __init__(self, color, row, column):
         self.color = color
         self.row = row
         self.column = column
 
     def __repr__(self):
-        return 'SetupStone {color} ({r},{c})'.format(
+        return 'Stone {color} ({r},{c})'.format(
                 color=self.color, r=self.row, c=self.column)
 
 def empty_board():
