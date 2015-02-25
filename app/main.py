@@ -189,18 +189,7 @@ def get_stone_if_args_good(args, moves):
             row=row, column=column, color=color)
 
 def get_goban_from_moves(moves, setup_stones=None):
-    """Given the moves for a game, return a 2d array of dicts for the board.
-
-    Each dictionary contains information needed to render the corresponding
-    board point.
-
-    `classes` contains CSS classes used by the client-side scripts and browser
-    tests to read the board state and locate specific points.  Currently:
-
-    * each point should have classes `row-y` and `col-x` where `y` and `x` are
-      numbers
-
-    * points with stones should have `blackstone` or `whitestone`
+    """Given the moves for a game, return game template data.
 
     Pure function.
     """
@@ -211,7 +200,7 @@ def get_goban_from_moves(moves, setup_stones=None):
     return goban
 
 def get_rules_board_from_db_objects(moves, setup_stones):
-    """Play the moves given and return the resulting board.
+    """Convert db Moves to input for go_rules and return a board layout.
 
     Pure function.
     """
@@ -243,7 +232,18 @@ def get_rules_board_from_db_objects(moves, setup_stones):
     return board
 
 def get_goban_data_from_rules_board(rules_board):
-    """Transform a dict of {(r,c): color} to a template-ready list of lists.
+    """Transform a dict of {(r,c): color} to a template-ready list of dicts.
+
+    Each output dictionary contains information needed by the game template to
+    render the corresponding board point.
+
+    `classes` contains CSS classes used by the client-side scripts and browser
+    tests to read the board state and locate specific points.  Currently:
+
+    * each point should have classes `row-y` and `col-x` where `y` and `x` are
+      numbers
+
+    * points with stones should have `blackstone` or `whitestone`
 
     Pure function.
     """
