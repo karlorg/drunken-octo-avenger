@@ -406,7 +406,7 @@ class TestGetGobanFromMoves(unittest.TestCase):
         self.assert_point(goban, 1, 3, 'w.gif', 'whitestone')
 
 
-class TestGetGobanColorsFromMoves(unittest.TestCase):
+class TestGetRulesBoardFromDbObjects(unittest.TestCase):
 
     def test_setup_stones(self):
         game = Game()
@@ -418,7 +418,7 @@ class TestGetGobanColorsFromMoves(unittest.TestCase):
         self.assertEqual(board[(0, 2)], go_rules.Color.white)
 
 
-class TestGetGobanFromColors(unittest.TestCase):
+class TestGetGobanDataFromRulesBoard(unittest.TestCase):
 
     def test_simple(self):
         board = go_rules.empty_board()
