@@ -85,7 +85,7 @@ class PhantomTest(object):
 
     def run_phantom_test(self):
         os.system("cake build")
-        os.system("phantomjs app/static/tests/phantom.js")
+        os.system("./node_modules/.bin/casperjs test app/static/tests/browser.js")
         
 if __name__ == "__main__":
     tester = PhantomTest()
