@@ -4,6 +4,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
+from collections import namedtuple
 from enum import Enum
 
 class Color(Enum):
@@ -11,15 +12,7 @@ class Color(Enum):
     black = 1
     white = 2
 
-class Stone:
-    def __init__(self, color, row, column):
-        self.color = color
-        self.row = row
-        self.column = column
-
-    def __repr__(self):
-        return 'Stone {color} ({r},{c})'.format(
-                color=self.color, r=self.row, c=self.column)
+Stone = namedtuple('Stone', ['color', 'row', 'column'])
 
 def empty_board():
     return {(r, c): Color.empty for r in range(19) for c in range(19)}
