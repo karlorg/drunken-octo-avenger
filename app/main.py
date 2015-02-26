@@ -4,7 +4,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from enum import IntEnum
 import logging
 
@@ -200,11 +200,12 @@ def get_goban_from_moves(moves, setup_stones=None):
     return goban
 
 def get_rules_board_from_db_objects(moves, setup_stones):
-    """Convert db Moves to input for go_rules and return a board layout.
+    """Get board layout resulting from given moves and setup stones.
 
     Pure function.
     """
-    def rules_color_from_db_color(db_color):
+
+    def rules_color(db_color):
         if db_color == Move.Color.black:
             color = go_rules.Color.black
         elif db_color == Move.Color.white:
@@ -213,22 +214,17 @@ def get_rules_board_from_db_objects(moves, setup_stones):
             color = go_rules.Color.empty
         return color
 
-    def rules_stone_from_db_stone(db_stone):
-        """Given a Move or SetupStone from the db, make a go_rules Stone"""
-        color = rules_color_from_db_color(db_stone.color)
-        try:
-            move_no = db_stone.move_no
-        except AttributeError:
-            move_no = db_stone.before_move
-        return move_no, go_rules.Stone(color, db_stone.row, db_stone.column)
+    def place_stones_for_move(n):
+        for stone in filter(lambda s: s.before_move == n, setup_stones):
+            board[(stone.row, stone.column)] = rules_color(stone.color)
 
-    rules_moves = [rules_stone_from_db_stone(move)[1]
-                   for move in sorted(moves, key=lambda m: m.move_no)]
-    rules_setup_stones = defaultdict(list)
-    for move_no, stone in map(rules_stone_from_db_stone, setup_stones):
-        rules_setup_stones[move_no].append(stone)
-    rules_setup_stones = dict(rules_setup_stones)
-    board = go_rules.board_from(rules_moves, rules_setup_stones)
+    board = go_rules.empty_board()
+    for move in sorted(moves, key=lambda m: m.move_no):
+        place_stones_for_move(move.move_no)
+        go_rules.update_board_with_move(
+                board, rules_color(move.color), move.row, move.column)
+    max_move_no = max([-1] + [m.move_no for m in moves])
+    place_stones_for_move(max_move_no + 1)
     return board
 
 def get_goban_data_from_rules_board(rules_board):

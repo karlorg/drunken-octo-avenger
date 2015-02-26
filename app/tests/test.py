@@ -408,15 +408,26 @@ class TestGetGobanFromMoves(unittest.TestCase):
 
 class TestGetRulesBoardFromDbObjects(unittest.TestCase):
 
-    def test_setup_stones(self):
+    def test_combination(self):
         game = Game()
-        moves = []
+        moves = [Move(game.id, 0, 2, 3, Move.Color.black)]
         setup_stones = main.get_stones_from_text_map(['.bw'], game)
         board = main.get_rules_board_from_db_objects(moves, setup_stones)
         self.assertEqual(board[(0, 0)], go_rules.Color.empty)
         self.assertEqual(board[(0, 1)], go_rules.Color.black)
         self.assertEqual(board[(0, 2)], go_rules.Color.white)
+        self.assertEqual(board[(2, 3)], go_rules.Color.black)
 
+    def test_setup_stones(self):
+        """Regression test: need to process setup stones after last move.
+
+        eg. setup stones for 'before move 0' when there are no moves yet.
+        """
+        game = Game()
+        moves = []
+        setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        self.assertEqual(board[(0, 1)], go_rules.Color.black)
 
 class TestGetGobanDataFromRulesBoard(unittest.TestCase):
 
