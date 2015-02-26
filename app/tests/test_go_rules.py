@@ -6,11 +6,26 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 
 import unittest
 
-from ..go_rules import Color, IllegalMoveException, Stone, board_from
+from .. import go_rules
+from ..go_rules import (
+        Color, EmptyPointLibertiesException, IllegalMoveException, Stone,
+        board_from, count_liberties, update_board_with_move
+)
 
 empty = Color.empty
 white = Color.white
 black = Color.black
+
+def board_from_strings(rows):
+    """Convenience function for setting up positions easily"""
+    board = go_rules.empty_board(len(rows[0]))
+    for r, row in enumerate(rows):
+        for c, char in enumerate(row):
+            if char is 'b':
+                board[(r, c)] = black
+            elif char is 'w':
+                board[(r, c)] = white
+    return board
 
 class TestBoardFrom(unittest.TestCase):
 
@@ -45,11 +60,35 @@ class TestBoardFrom(unittest.TestCase):
         e = cm.exception
         self.assertEqual(e.move_no, 1)
 
+class TestUpdateBoardWithMove(unittest.TestCase):
+
     def test_single_stone_capture(self):
-        setup = {0: [Stone(black, 0, 1),
-                     Stone(black, 1, 0),
-                     Stone(black, 2, 1),
-                     Stone(white, 1, 1)]}
-        moves = [Stone(black, 1, 2)]
-        board = board_from(moves, setup)
+        board = board_from_strings(['.b.',
+                                    'bw.',
+                                    '.b.'])
+        update_board_with_move(board, Stone(black, 1, 2))
         self.assertEqual(board[(1, 1)], empty)
+
+    def test_group_capture(self):
+        board = board_from_strings(['.bb.',
+                                    'bwwb',
+                                    '.b..'])
+        update_board_with_move(board, Stone(black, 2, 2))
+        self.assertEqual(board[(1, 1)], empty)
+        self.assertEqual(board[(1, 2)], empty)
+
+class TestCountLiberties(unittest.TestCase):
+
+    def test_exception_on_empty_point(self):
+        board = board_from_strings(['.'])
+        with self.assertRaises(EmptyPointLibertiesException):
+            count_liberties(board, 0, 0)
+
+    def test_groups_share_liberties(self):
+        board = board_from_strings(['bb..',
+                                    'bww.',
+                                    '.b..'])
+        top_left = count_liberties(board, 0, 1)
+        self.assertEqual(top_left, 2)
+        middle_white = count_liberties(board, 1, 1)
+        self.assertEqual(middle_white, 3)
