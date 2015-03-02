@@ -1,10 +1,19 @@
 # casper = require('casper').create()
 
-casper.test.begin('Frontpage title is "Go"', 1, (test) ->
+casper.test.begin('Test the login procedure', 1, (test) ->
     casper.start('http://localhost:5000', () ->
         test.assertTitle('Go', 'The front page title is the one expected')
-    )
-    casper.run(() -> test.done())
+        )
+    casper.on('popup.created', () ->
+        this.echo("url popup created: " + this.getCurrentURL(), "INFO")
+        )
+
+    casper.thenClick('#persona_login', () -> this.capture("lol.png"))
+    casper.waitForPopup(/persona/, (popup) ->
+        this.test.assertTitle('Mozilla Persona');
+        )
+    casper.run ->
+        test.done()
 )
 
 # @fill "form[action='/search']", q: "casperjs", true
