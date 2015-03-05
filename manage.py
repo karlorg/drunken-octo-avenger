@@ -59,7 +59,7 @@ def coverage(quick=False, browser=False):
     rcpath = os.path.abspath('.coveragerc')
 
     quick_command = 'test_package app.tests'
-    browser_command = 'test_package app.browser_tests'
+    browser_command = 'test_module app.browser_tests.phantom'
     full_command = 'test_all'
 
     if quick:
