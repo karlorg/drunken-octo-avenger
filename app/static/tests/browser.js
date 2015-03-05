@@ -4,13 +4,10 @@
     casper.start('http://localhost:5000', function() {
       return test.assertTitle('Go', 'The front page title is the one expected');
     });
-    casper.on('popup.created', function() {
-      return this.echo("url popup created: " + this.getCurrentUrl(), "INFO");
-    });
-    casper.thenClick('#persona_login', function() {});
-    casper.waitForPopup(/persona/, function() {});
+    casper.thenClick('#persona_login');
+    casper.waitForPopup(/persona/);
     casper.withPopup(/persona/, function() {
-      return test.assertTitleMatch(/Persona/i);
+      return test.assertTitleMatch(/Persona/i, 'Persona login popup has expected title');
     });
     return casper.run(function() {
       return test.done();
