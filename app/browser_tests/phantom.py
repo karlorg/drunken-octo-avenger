@@ -7,21 +7,12 @@ from future import standard_library
 standard_library.install_aliases()
 
 import logging
-import os
-import sys
-import time
-import unittest
 import multiprocessing
-
-from flask.ext.testing import LiveServerTestCase
-from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
-
-from collections import namedtuple
+import os
+import time
+from urllib.request import urlopen
 
 from ..main import app
-import manage
-from . import server_tools
 
 # importing main enables logging, we switch it off again here to prevent
 # selenium debug lines from flooding the test output
@@ -64,7 +55,7 @@ class PhantomTest(object):
 
         self._process.start()
 
-        # we must wait for the server to start listening with a maximum timeout of 5 seconds
+        # wait a few seconds for the server to start listening
         timeout = 5
         while timeout > 0:
             time.sleep(1)
@@ -85,8 +76,9 @@ class PhantomTest(object):
 
     def run_phantom_test(self):
         os.system("cake build")
-        os.system("./node_modules/.bin/casperjs test app/static/tests/browser.js")
-        
+        os.system("./node_modules/.bin/casperjs test"
+                  " app/static/tests/browser.js")
+
 if __name__ == "__main__":
     tester = PhantomTest()
     tester.run()
