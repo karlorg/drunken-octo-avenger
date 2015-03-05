@@ -8,7 +8,7 @@ casper.test.begin('Test the login procedure', 2, (test) ->
         this.echo("url popup created: " + this.getCurrentUrl(), "INFO")
         )
 
-    casper.thenClick('#persona_login', () -> this.capture("lol.png"))
+    casper.thenClick('#persona_login', ->)
     casper.waitForPopup(/persona/, ->)
     casper.withPopup(/persona/, ->
         test.assertTitleMatch(/Persona/i)
