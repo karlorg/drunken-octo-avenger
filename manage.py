@@ -10,6 +10,7 @@ import pickle
 from flask.ext.script import Manager
 
 from app.main import Game, Move, add_stones_from_text_map_to_game, app, db
+import config
 
 manager = Manager(app)
 
@@ -79,6 +80,16 @@ def coverage(quick=False, browser=False):
     os.system("coverage report -m")
     os.system("coverage html")
 
+@manager.command
+def run_test_server():
+    """Used by the phantomjs tests to run a live testing server"""
+    # running the server in debug mode during testing fails for some reason
+    import coverage
+    coverage.process_startup()
+    app.config['DEBUG'] = False
+    app.config['TESTING'] = True
+    port = config.LIVESERVER_PORT
+    app.run(port=port, use_reloader=False)
 
 @manager.command
 def clear_games_for_player(email):

@@ -7,14 +7,15 @@ from future import standard_library
 standard_library.install_aliases()
 
 import logging
-import multiprocessing
 import os
+import shlex
+import subprocess
 import time
 import unittest
 from urllib.error import URLError
 from urllib.request import urlopen
 
-from ..main import app
+import config
 
 # importing main enables logging, we switch it off again here to prevent
 # selenium debug lines from flooding the test output
@@ -22,21 +23,21 @@ logging.disable(logging.CRITICAL)
 
 class PhantomTest(unittest.TestCase):
 
-    def create_app(self):
-        ## for some reason the SQL Alchemy URI is removed between setup in the
-        ## main app and here
-        app.config.from_object('config')
-        # running the server in debug mode during testing fails for some reason
-        app.config['DEBUG'] = False
-        app.config['TESTING'] = True
-        return app
+    #def create_app(self):
+    #    ## for some reason the SQL Alchemy URI is removed between setup in the
+    #    ## main app and here
+    #    app.config.from_object('config')
+    #    # running the server in debug mode during testing fails for some reason
+    #    app.config['DEBUG'] = False
+    #    app.config['TESTING'] = True
+    #    return app
 
     def test_run(self):
-        self.app = self.create_app()
-        # We need to create a context in order for extensions to catch up
-        self._ctx = self.app.test_request_context()
-        self._ctx.push()
-        # now run the server and tests
+#        self.app = self.create_app()
+#        # We need to create a context in order for extensions to catch up
+#        self._ctx = self.app.test_request_context()
+#        self._ctx.push()
+#        # now run the server and tests
         try:
             self._spawn_live_server()
             self.run_phantom_test()
@@ -45,16 +46,10 @@ class PhantomTest(unittest.TestCase):
             self._terminate_live_server()
 
     def _spawn_live_server(self):
-        self._process = None
-        self.port = self.app.config.get('LIVESERVER_PORT', 5000)
+        self.port = config.LIVESERVER_PORT
         self._server_url = 'http://localhost:{}'.format(self.port)
-
-        worker = lambda app, port: app.run(port=port, use_reloader=False)
-        self._process = multiprocessing.Process(
-            target=worker, args=(self.app, self.port)
-        )
-        self._process.start()
-
+        command_line = 'python manage.py run_test_server'
+        self._process = subprocess.Popen(shlex.split(command_line))
         # wait a few seconds for the server to start listening
         timeout = 5
         start_time = time.time()
