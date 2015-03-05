@@ -7,9 +7,7 @@
     casper.on('popup.created', function() {
       return this.echo("url popup created: " + this.getCurrentUrl(), "INFO");
     });
-    casper.thenClick('#persona_login', function() {
-      return this.capture("lol.png");
-    });
+    casper.thenClick('#persona_login', function() {});
     casper.waitForPopup(/persona/, function() {});
     casper.withPopup(/persona/, function() {
       return test.assertTitleMatch(/Persona/i);

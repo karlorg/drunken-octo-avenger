@@ -10,6 +10,8 @@ import logging
 import multiprocessing
 import os
 import time
+import unittest
+from urllib.error import URLError
 from urllib.request import urlopen
 
 from ..main import app
@@ -18,7 +20,7 @@ from ..main import app
 # selenium debug lines from flooding the test output
 logging.disable(logging.CRITICAL)
 
-class PhantomTest(object):
+class PhantomTest(unittest.TestCase):
 
     def create_app(self):
         ## for some reason the SQL Alchemy URI is removed between setup in the
@@ -29,13 +31,15 @@ class PhantomTest(object):
         app.config['TESTING'] = True
         return app
 
-    def run(self):
-        self.app = self.create_app()
+    def get_server_url(self):
+        return self._server_url
 
+    def test_run(self):
+        self.app = self.create_app()
         # We need to create a context in order for extensions to catch up
         self._ctx = self.app.test_request_context()
         self._ctx.push()
-
+        # now run the server and tests
         try:
             self._spawn_live_server()
             self.run_phantom_test()
@@ -46,23 +50,23 @@ class PhantomTest(object):
     def _spawn_live_server(self):
         self._process = None
         self.port = self.app.config.get('LIVESERVER_PORT', 5000)
+        self._server_url = 'http://localhost:{}'.format(self.port)
 
         worker = lambda app, port: app.run(port=port, use_reloader=False)
 
         self._process = multiprocessing.Process(
             target=worker, args=(self.app, self.port)
         )
-
         self._process.start()
 
         # wait a few seconds for the server to start listening
         timeout = 5
-        start_time = time.clock()
-        while time.clock() - start_time < timeout:
+        start_time = time.time()
+        while time.time() - start_time < timeout:
             time.sleep(0.5)
             try:
                 urlopen(self.get_server_url())
-            except:
+            except URLError:
                 pass
             else:
                 break
