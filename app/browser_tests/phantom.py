@@ -57,13 +57,15 @@ class PhantomTest(object):
 
         # wait a few seconds for the server to start listening
         timeout = 5
-        while timeout > 0:
-            time.sleep(1)
+        start_time = time.clock()
+        while time.clock() - start_time < timeout:
+            time.sleep(0.5)
             try:
                 urlopen(self.get_server_url())
-                timeout = 0
             except:
-                timeout -= 1
+                pass
+            else:
+                break
 
     def _post_teardown(self):
         if getattr(self, '_ctx', None) is not None:
