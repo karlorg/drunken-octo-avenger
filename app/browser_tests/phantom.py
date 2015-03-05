@@ -31,9 +31,6 @@ class PhantomTest(unittest.TestCase):
         app.config['TESTING'] = True
         return app
 
-    def get_server_url(self):
-        return self._server_url
-
     def test_run(self):
         self.app = self.create_app()
         # We need to create a context in order for extensions to catch up
@@ -53,7 +50,6 @@ class PhantomTest(unittest.TestCase):
         self._server_url = 'http://localhost:{}'.format(self.port)
 
         worker = lambda app, port: app.run(port=port, use_reloader=False)
-
         self._process = multiprocessing.Process(
             target=worker, args=(self.app, self.port)
         )
@@ -65,11 +61,13 @@ class PhantomTest(unittest.TestCase):
         while time.time() - start_time < timeout:
             time.sleep(0.5)
             try:
-                urlopen(self.get_server_url())
+                urlopen(self._server_url)
             except URLError:
                 pass
             else:
                 break
+        else:
+            assert False, "timed out waiting for server to respond"
 
     def _post_teardown(self):
         if getattr(self, '_ctx', None) is not None:
