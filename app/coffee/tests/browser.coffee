@@ -1,5 +1,18 @@
+defaultHost = "http://localhost"
+host = casper.cli.options['host'] or defaultHost
+port = casper.cli.options['port'] or
+  if host is defaultHost then "5000" else "80"
+
+portString = if port == "80" or port == 80 then "" else ":#{port}"
+
+unless (host.match /localhost/) or (host.match /staging/)
+  casper.die "Server url contains neither 'localhost' nor 'staging', aborting"
+
+serverUrl = "#{host}#{portString}"
+casper.echo "Testing against server at #{serverUrl}"
+
 casper.test.begin 'Test the login procedure', 2, (test) ->
-  casper.start 'http://localhost:5000', ->
+  casper.start serverUrl, ->
     test.assertTitle 'Go', 'The front page title is the one expected'
 
   casper.thenClick '#persona_login'
