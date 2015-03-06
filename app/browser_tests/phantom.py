@@ -23,21 +23,7 @@ logging.disable(logging.CRITICAL)
 
 class PhantomTest(unittest.TestCase):
 
-    #def create_app(self):
-    #    ## for some reason the SQL Alchemy URI is removed between setup in the
-    #    ## main app and here
-    #    app.config.from_object('config')
-    #    # running the server in debug mode during testing fails for some reason
-    #    app.config['DEBUG'] = False
-    #    app.config['TESTING'] = True
-    #    return app
-
     def test_run(self):
-#        self.app = self.create_app()
-#        # We need to create a context in order for extensions to catch up
-#        self._ctx = self.app.test_request_context()
-#        self._ctx.push()
-#        # now run the server and tests
         try:
             self._spawn_live_server()
             self.run_phantom_test()

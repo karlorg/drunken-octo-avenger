@@ -56,17 +56,22 @@ def test(browser=None, module=None, package=None):
         return test_all()
 
 @manager.command
-def coverage(quick=False, browser=False):
+def coverage(quick=False, browser=False, phantom=False):
     rcpath = os.path.abspath('.coveragerc')
 
     quick_command = 'test_package app.tests'
-    browser_command = 'test_module app.browser_tests.phantom'
+    # once all browser tests are converted to phantom, we can remove the
+    # phantom option
+    browser_command = 'test_package app.browser_tests'
+    phantom_command = 'test_module app.browser_tests.phantom'
     full_command = 'test_all'
 
     if quick:
         manage_command = quick_command
     elif browser:
         manage_command = browser_command
+    elif phantom:
+        manage_command = phantom_command
     else:
         manage_command = full_command
 
@@ -84,8 +89,6 @@ def coverage(quick=False, browser=False):
 def run_test_server():
     """Used by the phantomjs tests to run a live testing server"""
     # running the server in debug mode during testing fails for some reason
-    import coverage
-    coverage.process_startup()
     app.config['DEBUG'] = False
     app.config['TESTING'] = True
     port = config.LIVESERVER_PORT
