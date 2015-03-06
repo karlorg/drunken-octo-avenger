@@ -14,9 +14,6 @@
         method: 'post'
       });
     });
-    casper.then(function() {
-      return casper.wait(3000);
-    });
     return casper.run(function() {
       return test.done();
     });
