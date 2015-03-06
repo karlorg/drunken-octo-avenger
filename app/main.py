@@ -147,6 +147,14 @@ def logout():
         pass
     return ''
 
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """Shutdown the Werkzeug dev server, if we're using it.
+
+    From http://flask.pocoo.org/snippets/67/"""
+    shutdown_server()
+    return 'Server shutting down...'
+
 
 # helper functions
 
@@ -338,6 +346,15 @@ def render_template_with_email(template_name_or_list, **context):
             current_user_email=email,
             current_persona_email=persona_email,
             **context)
+
+def shutdown_server():
+    """Shutdown the Werkzeug dev server, if we're using it.
+
+    From http://flask.pocoo.org/snippets/67/"""
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
 
 
 class Game(db.Model):
