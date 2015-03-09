@@ -7,7 +7,9 @@
     casper.thenClick('#persona_login');
     casper.waitForPopup(/persona/);
     casper.withPopup(/persona/, function() {
-      return test.assertTitleMatch(/Persona/i, 'Persona login popup has expected title');
+      test.assertTitleMatch(/Persona/i, 'Persona login popup has expected title');
+      this.sendKeys('#authentication_email', 'test@mockmyid.com');
+      return this.click('button');
     });
     return casper.run(function() {
       return test.done();

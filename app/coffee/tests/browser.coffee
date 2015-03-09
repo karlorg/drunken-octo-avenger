@@ -6,6 +6,11 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
   casper.waitForPopup /persona/
   casper.withPopup /persona/, ->
     test.assertTitleMatch /Persona/i, 'Persona login popup has expected title'
+    this.sendKeys '#authentication_email', 'test@mockmyid.com'
+    # Slightly annoying we do not have an better way to select the 'next'
+    # button, we could try the class "isDesktop isStart isAddressInfo", not
+    # quite sure how to write that maybe '.isDesktop isStart isAddressInfo'
+    this.click 'button'
 
   casper.run ->
     test.done()
