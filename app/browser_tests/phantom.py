@@ -7,27 +7,20 @@ from future import standard_library
 standard_library.install_aliases()
 
 import logging
+import multiprocessing
 import os
-import sys
 import time
 import unittest
-import multiprocessing
-
-from flask.ext.testing import LiveServerTestCase
-from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
-
-from collections import namedtuple
+from urllib.error import URLError
+from urllib.request import urlopen
 
 from ..main import app
-import manage
-from . import server_tools
 
 # importing main enables logging, we switch it off again here to prevent
 # selenium debug lines from flooding the test output
 logging.disable(logging.CRITICAL)
 
-class PhantomTest(object):
+class PhantomTest(unittest.TestCase):
 
     def create_app(self):
         ## for some reason the SQL Alchemy URI is removed between setup in the
@@ -38,13 +31,12 @@ class PhantomTest(object):
         app.config['TESTING'] = True
         return app
 
-    def run(self):
+    def test_run(self):
         self.app = self.create_app()
-
         # We need to create a context in order for extensions to catch up
         self._ctx = self.app.test_request_context()
         self._ctx.push()
-
+        # now run the server and tests
         try:
             self._spawn_live_server()
             self.run_phantom_test()
@@ -55,24 +47,27 @@ class PhantomTest(object):
     def _spawn_live_server(self):
         self._process = None
         self.port = self.app.config.get('LIVESERVER_PORT', 5000)
+        self._server_url = 'http://localhost:{}'.format(self.port)
 
         worker = lambda app, port: app.run(port=port, use_reloader=False)
-
         self._process = multiprocessing.Process(
             target=worker, args=(self.app, self.port)
         )
-
         self._process.start()
 
-        # we must wait for the server to start listening with a maximum timeout of 5 seconds
+        # wait a few seconds for the server to start listening
         timeout = 5
-        while timeout > 0:
-            time.sleep(1)
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            time.sleep(0.5)
             try:
-                urlopen(self.get_server_url())
-                timeout = 0
-            except:
-                timeout -= 1
+                urlopen(self._server_url)
+            except URLError:
+                pass
+            else:
+                break
+        else:
+            assert False, "timed out waiting for server to respond"
 
     def _post_teardown(self):
         if getattr(self, '_ctx', None) is not None:
@@ -85,8 +80,9 @@ class PhantomTest(object):
 
     def run_phantom_test(self):
         os.system("cake build")
-        os.system("./node_modules/.bin/casperjs test app/static/tests/browser.js")
-        
+        os.system("./node_modules/.bin/casperjs test"
+                  " app/static/tests/browser.js")
+
 if __name__ == "__main__":
     tester = PhantomTest()
     tester.run()
