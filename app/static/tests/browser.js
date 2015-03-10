@@ -9,6 +9,11 @@
     casper.withPopup(/persona/, function() {
       return test.assertTitleMatch(/Persona/i, 'Persona login popup has expected title');
     });
+    casper.then(function() {
+      return casper.open('http://localhost:5000/shutdown', {
+        method: 'post'
+      });
+    });
     return casper.run(function() {
       return test.done();
     });
