@@ -27,7 +27,7 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Game interface", 3, (test) ->
+casper.test.begin "Game interface", 4, (test) ->
   casper.start()
 
   ONE_EMAIL = 'player@one.com'
@@ -51,6 +51,9 @@ casper.test.begin "Game interface", 3, (test) ->
   casper.thenClick '#your_turn_games li:last-child a', ->
     # on the game page is a table with class 'goban'
     test.assertExists 'table.goban'
+    # on the game page are 19x19 imgs representing empty board points
+    empty = countStonesAndPoints().empty
+    test.assertEqual 19*19, empty, "19x19 empty points on board"
 
   casper.then ->
     test.done()
@@ -84,6 +87,20 @@ create_login_session = (email) ->
       'name': name
       'value': value
       'path': path
+
+countStonesAndPoints = ->
+  countImgsWith = (name) ->
+    casper.evaluate ((name) ->
+      allElems = $('table.goban img').toArray()
+      allStrs = allElems.map (x) -> $(x).attr 'src'
+      matching = allStrs.filter (x) -> x.indexOf(name) > -1
+      return matching.length
+    ), name
+  counts =
+    'empty': countImgsWith 'e.gif'
+    'black': countImgsWith 'b.gif'
+    'white': countImgsWith 'w.gif'
+  return counts
 
 # @fill "form[action='/search']", q: "casperjs", true
 
