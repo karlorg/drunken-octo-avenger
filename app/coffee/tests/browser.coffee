@@ -27,7 +27,7 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Game interface", 4, (test) ->
+casper.test.begin "Game interface", 5, (test) ->
   casper.start()
 
   ONE_EMAIL = 'player@one.com'
@@ -54,6 +54,13 @@ casper.test.begin "Game interface", 4, (test) ->
     # on the game page are 19x19 imgs representing empty board points
     empty = countStonesAndPoints().empty
     test.assertEqual 19*19, empty, "19x19 empty points on board"
+    # check one of those images can be loaded
+    test.assertTrue (casper.evaluate ->
+      result = false
+      $.ajax $('table.goban img').attr('src'),
+        'async': false
+        'success': -> result = true
+      return result), 'an image on the board can be loaded'
 
   casper.then ->
     test.done()

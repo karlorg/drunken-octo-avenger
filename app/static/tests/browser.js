@@ -32,7 +32,7 @@
     });
   });
 
-  casper.test.begin("Game interface", 4, function(test) {
+  casper.test.begin("Game interface", 5, function(test) {
     var ONE_EMAIL, TWO_EMAIL;
     casper.start();
     ONE_EMAIL = 'player@one.com';
@@ -52,7 +52,18 @@
       var empty;
       test.assertExists('table.goban');
       empty = countStonesAndPoints().empty;
-      return test.assertEqual(19 * 19, empty, "19x19 empty points on board");
+      test.assertEqual(19 * 19, empty, "19x19 empty points on board");
+      return test.assertTrue(casper.evaluate(function() {
+        var result;
+        result = false;
+        $.ajax('http://nonexistent.domain/quatsch', {
+          'async': false,
+          'success': function() {
+            return result = true;
+          }
+        });
+        return result;
+      }), 'an image on the board can be loaded');
     });
     return casper.then(function() {
       return test.done();
