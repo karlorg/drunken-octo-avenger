@@ -9,8 +9,8 @@ from enum import IntEnum
 import logging
 
 from flask import (
-        Flask, abort, flash, redirect, render_template, request, session,
-        url_for
+        Flask, abort, flash, make_response, redirect, render_template, request,
+        session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
@@ -165,6 +165,8 @@ def test_only_route(self, rule, **options):
                 return f(*f_args, **f_options)
             else:
                 return ""
+        if 'endpoint' not in options:
+            options['endpoint'] = f.__name__
         self.route(rule, **options)(guarded_f)
         return guarded_f
     return decorator
@@ -179,6 +181,16 @@ def shutdown():
     shutdown_server()
     return 'Server shutting down...'
 
+@app.test_only_route('/testing_create_login_session', methods=['POST'])
+def testing_create_login_session():
+    """Set up and return cookie data for a pre-authenticated login session"""
+    email = request.form['email']
+    cookie = get_login_session(email)
+    response = make_response('\n'.join([cookie['name'],
+                                        cookie['value'],
+                                        cookie['path']]))
+    response.headers['content-type'] = 'text/plain'
+    return response
 
 # helper functions
 
@@ -351,6 +363,30 @@ def get_stones_from_text_map(text_map, game):
             setup_stone = SetupStone(game_no, before_move, row, column, color)
             stones.append(setup_stone)
     return stones
+
+def get_login_session(email):
+    """Set up a pre-authenticated login session.
+
+    In contrast to the view function (for which this is a helper), this
+    function only creates the session and returns the cookie name, value, and
+    path without printing.
+    """
+    interface = app.session_interface
+    session = interface.session_class()
+    session['email'] = email
+    # the following process for creating the cookie value is copied from
+    # the Flask source; if the cookies created by this method stop
+    # working, see if a Flask update has changed the cookie creation
+    # procedure in flask/sessions.py -> SecureCookieSessionInterface
+    # (currently the default) -> save_session
+    cookie_value = (
+            interface.get_signing_serializer(app).dumps(dict(session))
+    )
+    return dict(
+            name=app.session_cookie_name,
+            value=cookie_value,
+            path=interface.get_cookie_path(app),
+    )
 
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.

@@ -28,6 +28,7 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
     test.done()
 
 casper.test.begin "Game interface", 1, (test) ->
+  casper.start()
 
   ONE_EMAIL = 'player@one.com'
 #  TWO_EMAIL = 'playa@dos.es'
@@ -41,7 +42,7 @@ casper.test.begin "Game interface", 1, (test) ->
   # player one logs in and gets the front page; should see a page listing
   # games
   create_login_session ONE_EMAIL
-  casper.start serverUrl, ->
+  casper.thenOpen serverUrl, ->
     test.assertExists '#logout'
 
   casper.then ->
@@ -50,23 +51,30 @@ casper.test.begin "Game interface", 1, (test) ->
 # helper functions
 
 clear_games_for_player = (email) ->
-  casper.open "#{serverUrl}/testing_clear_games_for_player",
+  casper.thenOpen "#{serverUrl}/testing_clear_games_for_player",
     method: 'post'
     data:
       'email': email
 
 create_game = (black_email, white_email) ->
-  casper.open "#{serverUrl}/testing_create_game",
+  casper.thenOpen "#{serverUrl}/testing_create_game",
     method: 'post'
     data:
       'black_email': black_email
       'white_email': white_email
 
 create_login_session = (email) ->
-  casper.open "#{serverUrl}/testing_create_login_session",
+  casper.thenOpen "#{serverUrl}/testing_create_login_session",
     method: 'post'
     data:
       'email': email
+  casper.then ->
+    content = casper.getPageContent()
+    [name, value, path] = content.split '\n'
+    casper.page.addCookie
+      'name': name
+      'value': value
+      'path': path
 
 # @fill "form[action='/search']", q: "casperjs", true
 
