@@ -53,6 +53,10 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
     this.echo casper.popups.length
     test.assertExists '#logout'
 
+  casper.then ->
+    casper.open 'http://localhost:5000/shutdown',
+      method: 'post'
+
   casper.run ->
     test.done()
 

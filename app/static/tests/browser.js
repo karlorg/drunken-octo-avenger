@@ -34,6 +34,11 @@
       this.echo(casper.popups.length);
       return test.assertExists('#logout');
     });
+    casper.then(function() {
+      return casper.open('http://localhost:5000/shutdown', {
+        method: 'post'
+      });
+    });
     return casper.run(function() {
       return test.done();
     });
