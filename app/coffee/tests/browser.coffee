@@ -27,23 +27,30 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Game interface", 1, (test) ->
+casper.test.begin "Game interface", 3, (test) ->
   casper.start()
 
   ONE_EMAIL = 'player@one.com'
-#  TWO_EMAIL = 'playa@dos.es'
-#  # create a couple of games
-#  clear_games_for_player ONE_EMAIL
-#  clear_games_for_player TWO_EMAIL
-#  create_game ONE_EMAIL, TWO_EMAIL
-#  create_game ONE_EMAIL, TWO_EMAIL
-#
+  TWO_EMAIL = 'playa@dos.es'
+  # create a couple of games
+  clear_games_for_player ONE_EMAIL
+  clear_games_for_player TWO_EMAIL
+  create_game ONE_EMAIL, TWO_EMAIL
+  create_game ONE_EMAIL, TWO_EMAIL
+
   # -- PLAYER ONE
   # player one logs in and gets the front page; should see a page listing
   # games
   create_login_session ONE_EMAIL
   casper.thenOpen serverUrl, ->
-    test.assertExists '#logout'
+    test.assertExists '#your_turn_games'
+    test.assertEqual 2,
+                     (casper.evaluate -> $('#your_turn_games a').length),
+                     'exactly two games listed'
+  # select the most recent game
+  casper.thenClick '#your_turn_games li:last-child a', ->
+    # on the game page is a table with class 'goban'
+    test.assertExists 'table.goban'
 
   casper.then ->
     test.done()
@@ -64,6 +71,8 @@ create_game = (black_email, white_email) ->
       'white_email': white_email
 
 create_login_session = (email) ->
+  "Add steps to the stack to create a login session on the server and set its
+  cookie in the browser."
   casper.thenOpen "#{serverUrl}/testing_create_login_session",
     method: 'post'
     data:

@@ -32,13 +32,24 @@
     });
   });
 
-  casper.test.begin("Game interface", 1, function(test) {
-    var ONE_EMAIL;
+  casper.test.begin("Game interface", 3, function(test) {
+    var ONE_EMAIL, TWO_EMAIL;
     casper.start();
     ONE_EMAIL = 'player@one.com';
+    TWO_EMAIL = 'playa@dos.es';
+    clear_games_for_player(ONE_EMAIL);
+    clear_games_for_player(TWO_EMAIL);
+    create_game(ONE_EMAIL, TWO_EMAIL);
+    create_game(ONE_EMAIL, TWO_EMAIL);
     create_login_session(ONE_EMAIL);
     casper.thenOpen(serverUrl, function() {
-      return test.assertExists('#logout');
+      test.assertExists('#your_turn_games');
+      return test.assertEqual(2, casper.evaluate(function() {
+        return $('#your_turn_games a').length;
+      }), 'exactly two games listed');
+    });
+    casper.thenClick('#your_turn_games li:last-child a', function() {
+      return test.assertExists('table.goban');
     });
     return casper.then(function() {
       return test.done();
@@ -46,7 +57,7 @@
   });
 
   clear_games_for_player = function(email) {
-    return casper.open(serverUrl + "/testing_clear_games_for_player", {
+    return casper.thenOpen(serverUrl + "/testing_clear_games_for_player", {
       method: 'post',
       data: {
         'email': email
@@ -55,7 +66,7 @@
   };
 
   create_game = function(black_email, white_email) {
-    return casper.open(serverUrl + "/testing_create_game", {
+    return casper.thenOpen(serverUrl + "/testing_create_game", {
       method: 'post',
       data: {
         'black_email': black_email,
@@ -73,9 +84,7 @@
     });
     return casper.then(function() {
       var content, name, path, ref, value;
-      require('utils').dump('hey there');
       content = casper.getPageContent();
-      require('utils').dump(content);
       ref = content.split('\n'), name = ref[0], value = ref[1], path = ref[2];
       return casper.page.addCookie({
         'name': name,
