@@ -7,7 +7,6 @@ from future import standard_library
 standard_library.install_aliases()
 
 import logging
-import os
 import shlex
 import subprocess
 import time
@@ -60,9 +59,12 @@ class PhantomTest(unittest.TestCase):
             self._process.terminate()
 
     def run_phantom_test(self):
-        os.system("cake build")
-        os.system("./node_modules/.bin/casperjs test"
-                  " app/static/tests/browser.js")
+        subprocess.call(["cake", "build"])
+        return_code = subprocess.call([
+                "./node_modules/.bin/casperjs", "test",
+                "--fail-fast",  # stop at first failed assertion
+                "app/static/tests/browser.js"])
+        self.assertEqual(return_code, 0, "phantomjs test failed")
 
 if __name__ == "__main__":
     tester = PhantomTest()
