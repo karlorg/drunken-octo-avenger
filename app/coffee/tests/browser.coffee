@@ -27,8 +27,29 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Game interface", 5, (test) ->
+casper.test.begin "Game interface", 14, (test) ->
   casper.start()
+
+  countStonesAndPoints = ->
+    countImgsWith = (name) ->
+      casper.evaluate ((name) ->
+        allElems = $('table.goban img').toArray()
+        allStrs = allElems.map (x) -> $(x).attr 'src'
+        matching = allStrs.filter (x) -> x.indexOf(name) > -1
+        return matching.length
+      ), name
+    counts =
+      'empty': countImgsWith 'e.gif'
+      'black': countImgsWith 'b.gif'
+      'white': countImgsWith 'w.gif'
+    return counts
+
+  pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
+
+  test.assertPointMatches = (x, y, regex) ->
+    imgSrc = casper.evaluate ((imgSel) -> $(imgSel).attr 'src'),
+                             pointSelector(x, y) + " img"
+    test.assertMatch imgSrc, regex
 
   ONE_EMAIL = 'player@one.com'
   TWO_EMAIL = 'playa@dos.es'
@@ -61,6 +82,32 @@ casper.test.begin "Game interface", 5, (test) ->
         'async': false
         'success': -> result = true
       return result), 'an image on the board can be loaded'
+    # no (usable) confirm button appears yet
+    test.assertDoesntExist '.confirm_button:enabled',
+                           'no usable confirm button appears'
+
+  # user clicks an empty spot, which is a link
+  casper.thenClick pointSelector(15, 3), ->
+    # now on the board is one black stone and 19x19-1 empty points
+    counts = countStonesAndPoints()
+    test.assertEquals 19*19-1, counts.empty
+    test.assertEquals 1, counts.black
+    # a confirm button is now available
+    test.assertExists '.confirm_button:enabled'
+
+  # we click a different point, and now our new stone is on that point
+  # instead of the previous one
+  casper.thenClick pointSelector(15, 2), ->
+    counts = countStonesAndPoints()
+    test.assertEquals 19*19-1, counts.empty
+    test.assertEquals 1, counts.black
+    test.assertPointMatches 15, 3, /e.gif/
+    test.assertPointMatches 15, 2, /b.gif/
+
+  # we confirm this new move
+  casper.thenClick '.confirm_button', ->
+    # now we're taken back to the status page
+    test.assertExists '#your_turn_games'
 
   casper.then ->
     test.done()
@@ -94,20 +141,6 @@ create_login_session = (email) ->
       'name': name
       'value': value
       'path': path
-
-countStonesAndPoints = ->
-  countImgsWith = (name) ->
-    casper.evaluate ((name) ->
-      allElems = $('table.goban img').toArray()
-      allStrs = allElems.map (x) -> $(x).attr 'src'
-      matching = allStrs.filter (x) -> x.indexOf(name) > -1
-      return matching.length
-    ), name
-  counts =
-    'empty': countImgsWith 'e.gif'
-    'black': countImgsWith 'b.gif'
-    'white': countImgsWith 'w.gif'
-  return counts
 
 # @fill "form[action='/search']", q: "casperjs", true
 
