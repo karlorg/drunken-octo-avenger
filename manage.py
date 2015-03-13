@@ -3,13 +3,82 @@ from __future__ import (
 from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
+
 import os
+import pickle
 
 from flask.ext.script import Manager
 
-from app.main import Game, Move, app, db
+from app.main import Game, Move, add_stones_from_text_map_to_game, app, db
 
 manager = Manager(app)
+
+@manager.command
+def remake_db():
+    db.drop_all()
+    db.create_all()
+
+@manager.command
+def test_browser(name):
+    """Run a single browser test, given its name (excluding `test_`)"""
+    result = os.system(
+            "python -m unittest app.browser_tests.test_{}".format(name))
+    return (0 if result == 0 else 1)
+
+@manager.command
+def test_module(module):
+    """ For example you might do `python manage.py test_module app.tests.test'
+    """
+    result = os.system("python -m unittest " + module)
+    return (0 if result == 0 else 1)
+
+@manager.command
+def test_package(directory):
+    result = os.system("python -m unittest discover " + directory)
+    return (0 if result == 0 else 1)
+
+@manager.command
+def test_all():
+    result = os.system("python -m unittest discover")
+    return (0 if result == 0 else 1)
+
+@manager.command
+def test(browser=None, module=None, package=None):
+    """For convenience, you can use `test -x` as a shorthand for other tests"""
+    if browser is not None:
+        return test_browser(browser)
+    elif module is not None:
+        return test_module(module)
+    elif package is not None:
+        return test_package(package)
+    else:
+        return test_all()
+
+@manager.command
+def coverage(quick=False, browser=False):
+    rcpath = os.path.abspath('.coveragerc')
+
+    quick_command = 'test_package app.tests'
+    browser_command = 'test_package app.browser_tests'
+    full_command = 'test_all'
+
+    if quick:
+        manage_command = quick_command
+    elif browser:
+        manage_command = browser_command
+    else:
+        manage_command = full_command
+
+    if os.path.exists('.coverage'):
+        os.remove('.coverage')
+    os.system((
+            "COVERAGE_PROCESS_START='{0}' "
+            "coverage run manage.py {1}"
+            ).format(rcpath, manage_command))
+    os.system("coverage combine")
+    os.system("coverage report -m")
+    os.system("coverage html")
+
 
 @manager.command
 def clear_games_for_player(email):
@@ -29,16 +98,22 @@ def clear_games_for_player_internal(email):
         db.session.commit()
 
 @manager.command
-def create_game(black_email, white_email):
+def create_game(black_email, white_email, pickled_stones=None):
     """Create a custom game in the database without using the web."""
-    create_game_internal(black_email, white_email)
+    if pickled_stones is None:
+        stones = None
+    else:
+        stones = pickle.loads(stones)
+    create_game_internal(black_email, white_email, stones)
 
-def create_game_internal(black_email, white_email):
+def create_game_internal(black_email, white_email, stones=None):
     game = Game()
     game.black = black_email
     game.white = white_email
     db.session.add(game)
     db.session.commit()
+    if stones is not None:
+        add_stones_from_text_map_to_game(stones, game)
 
 @manager.command
 def create_login_session(email):
@@ -74,53 +149,6 @@ def create_login_session_internal(email):
             value=cookie_value,
             path=interface.get_cookie_path(app),
     )
-
-@manager.command
-def remake_db():
-    db.drop_all()
-    db.create_all()
-
-@manager.command
-def test_module(module):
-    """ For example you might do `python manage.py test_module app.tests.test'
-    """
-    result = os.system("python -m unittest " + module)
-    return (0 if result == 0 else 1)
-
-@manager.command
-def test_package(directory):
-    result = os.system("python -m unittest discover " + directory)
-    return (0 if result == 0 else 1)
-
-@manager.command
-def test_all():
-    result = os.system("python -m unittest discover")
-    return (0 if result == 0 else 1)
-
-@manager.command
-def coverage(quick=False, browser=False):
-    rcpath = os.path.abspath('.coveragerc')
-
-    quick_command = 'test_package app.tests'
-    browser_command = 'test_package app.browser_tests'
-    full_command = 'test_all'
-
-    if quick:
-        manage_command = quick_command
-    elif browser:
-        manage_command = browser_command
-    else:
-        manage_command = full_command
-
-    if os.path.exists('.coverage'):
-        os.remove('.coverage')
-    os.system((
-            "COVERAGE_PROCESS_START='{0}' "
-            "coverage run manage.py {1}"
-            ).format(rcpath, manage_command))
-    os.system("coverage combine")
-    os.system("coverage report -m")
-    os.system("coverage html")
 
 if __name__ == "__main__":
     manager.run()

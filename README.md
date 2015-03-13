@@ -32,7 +32,7 @@ In the repository root directory, run
 
 (from virtualenv)
 
-    python manage.py runserver [-d]
+    python manage.py runserver
 
 Access the local server at `http://localhost:5000` by default (other domains
 will need to be set in `config.py` to avoid confusing the login system).
@@ -58,17 +58,26 @@ in the script to see the arguments, but none will cause it to call the entire
 test suite, `quick` will just run a single test module and `coverage` will run
 the coverage analysis in both versions.
 
-#### without the script
+#### more specific testing
 
-You can also use
+You can also use various `python manage.py` commands, eg.:
 
-    python -m unittest discover [package]
+    python manage.py test_all
+    python manage.py test_package app.tests
+    python manage.py test_module app.browser_tests.test_frontpage
+    python manage.py test_browser frontpage
 
-or
+As a shorthand, you can also use `python manage.py test -x` where `x` is `p`
+for package, `m` for module or `b` for browser, or leave out the option to test
+all.
 
-    python -m unittest [module]
+You can also use `python -m unittest [discover]` as normal.
 
-to run tests without switching Python versions.
+#### coverage
+
+`python manage.py coverage -q` will produce coverage stats for the non-browser
+automation tests (`-b` runs the browser tests, but coverage isn't working for
+those yet).  View the results in the `htmlcov` directory.
 
 #### testing against a remote server
 
@@ -77,7 +86,13 @@ markdown file in `app/browser_tests`.
 
 ### Javascript code
 
-Open `app/static/tests/tests.html` in your browser.
+To enable the coverage options for Javascript, run a local server as above and
+open `http://localhost:5000/static/tests/tests.html`.  This may later become
+the only way to run the tests if we start doing clever things that get the
+server involved in JS testing.
+
+If you don't care about coverage, you can also just open the local file
+`app/static/tests/tests.html` in your browser.
 
 ## Compatibility (Python 2/3)
 

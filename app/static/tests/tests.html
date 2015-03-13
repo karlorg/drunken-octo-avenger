@@ -14,19 +14,19 @@
 
     <table class="goban">
         <tr>
-            <td class="row-0 col-0"><img src="static/images/goban/e.gif" /></td>
-            <td class="row-0 col-1"><img src="static/images/goban/e.gif" /></td>
-            <td class="row-0 col-2"><img src="static/images/goban/e.gif" /></td>
+            <td class="row-0 col-0"><img src="/static/images/goban/e.gif" /></td>
+            <td class="row-0 col-1"><img src="/static/images/goban/e.gif" /></td>
+            <td class="row-0 col-2"><img src="/static/images/goban/e.gif" /></td>
         </tr>
         <tr>
-            <td class="row-1 col-0"><img src="static/images/goban/e.gif" /></td>
-            <td class="row-1 col-1"><img src="static/images/goban/e.gif" /></td>
-            <td class="row-1 col-2"><img src="static/images/goban/e.gif" /></td>
+            <td class="row-1 col-0"><img src="/static/images/goban/e.gif" /></td>
+            <td class="row-1 col-1"><img src="/static/images/goban/e.gif" /></td>
+            <td class="row-1 col-2"><img src="/static/images/goban/e.gif" /></td>
         </tr>
         <tr>
-            <td class="row-2 col-0"><img src="static/images/goban/e.gif" /></td>
-            <td class="row-2 col-1"><img src="static/images/goban/e.gif" /></td>
-            <td class="row-2 col-2"><img src="static/images/goban/e.gif" /></td>
+            <td class="row-2 col-0"><img src="/static/images/goban/e.gif" /></td>
+            <td class="row-2 col-1"><img src="/static/images/goban/e.gif" /></td>
+            <td class="row-2 col-2"><img src="/static/images/goban/e.gif" /></td>
         </tr>
     </table>
     <form method="POST" action="/playstone">
@@ -38,9 +38,11 @@
     </form>
 </div>
 <script src="../jquery.js"></script>
-<script src="../persona.js"></script>
-<script src="../game_basic.js"></script>
+<script src="../persona.js" data-cover></script>
+<script src="../go_rules.js" data-cover></script>
+<script src="../game_basic.js" data-cover></script>
 <script src="qunit.js"></script>
+<script src="blanket.js"></script>
 <script src="tests.js"></script>
 
 </body>

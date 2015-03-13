@@ -8,10 +8,14 @@ tesuji_charm = window.tesuji_charm
 tesuji_charm.game_basic ?= {}
 game_basic = tesuji_charm.game_basic
 
-$new_stone = null
-new_stone_image_path = null
+go_rules = tesuji_charm.go_rules
 
-set_image = ($td, filename) ->
+initialBoardState = null
+
+$newStone = null
+newStoneColor = null
+
+setImage = ($td, filename) ->
   $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
 rowRe = /row-(\d+)/
@@ -27,33 +31,69 @@ parseCoordClass = ($obj) ->
   [_, colStr] = colRe.exec $obj.attr("class")
   return [parseInt(rowStr, 10), parseInt(colStr, 10)]
 
-hasStoneClass = ($obj) ->
+getStoneClass = ($obj) ->
   classStr = $obj.attr "class"
-  return true if classStr.indexOf('blackstone') > -1
-  return true if classStr.indexOf('whitestone') > -1
-  return false
+  return 'blackstone' if classStr.indexOf('blackstone') > -1
+  return 'whitestone' if classStr.indexOf('whitestone') > -1
+  return ''
+
+readBoardState = ->
+  # generate a board state object based on the loaded page contents
+  result = []
+  $('.goban td').each (index) ->
+    [row, col] = parseCoordClass $(this)
+    result[row] ?= []
+    result[row][col] = switch (getStoneClass $(this))
+      when 'blackstone' then 'black'
+      when 'whitestone' then 'white'
+      else 'empty'
+  return result
+
+# export to enable testing
+game_basic._readBoardState = readBoardState
+
+updateBoard = (state) ->
+  for row, rowArray of state
+    for col, data of rowArray
+      $td = $(".row-#{row}.col-#{col}")
+      setImage $td, switch data
+        when 'empty' then 'e.gif'
+        when 'black' then 'b.gif'
+        when 'white' then 'w.gif'
+
+# export to enable testing
+game_basic._updateBoard = updateBoard
+
+# to facilitate testing, export a function to reload our internal state from
+# the page
+game_basic._reloadBoard = ->
+  initialBoardState = readBoardState()
 
 game_basic.initialize = ->
 
-  if parseInt($('input#move_no').val()) % 2 == 0
-    new_stone_image_path = 'b.gif'
+  initialBoardState = readBoardState()
+
+  if parseInt($('input#move_no').val()) % 2 is 0
+    newStoneColor = 'black'
   else
-    new_stone_image_path = 'w.gif'
+    newStoneColor = 'white'
 
   $('button.confirm_button').prop 'disabled', true
 
   $('table.goban td').click ->
     return unless hasCoordClass $(this)
-    return if hasStoneClass $(this)
+    [row, col] = parseCoordClass $(this)
 
-    $old_new_stone = $new_stone
-    $new_stone = $(this)
+    try
+      newBoardState = go_rules.getNewState(
+        newStoneColor, col, row, initialBoardState)
+    catch error
+      if error.message is 'illegal move'
+        return
+      else
+        throw error
+    updateBoard newBoardState
 
-    if $old_new_stone != null
-      set_image $old_new_stone, 'e.gif'
-
-    set_image $new_stone, new_stone_image_path
-    [row, col] = parseCoordClass $new_stone
     $('input#row').val row.toString()
     $('input#column').val col.toString()
     $('button.confirm_button').prop 'disabled', false

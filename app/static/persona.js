@@ -15,25 +15,25 @@
   persona = tesuji_charm.persona;
 
   persona.initialize = function(navigator) {
-    var logged_in_user, signin_link, signout_link;
-    signin_link = $('#persona_login');
-    if (signin_link.length > 0) {
-      signin_link.click(function() {
+    var loggedInUser, signinLink, signoutLink;
+    signinLink = $('#persona_login');
+    if (signinLink.length > 0) {
+      signinLink.click(function() {
         return navigator.id.request();
       });
     }
-    signout_link = $('#logout');
-    if (signout_link.length > 0) {
-      signout_link.click(function() {
+    signoutLink = $('#logout');
+    if (signoutLink.length > 0) {
+      signoutLink.click(function() {
         return navigator.id.logout();
       });
     }
-    logged_in_user = tesuji_charm.current_persona_email;
-    if (logged_in_user === '') {
-      logged_in_user = null;
+    loggedInUser = tesuji_charm.currentPersonaEmail;
+    if (loggedInUser === '') {
+      loggedInUser = null;
     }
     return navigator.id.watch({
-      loggedInUser: logged_in_user,
+      loggedInUser: loggedInUser,
       onlogin: function(assertion) {
         return $.ajax({
           type: 'POST',

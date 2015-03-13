@@ -6,6 +6,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 from future import standard_library
 standard_library.install_aliases()
 
+import logging
 import os
 import sys
 import time
@@ -21,6 +22,9 @@ from ..main import app
 import manage
 from . import server_tools
 
+# importing main enables logging, we switch it off again here to prevent
+# selenium debug lines from flooding the test output
+logging.disable(logging.CRITICAL)
 
 class SeleniumTest(LiveServerTestCase):
 
@@ -72,22 +76,16 @@ class SeleniumTest(LiveServerTestCase):
         ## for some reason the SQL Alchemy URI is removed between setup in the
         ## main app and here
         app.config.from_object('config')
+        # running the server in debug mode during testing fails for some reason
+        app.config['DEBUG'] = False
+        app.config['TESTING'] = True
         return app
 
     def setUp(self):
-        self.active_browsers = []
-        self.browser = self.get_new_browser()
+        self.browser = webdriver.Firefox()
 
     def tearDown(self):
-        for browser in self.active_browsers:
-            browser.quit()
-        time.sleep(0.5)
-
-    def get_new_browser(self):
-        """Return a new browser object that will be cleaned up on teardown"""
-        browser = webdriver.Firefox()
-        self.active_browsers.append(browser)
-        return browser
+        self.browser.quit()
 
     # credit to Harry Percival for this wait_for
     # from his book, Test-Driven Development with Python
@@ -133,16 +131,16 @@ class SeleniumTest(LiveServerTestCase):
             path=cookie['path'],
         ))
 
-    def create_game(self, black_email, white_email):
+    def create_game(self, black_email, white_email, stones=None):
         """Create a custom game in the database without using the web.
 
         Go via fabric if testing against a remote server.
         """
         if self.against_remote:
             server_tools.create_game_on_server(
-                    self.server_host, black_email, white_email)
+                    self.server_host, black_email, white_email, stones)
         else:
-            manage.create_game_internal(black_email, white_email)
+            manage.create_game_internal(black_email, white_email, stones)
 
     def clear_games_for_player(self, email):
         """Clear all of `email`'s games from the database.

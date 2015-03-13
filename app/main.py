@@ -54,10 +54,11 @@ def game(game_no):
         flash("Game #{game_no} not found".format(game_no=game_no))
         return redirect('/')
     moves = game.moves
+    setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game, moves)
     # imgs = get_img_array_from_moves(moves)
     # goban = annotate_with_classes(imgs)
-    goban = get_goban_from_moves(moves)
+    goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
         move_no=len(moves)
@@ -188,7 +189,7 @@ def get_stone_if_args_good(args, moves):
             game_no=game_no, move_no=move_no,
             row=row, column=column, color=color)
 
-def get_goban_from_moves(moves):
+def get_goban_from_moves(moves, setup_stones=None):
     """Given the moves for a game, return a 2d array of dicts for the board.
 
     Each dictionary contains information needed to render the corresponding
@@ -204,13 +205,15 @@ def get_goban_from_moves(moves):
 
     Pure function.
     """
+    if setup_stones is None:
+        setup_stones = []
     goban = [[dict(
         img=IMG_PATH_EMPTY,
         classes='row-{row} col-{col}'.format(row=str(j), col=str(i))
     )
              for i in range(19)]
              for j in range(19)]
-    for move in moves:
+    for move in moves + setup_stones:
         if move.color == Move.Color.black:
             goban[move.row][move.column]['img'] = IMG_PATH_BLACK
             goban[move.row][move.column]['classes'] += ' blackstone'
@@ -285,6 +288,38 @@ def is_players_turn_in_game(game, moves, email=None):
     else:  # player is white
         return (last_move_color == Move.Color.black)
 
+def add_stones_from_text_map_to_game(text_map, game):
+    """Given a list of strings, add setup stones to the given game.
+
+    An example text map is [[".b.","bw.",".b."]]
+    """
+    stones = get_stones_from_text_map(text_map, game)
+    for stone in stones:
+        db.session.add(stone)
+    db.session.commit()
+
+def get_stones_from_text_map(text_map, game):
+    """Given a list of strings, return a list of setup stones for `game`.
+
+    An example text map is [[".b.","bw.",".b."]]
+    """
+    stones = []
+    for rowno, row in enumerate(text_map):
+        for colno, stone in enumerate(row):
+            if stone not in ['b', 'w']:
+                continue
+            game_no = game.id
+            before_move = 0
+            color = {
+                    'b': Move.Color.black,
+                    'w': Move.Color.white
+            }[stone]
+            row = rowno
+            column = colno
+            setup_stone = SetupStone(game_no, before_move, row, column, color)
+            stones.append(setup_stone)
+    return stones
+
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.
 
@@ -311,6 +346,7 @@ class Game(db.Model):
     black = db.Column(db.String(length=254))
     white = db.Column(db.String(length=254))
     moves = db.relationship('Move', backref='game')
+    setup_stones = db.relationship('SetupStone', backref='game')
 
 class Move(db.Model):
     __tablename__ = 'moves'
@@ -335,6 +371,27 @@ class Move(db.Model):
     def __repr__(self):
         return '<Move {0}: {1} at ({2},{3})>'.format(
                 self.move_no, self.Color(self.color).name,
+                self.column, self.row)
+
+class SetupStone(db.Model):
+    __tablename__ = 'setupstones'
+    id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
+    row = db.Column(db.Integer)
+    column = db.Column(db.Integer)
+    before_move = db.Column(db.Integer)
+    color = db.Column(db.Integer)
+
+    def __init__(self, game_no, before_move, row, column, color):
+        self.game_no = game_no
+        self.before_move = before_move
+        self.row = row
+        self.column = column
+        self.color = color
+
+    def __repr__(self):
+        return '<SetupStone {0}: {1} at ({2},{3})>'.format(
+                self.before_move, self.Color(self.color).name,
                 self.column, self.row)
 
 
