@@ -27,7 +27,7 @@ casper.test.begin 'Test the login procedure', 2, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Game interface", 14, (test) ->
+casper.test.begin "Game interface", 23, (test) ->
   casper.start()
 
   countStonesAndPoints = ->
@@ -109,6 +109,41 @@ casper.test.begin "Game interface", 14, (test) ->
     # now we're taken back to the status page
     test.assertExists '#your_turn_games'
 
+  # -- PLAYER TWO
+  # now the white player logs in and visits the same game
+  create_login_session TWO_EMAIL
+  casper.thenOpen serverUrl, ->
+    test.assertEqual 1,
+                     (casper.evaluate -> $('#your_turn_games a').length),
+                     "exactly one game listed in which it's P2's turn"
+  casper.thenClick '#your_turn_games a'
+
+  # clicking the point with a black stone does nothing
+  casper.thenClick pointSelector(15, 2), ->
+    # still one black stone, no white, rest empty
+    counts = countStonesAndPoints()
+    test.assertEquals 19*19-1, counts.empty
+    test.assertEquals 1, counts.black
+    test.assertEquals 0, counts.white
+
+  # user clicks an empty spot
+  casper.thenClick pointSelector(3, 3), ->
+    # now one black stone, one white, rest empty
+    counts = countStonesAndPoints()
+    test.assertEquals 19*19-2, counts.empty
+    test.assertEquals 1, counts.black
+    test.assertEquals 1, counts.white
+
+  # confirm move
+  casper.thenClick '.confirm_button'
+  # reload front page and get the other game
+  # (it should be the first listed under 'not your turn')
+  casper.thenClick '#not_your_turn_games li:first-child a', ->
+    # we should be back to an empty board
+    test.assertExists '.goban'
+    counts = countStonesAndPoints()
+    test.assertEquals 19*19, counts.empty, 'second board empty'
+
   casper.then ->
     test.done()
 
@@ -137,6 +172,7 @@ create_login_session = (email) ->
   casper.then ->
     content = casper.getPageContent()
     [name, value, path] = content.split '\n'
+    casper.page.clearCookies()
     casper.page.addCookie
       'name': name
       'value': value

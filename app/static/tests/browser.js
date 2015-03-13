@@ -32,7 +32,7 @@
     });
   });
 
-  casper.test.begin("Game interface", 14, function(test) {
+  casper.test.begin("Game interface", 23, function(test) {
     var ONE_EMAIL, TWO_EMAIL, countStonesAndPoints, pointSelector;
     casper.start();
     countStonesAndPoints = function() {
@@ -116,6 +116,34 @@
     casper.thenClick('.confirm_button', function() {
       return test.assertExists('#your_turn_games');
     });
+    create_login_session(TWO_EMAIL);
+    casper.thenOpen(serverUrl, function() {
+      return test.assertEqual(1, casper.evaluate(function() {
+        return $('#your_turn_games a').length;
+      }), "exactly one game listed in which it's P2's turn");
+    });
+    casper.thenClick('#your_turn_games a');
+    casper.thenClick(pointSelector(15, 2), function() {
+      var counts;
+      counts = countStonesAndPoints();
+      test.assertEquals(19 * 19 - 1, counts.empty);
+      test.assertEquals(1, counts.black);
+      return test.assertEquals(0, counts.white);
+    });
+    casper.thenClick(pointSelector(3, 3), function() {
+      var counts;
+      counts = countStonesAndPoints();
+      test.assertEquals(19 * 19 - 2, counts.empty);
+      test.assertEquals(1, counts.black);
+      return test.assertEquals(1, counts.white);
+    });
+    casper.thenClick('.confirm_button');
+    casper.thenClick('#not_your_turn_games li:first-child a', function() {
+      var counts;
+      test.assertExists('.goban');
+      counts = countStonesAndPoints();
+      return test.assertEquals(19 * 19, counts.empty, 'second board empty');
+    });
     return casper.then(function() {
       return test.done();
     });
@@ -152,6 +180,7 @@
       var content, name, path, ref, value;
       content = casper.getPageContent();
       ref = content.split('\n'), name = ref[0], value = ref[1], path = ref[2];
+      casper.page.clearCookies();
       return casper.page.addCookie({
         'name': name,
         'value': value,
