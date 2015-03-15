@@ -37,7 +37,7 @@
     });
   });
 
-  casper.test.begin("Game interface", 23, function(test) {
+  casper.test.begin("Game interface", 27, function(test) {
     var ONE_EMAIL, TWO_EMAIL, countStonesAndPoints, initialEmptyCount, pointSelector;
     casper.start();
     countStonesAndPoints = function() {

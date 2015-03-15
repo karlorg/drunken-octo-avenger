@@ -8,8 +8,9 @@ import unittest
 
 from .. import go_rules
 from ..go_rules import (
-        Color, EmptyPointLibertiesException, IllegalMoveException,
-        count_liberties, update_board_with_move
+        Color, EmptyPointGroupException, EmptyPointLibertiesException,
+        IllegalMoveException,
+        count_liberties, get_group, update_board_with_move
 )
 
 empty = Color.empty
@@ -66,3 +67,21 @@ class TestCountLiberties(unittest.TestCase):
         self.assertEqual(top_left, 2)
         middle_white = count_liberties(board, 1, 1)
         self.assertEqual(middle_white, 3)
+
+class TestGetGroup(unittest.TestCase):
+
+    def test_exception_on_empty_point(self):
+        board = board_from_strings(['.'])
+        with self.assertRaises(EmptyPointGroupException):
+            get_group(board, 0, 0)
+
+    def test_identifies_sample_groups(self):
+        board = board_from_strings(['bb..',
+                                    'bww.',
+                                    '.b..'])
+        top_left = get_group(board, 0, 1)
+        self.assertEqual(top_left, set([(0, 0), (0, 1), (1, 0)]))
+        middle_white = get_group(board, 1, 1)
+        self.assertEqual(middle_white, set([(1, 1), (1, 2)]))
+        bottom_black = get_group(board, 2, 1)
+        self.assertEqual(bottom_black, set([(2, 1)]))

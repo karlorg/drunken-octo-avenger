@@ -36,7 +36,7 @@ casper.test.begin 'Test the login procedure', 3, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Game interface", 23, (test) ->
+casper.test.begin "Game interface", 27, (test) ->
   casper.start()
 
   countStonesAndPoints = ->
