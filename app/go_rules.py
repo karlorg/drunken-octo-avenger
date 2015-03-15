@@ -30,9 +30,15 @@ def update_board_with_move(board, color, r, c, move_no=None):
 
     Modifies its argument `board`.
     """
+    try:
+        enemy = {Color.white: Color.black,
+                 Color.black: Color.white}.get(color)
+    except:
+        assert False, "attempted board update with invalid color"
+
     def process_captures(board, r, c):
         for (r0, c0) in get_neighbours(board, r, c):
-            if board[(r0, c0)] is not Color.empty:
+            if board[(r0, c0)] is enemy:
                 if count_liberties(board, r0, c0) == 0:
                     for p in get_group(board, r0, c0):
                         board[p] = Color.empty
