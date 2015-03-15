@@ -205,6 +205,24 @@ test "removing a group's last liberty removes the group", (assert) ->
   ]
   assert.deepEqual(b2, expected, "group capture succeeded")
 
+test "capturing with own last liberty does not remove own stones", (assert) ->
+  board = [
+    ['empty', 'black', 'black', 'empty']
+    ['black', 'white', 'white', 'black']
+    ['black', 'empty', 'white', 'black']
+    ['white', 'black', 'black', 'white']
+    ['empty', 'white', 'white', 'empty']
+  ]
+  expected = [
+    ['empty', 'black', 'black', 'empty']
+    ['black', 'white', 'white', 'black']
+    ['black', 'white', 'white', 'black']
+    ['white', 'empty', 'empty', 'white']
+    ['empty', 'white', 'white', 'empty']
+  ]
+  b1 = go_rules.getNewState('white', 1, 2, board)
+  assert.deepEqual(b1, expected, "group capture succeeded")
+
 test "helper function neighboringPoints", (assert) ->
   board = [
     ['empty', 'empty', 'empty']
