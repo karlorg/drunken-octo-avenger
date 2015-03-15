@@ -77,6 +77,17 @@ class TestUpdateBoardWithMove(unittest.TestCase):
         e = cm.exception
         self.assertEqual(e.move_no, 1)
 
+    def test_playing_into_atari_is_illegal(self):
+        board = board_from_strings(['.w.',
+                                    'w.w',
+                                    '.w.'])
+        with self.assertRaises(IllegalMoveException) as cm:
+            update_board_with_move(board, black, 1, 1, move_no=1)
+        e = cm.exception
+        self.assertEqual(e.move_no, 1)
+        # also, the board should not have changed
+        self.assertEqual(board[(1, 1)], empty)
+
 class TestCountLiberties(unittest.TestCase):
 
     def test_exception_on_empty_point(self):

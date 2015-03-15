@@ -49,6 +49,13 @@ def update_board_with_move(board, color, r, c, move_no=None):
         raise IllegalMoveException("point already occupied", move_no)
     process_captures(board, r, c)
 
+    if _count_liberties(board, r, c) == 0:
+        # thankfully, if we're still in atari then no captures have occurred,
+        # so we can revert the board position simply by removing the stone we
+        # just played
+        board[(r, c)] = Color.empty
+        raise IllegalMoveException("playing into atari", move_no)
+
 def _get_group(board, r, c):
     """Return the group of the stone at (r,c) as an iterable of coords.
 
