@@ -179,7 +179,7 @@ def shutdown():
 
     From http://flask.pocoo.org/snippets/67/"""
     func = request.environ.get('werkzeug.server.shutdown')
-    if func is None:
+    if func is None:  # pragma: no cover
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
     return 'Server shutting down...'

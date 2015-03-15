@@ -33,14 +33,14 @@ def update_board_with_move(board, color, r, c, move_no=None):
     try:
         enemy = {Color.white: Color.black,
                  Color.black: Color.white}.get(color)
-    except:
+    except:  # pragma: no cover
         assert False, "attempted board update with invalid color"
 
     def process_captures(board, r, c):
-        for (r0, c0) in get_neighbours(board, r, c):
+        for (r0, c0) in _get_neighbours(board, r, c):
             if board[(r0, c0)] is enemy:
-                if count_liberties(board, r0, c0) == 0:
-                    for p in get_group(board, r0, c0):
+                if _count_liberties(board, r0, c0) == 0:
+                    for p in _get_group(board, r0, c0):
                         board[p] = Color.empty
 
     if board[(r, c)] == Color.empty:
@@ -49,7 +49,7 @@ def update_board_with_move(board, color, r, c, move_no=None):
         raise IllegalMoveException("point already occupied", move_no)
     process_captures(board, r, c)
 
-def get_group(board, r, c):
+def _get_group(board, r, c):
     """Return the group of the stone at (r,c) as an iterable of coords.
 
     Pure function.
@@ -63,7 +63,7 @@ def get_group(board, r, c):
         group_so_far |= set([(r, c)])
         neighbours_to_recurse = filter(
             lambda p: board[p] is ally and p not in group_so_far,
-            get_neighbours(board, r, c)
+            _get_neighbours(board, r, c)
         )
         for (r0, c0) in neighbours_to_recurse:
             group_so_far |= get_group_recursive(r0, c0, group_so_far)
@@ -71,7 +71,7 @@ def get_group(board, r, c):
 
     return get_group_recursive(r, c, set())
 
-def get_neighbours(board, r, c):
+def _get_neighbours(board, r, c):
     """Return the neighbouring points of (r,c) as an iterable of coords.
 
     Pure function.
@@ -79,7 +79,7 @@ def get_neighbours(board, r, c):
     return filter(lambda p: p in board,
                   ((r-1, c), (r, c+1), (r+1, c), (r, c-1)))
 
-def count_liberties(board, r, c):
+def _count_liberties(board, r, c):
     """Count the liberties of the group containing the stone (r,c).
 
     Pure function.
@@ -88,10 +88,10 @@ def count_liberties(board, r, c):
         raise EmptyPointLibertiesException
 
     liberties = set()
-    for (r0, c0) in get_group(board, r, c):
+    for (r0, c0) in _get_group(board, r, c):
         liberties |= set(filter(
                 lambda p: board[p] == Color.empty,
-                get_neighbours(board, r0, c0)
+                _get_neighbours(board, r0, c0)
         ))
 
     return len(liberties)
