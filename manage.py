@@ -10,6 +10,7 @@ import pickle
 from flask.ext.script import Manager
 
 from app.main import Game, Move, add_stones_from_text_map_to_game, app, db
+import config
 
 manager = Manager(app)
 
@@ -55,17 +56,22 @@ def test(browser=None, module=None, package=None):
         return test_all()
 
 @manager.command
-def coverage(quick=False, browser=False):
+def coverage(quick=False, browser=False, phantom=False):
     rcpath = os.path.abspath('.coveragerc')
 
     quick_command = 'test_package app.tests'
+    # once all browser tests are converted to phantom, we can remove the
+    # phantom option
     browser_command = 'test_package app.browser_tests'
+    phantom_command = 'test_module app.browser_tests.phantom'
     full_command = 'test_all'
 
     if quick:
         manage_command = quick_command
     elif browser:
         manage_command = browser_command
+    elif phantom:
+        manage_command = phantom_command
     else:
         manage_command = full_command
 
@@ -79,6 +85,14 @@ def coverage(quick=False, browser=False):
     os.system("coverage report -m")
     os.system("coverage html")
 
+@manager.command
+def run_test_server():
+    """Used by the phantomjs tests to run a live testing server"""
+    # running the server in debug mode during testing fails for some reason
+    app.config['DEBUG'] = False
+    app.config['TESTING'] = True
+    port = config.LIVESERVER_PORT
+    app.run(port=port, use_reloader=False)
 
 @manager.command
 def clear_games_for_player(email):

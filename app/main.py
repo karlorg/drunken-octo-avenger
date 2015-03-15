@@ -9,12 +9,13 @@ from enum import IntEnum
 import logging
 
 from flask import (
-        Flask, abort, flash, redirect, render_template, request, session,
-        url_for
+        Flask, abort, flash, make_response, redirect, render_template, request,
+        session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
 import jinja2
+import json
 import requests
 from wtforms import IntegerField, StringField
 from wtforms.validators import DataRequired, Email
@@ -145,6 +146,114 @@ def logout():
     except KeyError:
         pass
     return ''
+
+# test-only routes (used in testing to access the server more directly than
+# users are normally allowed to), and their helpers.  These should all use the
+# `test_only_route` decorator below:
+
+def test_only_route(self, rule, **options):
+    """A wrapper for `app.route`, that disables the route outside testing"""
+    def decorator(f):
+        # we can't just check at compile time whether testing mode is on,
+        # because it's not set until after this file is imported (until then,
+        # the importing module has no app object to set the testing flag on).
+        #
+        # Therefore we have to check at the time the wrapped view function is
+        # called.
+        def guarded_f(*f_args, **f_options):
+            if self.config['TESTING']:
+                return f(*f_args, **f_options)
+            else:
+                return ""
+        if 'endpoint' not in options:
+            options['endpoint'] = f.__name__
+        self.route(rule, **options)(guarded_f)
+        return guarded_f
+    return decorator
+
+Flask.test_only_route = test_only_route
+
+@app.test_only_route('/shutdown', methods=['POST'])
+def shutdown():
+    """Shutdown the Werkzeug dev server, if we're using it.
+
+    From http://flask.pocoo.org/snippets/67/"""
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+    return 'Server shutting down...'
+
+@app.test_only_route('/testing_create_login_session', methods=['POST'])
+def testing_create_login_session():
+    """Set up and return cookie data for a pre-authenticated login session"""
+    email = request.form['email']
+    cookie = get_login_session(email)
+    response = make_response('\n'.join([cookie['name'],
+                                        cookie['value'],
+                                        cookie['path']]))
+    response.headers['content-type'] = 'text/plain'
+    return response
+
+def get_login_session(email):
+    """Set up a pre-authenticated login session.
+
+    In contrast to the view function (for which this is a helper), this
+    function only creates the session and returns the cookie name, value, and
+    path without printing.
+    """
+    interface = app.session_interface
+    session = interface.session_class()
+    session['email'] = email
+    # the following process for creating the cookie value is copied from
+    # the Flask source; if the cookies created by this method stop
+    # working, see if a Flask update has changed the cookie creation
+    # procedure in flask/sessions.py -> SecureCookieSessionInterface
+    # (currently the default) -> save_session
+    cookie_value = (
+            interface.get_signing_serializer(app).dumps(dict(session))
+    )
+    return dict(
+            name=app.session_cookie_name,
+            value=cookie_value,
+            path=interface.get_cookie_path(app),
+    )
+
+@app.test_only_route('/testing_create_game', methods=['POST'])
+def testing_create_game():
+    """Create a custom game in the database directly"""
+    black_email = request.form['black_email']
+    white_email = request.form['white_email']
+    stones = json.loads(request.form['stones'])
+    create_game_internal(black_email, white_email, stones)
+    return ''
+
+def create_game_internal(black_email, white_email, stones=None):
+    game = Game()
+    game.black = black_email
+    game.white = white_email
+    db.session.add(game)
+    db.session.commit()
+    if stones is not None:
+        add_stones_from_text_map_to_game(stones, game)
+
+@app.test_only_route('/testing_clear_games_for_player', methods=['POST'])
+def testing_clear_games_for_player():
+    """Clear all of `email`'s games from the database."""
+    email = request.form['email']
+    clear_games_for_player_internal(email)
+    return ''
+
+def clear_games_for_player_internal(email):
+    games_as_black = Game.query.filter(Game.black == email).all()
+    games_as_white = Game.query.filter(Game.white == email).all()
+    games = games_as_black + games_as_white
+    moves = Move.query.filter(Move.game in games).all()
+    for move in moves:
+        db.session.delete(move)
+    for game in games:
+        db.session.delete(game)
+        db.session.commit()
 
 
 # helper functions
