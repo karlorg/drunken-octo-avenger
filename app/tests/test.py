@@ -530,6 +530,16 @@ class TestPlayStoneIntegrated(TestWithDb):
                 passed_dict = mock_get_stone.call_args[1]['args']
                 assert not isinstance(passed_dict, MultiDict)
 
+    def test_returns_to_game_on_illegal_move(self):
+        game = self.add_game()
+        main.add_stones_from_text_map_to_game(['.b'], game)
+        with self.patch_render_template():
+            with self.set_email('black@black.com') as test_client:
+                response = test_client.post('/playstone', data=dict(
+                    game_no=game.id, move_no=0, row=0, column=1
+                ))
+        self.assert_redirects(response, url_for('game', game_no=game.id))
+
     @unittest.skip(
             """haven't decided yet what should be returned after a move is
             played""")

@@ -80,11 +80,23 @@ def playstone():
     stone = get_stone_if_args_good(args=arguments, moves=moves)
     if stone is None:
         flash("Invalid move received")
-    elif not is_players_turn_in_game(game, moves):
+        return redirect(url_for('status'))
+    if not is_players_turn_in_game(game, moves):
         flash("It's not your turn!")
-    else:
-        db.session.add(stone)
-        db.session.commit()
+        return redirect(url_for('status'))
+
+    # test legality
+    board = get_rules_board_from_db_objects(moves=moves,
+                                            setup_stones=game.setup_stones)
+    try:
+        go_rules.update_board_with_move(
+                board, stone.color, stone.row, stone.column, stone.move_no)
+    except go_rules.IllegalMoveException as e:
+        flash("Illegal move received: " + e.args[0])
+        return redirect(url_for('game', game_no=game_no))
+
+    db.session.add(stone)
+    db.session.commit()
     return redirect(url_for('status'))
 
 @app.route('/challenge', methods=('GET', 'POST'))
