@@ -187,23 +187,6 @@ create_login_session = (email) ->
       'value': value
       'path': path
 
-# @fill "form[action='/search']", q: "casperjs", true
-
-# casper.then ->
-  # aggregate results for the 'casperjs' search
-#   links = @evaluate getLinks
-  # search for 'phantomjs' from google form
-#   @fill "form[action='/search']", q: "phantomjs", true
-
-# casper.then ->
-  # concat results for the 'phantomjs' search
-#   links = links.concat @evaluate(getLinks)
-
-# casper.run ->
-  # display results
-#  @echo links.length + " links found:"
-#  @echo(" - " + links.join("\n - ")).exit()
-
 casper.run ->
   casper.log "shutting down..."
   casper.open 'http://localhost:5000/shutdown',
