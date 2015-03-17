@@ -40,17 +40,15 @@ casper.test.begin "Game interface", 23, (test) ->
   casper.start()
 
   countStonesAndPoints = ->
-    countImgsWith = (name) ->
-      casper.evaluate ((name) ->
-        allElems = $('table.goban img').toArray()
-        allStrs = allElems.map (x) -> $(x).attr 'src'
-        matching = allStrs.filter (x) -> x.indexOf(name) > -1
-        return matching.length
-      ), name
-    counts =
-      'empty': countImgsWith 'e.gif'
-      'black': countImgsWith 'b.gif'
-      'white': countImgsWith 'w.gif'
+    counts = casper.evaluate () ->
+        go_points = $('table.goban .gopoint').length
+        black_stones = $('.blackstone').length
+        white_stones = $('.whitestone').length
+        counts =
+          'empty': go_points - (black_stones + white_stones)
+          'black': black_stones
+          'white': white_stones
+        return counts
     return counts
 
   pointSelector = (x, y) -> ".col-#{x}.row-#{y}"

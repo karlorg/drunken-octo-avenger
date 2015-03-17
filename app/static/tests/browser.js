@@ -41,25 +41,19 @@
     var ONE_EMAIL, TWO_EMAIL, countStonesAndPoints, pointSelector;
     casper.start();
     countStonesAndPoints = function() {
-      var countImgsWith, counts;
-      countImgsWith = function(name) {
-        return casper.evaluate((function(name) {
-          var allElems, allStrs, matching;
-          allElems = $('table.goban img').toArray();
-          allStrs = allElems.map(function(x) {
-            return $(x).attr('src');
-          });
-          matching = allStrs.filter(function(x) {
-            return x.indexOf(name) > -1;
-          });
-          return matching.length;
-        }), name);
-      };
-      counts = {
-        'empty': countImgsWith('e.gif'),
-        'black': countImgsWith('b.gif'),
-        'white': countImgsWith('w.gif')
-      };
+      var counts;
+      counts = casper.evaluate(function() {
+        var black_stones, go_points, white_stones;
+        go_points = $('table.goban .gopoint').length;
+        black_stones = $('.blackstone').length;
+        white_stones = $('.whitestone').length;
+        counts = {
+          'empty': go_points - (black_stones + white_stones),
+          'black': black_stones,
+          'white': white_stones
+        };
+        return counts;
+      });
       return counts;
     };
     pointSelector = function(x, y) {
