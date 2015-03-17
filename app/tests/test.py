@@ -518,16 +518,16 @@ class TestPlayStoneIntegrated(TestWithDb):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                mock_get_stone = Mock(spec=main.get_stone_if_args_good)
-                mock_get_stone.return_value = None
+                mock_get_move = Mock(spec=main.get_move_if_args_good)
+                mock_get_move.return_value = None
                 with patch(
-                        'app.main.get_stone_if_args_good', mock_get_stone
+                        'app.main.get_move_if_args_good', mock_get_move
                 ):
                     test_client.post('/playstone', data=dict(
                         game_no=game.id, move_no=0, row=9, column=9
                     ))
-                assert mock_get_stone.call_args is not None
-                passed_dict = mock_get_stone.call_args[1]['args']
+                assert mock_get_move.call_args is not None
+                passed_dict = mock_get_move.call_args[1]['args']
                 assert not isinstance(passed_dict, MultiDict)
 
     def test_returns_to_game_on_illegal_move(self):
@@ -558,27 +558,27 @@ class TestPlayStoneIntegrated(TestWithDb):
 class TestGetStoneIfArgsGood(unittest.TestCase):
 
     def test_returns_none_for_missing_args(self):
-        assert main.get_stone_if_args_good(args={}, moves=[]) is None
-        assert main.get_stone_if_args_good(
+        assert main.get_move_if_args_good(args={}, moves=[]) is None
+        assert main.get_move_if_args_good(
                 args={'game_no': 1, 'move_no': 0, 'row': 0}, moves=[]) is None
-        assert main.get_stone_if_args_good(
+        assert main.get_move_if_args_good(
                 args={'game_no': 1, 'move_no': 0, 'column': 0}, moves=[]
         ) is None
-        assert main.get_stone_if_args_good(
+        assert main.get_move_if_args_good(
                 args={'column': 0, 'row': 0}, moves=[]) is None
 
     def test_returns_none_if_move_no_bad(self):
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
                 args={'game_no': 1, 'move_no': 0, 'row': 3, 'column': 3})
         assert stone is None
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
                 args={'game_no': 1, 'move_no': 2, 'row': 3, 'column': 3})
         assert stone is None
 
     def test_returns_black_stone_as_first_move(self):
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[],
                 args={'game_no': 1, 'move_no': 0, 'row': 9, 'column': 9})
         assert stone.row == 9
@@ -586,7 +586,7 @@ class TestGetStoneIfArgsGood(unittest.TestCase):
         assert stone.color == Move.Color.black
 
     def test_returns_white_stone_as_second_move(self):
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
                 args={'game_no': 1, 'move_no': 1, 'row': 3, 'column': 3})
         assert stone.row == 3

@@ -77,8 +77,8 @@ def playstone():
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
-    stone = get_stone_if_args_good(args=arguments, moves=moves)
-    if stone is None:
+    new_move = get_move_if_args_good(args=arguments, moves=moves)
+    if new_move is None:
         flash("Invalid move received")
         return redirect(url_for('status'))
     if not is_players_turn_in_game(game, moves):
@@ -90,12 +90,13 @@ def playstone():
                                             setup_stones=game.setup_stones)
     try:
         go_rules.update_board_with_move(
-                board, stone.color, stone.row, stone.column, stone.move_no)
+                board, new_move.color,
+                new_move.row, new_move.column, new_move.move_no)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
 
-    db.session.add(stone)
+    db.session.add(new_move)
     db.session.commit()
     return redirect(url_for('status'))
 
@@ -290,7 +291,7 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_stone_if_args_good(args, moves):
+def get_move_if_args_good(args, moves):
     """Check GET arguments and if a new move is indicated, return it.
 
     Pure function; does not commit the new stone to the database.
