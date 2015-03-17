@@ -367,6 +367,7 @@ def get_goban_data_from_rules_board(rules_board):
     """
     black = go_rules.Color.black
     white = go_rules.Color.white
+    empty = go_rules.Color.empty
     goban = [[dict(
         img=IMG_PATH_EMPTY,
         classes='row-{row} col-{col}'.format(row=str(j), col=str(i))
@@ -380,6 +381,8 @@ def get_goban_data_from_rules_board(rules_board):
         elif color == white:
             goban[r][c]['img'] = IMG_PATH_WHITE
             goban[r][c]['classes'] += ' whitestone'
+        elif color == empty:
+            goban[r][c]['classes'] += ' nostone'
     return goban
 
 def get_status_lists(player_email):

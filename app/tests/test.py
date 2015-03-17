@@ -364,7 +364,11 @@ class TestGetGobanFromMoves(unittest.TestCase):
         assert substr in string, '{exp} not found in {act}'.format(
                 exp=substr, act=string)
 
-    def assert_point(self, goban, row, col, img, stone_class=''):
+    def assert_point(self, goban, row, col, color):
+        """`color` in this case is 'e', 'b' or 'w'"""
+        img, stone_class = {'e': ('e.gif', 'nostone'),
+                            'b': ('b.gif', 'blackstone'),
+                            'w': ('w.gif', 'whitestone')}[color]
         point = goban[row][col]
         self.assert_in(img, point['img'])
         self.assert_in('row-{}'.format(str(row)), point['classes'])
@@ -381,11 +385,11 @@ class TestGetGobanFromMoves(unittest.TestCase):
                 game_no=1, move_no=1,
                 row=15, column=16, color=Move.Color.white)
         ])
-        self.assert_point(goban, 3, 3, 'e.gif')
-        self.assert_point(goban, 15, 16, 'w.gif', 'whitestone')
-        self.assert_point(goban, 3, 4, 'b.gif', 'blackstone')
+        self.assert_point(goban, 3, 3, 'e')
+        self.assert_point(goban, 15, 16, 'w')
+        self.assert_point(goban, 3, 4, 'b')
         ## regression: shared list pointers cause stones to appear on all rows
-        self.assert_point(goban, 4, 4, 'e.gif')
+        self.assert_point(goban, 4, 4, 'e')
 
     def test_applies_go_rules(self):
         game = Game()
@@ -401,9 +405,9 @@ class TestGetGobanFromMoves(unittest.TestCase):
             'w.b.',
             '.ww.'
         ], game))
-        self.assert_point(goban, 0, 1, 'w.gif', 'whitestone')
-        self.assert_point(goban, 1, 2, 'e.gif')
-        self.assert_point(goban, 1, 3, 'w.gif', 'whitestone')
+        self.assert_point(goban, 0, 1, 'w')
+        self.assert_point(goban, 1, 2, 'e')
+        self.assert_point(goban, 1, 3, 'w')
 
 
 class TestGetRulesBoardFromDbObjects(unittest.TestCase):
