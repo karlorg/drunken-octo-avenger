@@ -18,6 +18,18 @@ newStoneColor = null
 setImage = ($td, filename) ->
   $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
+setStoneClass = ($td, stoneclass) ->
+  $td.removeClass('blackstone').removeClass('whitestone').addClass(stoneclass)
+
+setPointColor = ($td, color) ->
+  [filename, stoneclass] = switch color
+    when 'empty' then ['e.gif', '']
+    when 'black' then ['b.gif', 'blackstone']
+    when 'white' then ['w.gif', 'whitestone']
+  setImage $td, filename
+  setStoneClass $td, stoneclass
+
+
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/
 
@@ -56,10 +68,7 @@ updateBoard = (state) ->
   for row, rowArray of state
     for col, data of rowArray
       $td = $(".row-#{row}.col-#{col}")
-      setImage $td, switch data
-        when 'empty' then 'e.gif'
-        when 'black' then 'b.gif'
-        when 'white' then 'w.gif'
+      setPointColor $td, data
 
 # export to enable testing
 game_basic._updateBoard = updateBoard

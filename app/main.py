@@ -316,7 +316,7 @@ def get_goban_from_moves(moves, setup_stones=None):
         setup_stones = []
     goban = [[dict(
         img=IMG_PATH_EMPTY,
-        classes='row-{row} col-{col}'.format(row=str(j), col=str(i))
+        classes='gopoint row-{row} col-{col}'.format(row=str(j), col=str(i))
     )
              for i in range(19)]
              for j in range(19)]
