@@ -59,12 +59,14 @@
     pointSelector = function(x, y) {
       return ".col-" + x + ".row-" + y;
     };
-    test.assertPointMatches = function(x, y, regex) {
-      var imgSrc;
-      imgSrc = casper.evaluate((function(imgSel) {
-        return $(imgSel).attr('src');
-      }), pointSelector(x, y) + " img");
-      return test.assertMatch(imgSrc, regex);
+    test.assertPointIsBlack = function(x, y) {
+      return test.assertExists(pointSelector(x, y) + ".blackstone");
+    };
+    test.assertPointIsWhite = function(x, y) {
+      return test.assertExists(pointSelector(x, y) + ".whitestone");
+    };
+    test.assertPointIsEmpty = function(x, y) {
+      return test.assertExists(pointSelector(x, y) + ".nostone");
     };
     ONE_EMAIL = 'player@one.com';
     TWO_EMAIL = 'playa@dos.es';
@@ -109,8 +111,8 @@
       counts = countStonesAndPoints();
       test.assertEquals(19 * 19 - 1, counts.empty);
       test.assertEquals(1, counts.black);
-      test.assertPointMatches(15, 3, /e.gif/);
-      return test.assertPointMatches(15, 2, /b.gif/);
+      test.assertPointIsEmpty(15, 3);
+      return test.assertPointIsBlack(15, 2);
     });
     casper.thenClick('.confirm_button', function() {
       return test.assertExists('#your_turn_games');

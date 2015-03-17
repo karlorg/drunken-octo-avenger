@@ -19,11 +19,11 @@ setImage = ($td, filename) ->
   $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
 setStoneClass = ($td, stoneclass) ->
-  $td.removeClass('blackstone').removeClass('whitestone').addClass(stoneclass)
+  $td.removeClass('blackstone whitestone nostone').addClass(stoneclass)
 
 setPointColor = ($td, color) ->
   [filename, stoneclass] = switch color
-    when 'empty' then ['e.gif', '']
+    when 'empty' then ['e.gif', 'nostone']
     when 'black' then ['b.gif', 'blackstone']
     when 'white' then ['w.gif', 'whitestone']
   setImage $td, filename

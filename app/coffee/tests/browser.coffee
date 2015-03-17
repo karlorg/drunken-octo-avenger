@@ -53,10 +53,12 @@ casper.test.begin "Game interface", 23, (test) ->
 
   pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 
-  test.assertPointMatches = (x, y, regex) ->
-    imgSrc = casper.evaluate ((imgSel) -> $(imgSel).attr 'src'),
-                             pointSelector(x, y) + " img"
-    test.assertMatch imgSrc, regex
+  test.assertPointIsBlack = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".blackstone"
+  test.assertPointIsWhite = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".whitestone"
+  test.assertPointIsEmpty = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".nostone"
 
   ONE_EMAIL = 'player@one.com'
   TWO_EMAIL = 'playa@dos.es'
@@ -108,8 +110,8 @@ casper.test.begin "Game interface", 23, (test) ->
     counts = countStonesAndPoints()
     test.assertEquals 19*19-1, counts.empty
     test.assertEquals 1, counts.black
-    test.assertPointMatches 15, 3, /e.gif/
-    test.assertPointMatches 15, 2, /b.gif/
+    test.assertPointIsEmpty 15, 3
+    test.assertPointIsBlack 15, 2
 
   # we confirm this new move
   casper.thenClick '.confirm_button', ->

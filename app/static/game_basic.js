@@ -27,7 +27,7 @@
   };
 
   setStoneClass = function($td, stoneclass) {
-    return $td.removeClass('blackstone').removeClass('whitestone').addClass(stoneclass);
+    return $td.removeClass('blackstone whitestone nostone').addClass(stoneclass);
   };
 
   setPointColor = function($td, color) {
@@ -35,7 +35,7 @@
     ref = (function() {
       switch (color) {
         case 'empty':
-          return ['e.gif', ''];
+          return ['e.gif', 'nostone'];
         case 'black':
           return ['b.gif', 'blackstone'];
         case 'white':
