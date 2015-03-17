@@ -40,25 +40,25 @@ casper.test.begin "Game interface", 23, (test) ->
   casper.start()
 
   countStonesAndPoints = ->
-    countImgsWith = (name) ->
-      casper.evaluate ((name) ->
-        allElems = $('table.goban img').toArray()
-        allStrs = allElems.map (x) -> $(x).attr 'src'
-        matching = allStrs.filter (x) -> x.indexOf(name) > -1
-        return matching.length
-      ), name
-    counts =
-      'empty': countImgsWith 'e.gif'
-      'black': countImgsWith 'b.gif'
-      'white': countImgsWith 'w.gif'
+    counts = casper.evaluate () ->
+        go_points = $('table.goban .gopoint').length
+        black_stones = $('.blackstone').length
+        white_stones = $('.whitestone').length
+        counts =
+          'empty': go_points - (black_stones + white_stones)
+          'black': black_stones
+          'white': white_stones
+        return counts
     return counts
 
   pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 
-  test.assertPointMatches = (x, y, regex) ->
-    imgSrc = casper.evaluate ((imgSel) -> $(imgSel).attr 'src'),
-                             pointSelector(x, y) + " img"
-    test.assertMatch imgSrc, regex
+  test.assertPointIsBlack = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".blackstone"
+  test.assertPointIsWhite = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".whitestone"
+  test.assertPointIsEmpty = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".nostone"
 
   ONE_EMAIL = 'player@one.com'
   TWO_EMAIL = 'playa@dos.es'
@@ -110,8 +110,8 @@ casper.test.begin "Game interface", 23, (test) ->
     counts = countStonesAndPoints()
     test.assertEquals 19*19-1, counts.empty
     test.assertEquals 1, counts.black
-    test.assertPointMatches 15, 3, /e.gif/
-    test.assertPointMatches 15, 2, /b.gif/
+    test.assertPointIsEmpty 15, 3
+    test.assertPointIsBlack 15, 2
 
   # we confirm this new move
   casper.thenClick '.confirm_button', ->
@@ -186,23 +186,6 @@ create_login_session = (email) ->
       'name': name
       'value': value
       'path': path
-
-# @fill "form[action='/search']", q: "casperjs", true
-
-# casper.then ->
-  # aggregate results for the 'casperjs' search
-#   links = @evaluate getLinks
-  # search for 'phantomjs' from google form
-#   @fill "form[action='/search']", q: "phantomjs", true
-
-# casper.then ->
-  # concat results for the 'phantomjs' search
-#   links = links.concat @evaluate(getLinks)
-
-# casper.run ->
-  # display results
-#  @echo links.length + " links found:"
-#  @echo(" - " + links.join("\n - ")).exit()
 
 casper.run ->
   casper.log "shutting down..."

@@ -41,36 +41,32 @@
     var ONE_EMAIL, TWO_EMAIL, countStonesAndPoints, pointSelector;
     casper.start();
     countStonesAndPoints = function() {
-      var countImgsWith, counts;
-      countImgsWith = function(name) {
-        return casper.evaluate((function(name) {
-          var allElems, allStrs, matching;
-          allElems = $('table.goban img').toArray();
-          allStrs = allElems.map(function(x) {
-            return $(x).attr('src');
-          });
-          matching = allStrs.filter(function(x) {
-            return x.indexOf(name) > -1;
-          });
-          return matching.length;
-        }), name);
-      };
-      counts = {
-        'empty': countImgsWith('e.gif'),
-        'black': countImgsWith('b.gif'),
-        'white': countImgsWith('w.gif')
-      };
+      var counts;
+      counts = casper.evaluate(function() {
+        var black_stones, go_points, white_stones;
+        go_points = $('table.goban .gopoint').length;
+        black_stones = $('.blackstone').length;
+        white_stones = $('.whitestone').length;
+        counts = {
+          'empty': go_points - (black_stones + white_stones),
+          'black': black_stones,
+          'white': white_stones
+        };
+        return counts;
+      });
       return counts;
     };
     pointSelector = function(x, y) {
       return ".col-" + x + ".row-" + y;
     };
-    test.assertPointMatches = function(x, y, regex) {
-      var imgSrc;
-      imgSrc = casper.evaluate((function(imgSel) {
-        return $(imgSel).attr('src');
-      }), pointSelector(x, y) + " img");
-      return test.assertMatch(imgSrc, regex);
+    test.assertPointIsBlack = function(x, y) {
+      return test.assertExists(pointSelector(x, y) + ".blackstone");
+    };
+    test.assertPointIsWhite = function(x, y) {
+      return test.assertExists(pointSelector(x, y) + ".whitestone");
+    };
+    test.assertPointIsEmpty = function(x, y) {
+      return test.assertExists(pointSelector(x, y) + ".nostone");
     };
     ONE_EMAIL = 'player@one.com';
     TWO_EMAIL = 'playa@dos.es';
@@ -115,8 +111,8 @@
       counts = countStonesAndPoints();
       test.assertEquals(19 * 19 - 1, counts.empty);
       test.assertEquals(1, counts.black);
-      test.assertPointMatches(15, 3, /e.gif/);
-      return test.assertPointMatches(15, 2, /b.gif/);
+      test.assertPointIsEmpty(15, 3);
+      return test.assertPointIsBlack(15, 2);
     });
     casper.thenClick('.confirm_button', function() {
       return test.assertExists('#your_turn_games');
