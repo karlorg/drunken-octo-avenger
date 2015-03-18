@@ -45,7 +45,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
         self.assertEqual(board[(1, 1)], empty)
         self.assertEqual(board[(1, 2)], empty)
 
-    def test_group_capture_with_self_atari(self):
+    def test_group_capture_with_self_capture(self):
         # to avoid false passes depending on the order in which neighbours are
         # inspected for captures, do this twice rotated 180 degrees
         board = board_from_strings(['.bb..',
@@ -77,7 +77,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
         e = cm.exception
         self.assertEqual(e.move_no, 1)
 
-    def test_playing_into_atari_is_illegal(self):
+    def test_playing_into_no_liberties_is_illegal(self):
         board = board_from_strings(['.w.',
                                     'w.w',
                                     '.w.'])
