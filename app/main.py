@@ -15,12 +15,14 @@ from flask import (
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
 import jinja2
+import json
 import requests
 from wtforms import IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
+from app import go_rules
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -56,8 +58,6 @@ def game(game_no):
     moves = game.moves
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game, moves)
-    # imgs = get_img_array_from_moves(moves)
-    # goban = annotate_with_classes(imgs)
     goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
@@ -77,14 +77,27 @@ def playstone():
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
-    stone = get_stone_if_args_good(args=arguments, moves=moves)
-    if stone is None:
+    new_move = get_move_if_args_good(args=arguments, moves=moves)
+    if new_move is None:
         flash("Invalid move received")
-    elif not is_players_turn_in_game(game, moves):
+        return redirect(url_for('status'))
+    if not is_players_turn_in_game(game, moves):
         flash("It's not your turn!")
-    else:
-        db.session.add(stone)
-        db.session.commit()
+        return redirect(url_for('status'))
+
+    # test legality
+    board = get_rules_board_from_db_objects(moves=moves,
+                                            setup_stones=game.setup_stones)
+    try:
+        go_rules.update_board_with_move(
+                board, new_move.color,
+                new_move.row, new_move.column, new_move.move_no)
+    except go_rules.IllegalMoveException as e:
+        flash("Illegal move received: " + e.args[0])
+        return redirect(url_for('game', game_no=game_no))
+
+    db.session.add(new_move)
+    db.session.commit()
     return redirect(url_for('status'))
 
 @app.route('/challenge', methods=('GET', 'POST'))
@@ -179,7 +192,7 @@ def shutdown():
 
     From http://flask.pocoo.org/snippets/67/"""
     func = request.environ.get('werkzeug.server.shutdown')
-    if func is None:
+    if func is None:  # pragma: no cover
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
     return 'Server shutting down...'
@@ -224,7 +237,8 @@ def testing_create_game():
     """Create a custom game in the database directly"""
     black_email = request.form['black_email']
     white_email = request.form['white_email']
-    create_game_internal(black_email, white_email)
+    stones = json.loads(request.form['stones'])
+    create_game_internal(black_email, white_email, stones)
     return ''
 
 def create_game_internal(black_email, white_email, stones=None):
@@ -277,7 +291,7 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_stone_if_args_good(args, moves):
+def get_move_if_args_good(args, moves):
     """Check GET arguments and if a new move is indicated, return it.
 
     Pure function; does not commit the new stone to the database.
@@ -297,12 +311,51 @@ def get_stone_if_args_good(args, moves):
             row=row, column=column, color=color)
 
 def get_goban_from_moves(moves, setup_stones=None):
-    """Given the moves for a game, return a 2d array of dicts for the board.
+    """Given the moves for a game, return game template data.
 
-    Each dictionary contains information needed to render the corresponding
-    board point.
+    Pure function.
+    """
+    if setup_stones is None:
+        setup_stones = []
+    rules_board = get_rules_board_from_db_objects(moves, setup_stones)
+    goban = get_goban_data_from_rules_board(rules_board)
+    return goban
 
-    `.classes` contains CSS classes used by the client-side scripts and browser
+def get_rules_board_from_db_objects(moves, setup_stones):
+    """Get board layout resulting from given moves and setup stones.
+
+    Pure function.
+    """
+
+    def rules_color(db_color):
+        if db_color == Move.Color.black:
+            color = go_rules.Color.black
+        elif db_color == Move.Color.white:
+            color = go_rules.Color.white
+        else:
+            color = go_rules.Color.empty
+        return color
+
+    def place_stones_for_move(n):
+        for stone in filter(lambda s: s.before_move == n, setup_stones):
+            board[(stone.row, stone.column)] = rules_color(stone.color)
+
+    board = go_rules.empty_board()
+    for move in sorted(moves, key=lambda m: m.move_no):
+        place_stones_for_move(move.move_no)
+        go_rules.update_board_with_move(
+                board, rules_color(move.color), move.row, move.column)
+    max_move_no = max([-1] + [m.move_no for m in moves])
+    place_stones_for_move(max_move_no + 1)
+    return board
+
+def get_goban_data_from_rules_board(rules_board):
+    """Transform a dict of {(r,c): color} to a template-ready list of dicts.
+
+    Each output dictionary contains information needed by the game template to
+    render the corresponding board point.
+
+    `classes` contains CSS classes used by the client-side scripts and browser
     tests to read the board state and locate specific points.  Currently:
 
     * each point should have classes `row-y` and `col-x` where `y` and `x` are
@@ -312,23 +365,24 @@ def get_goban_from_moves(moves, setup_stones=None):
 
     Pure function.
     """
-    if setup_stones is None:
-        setup_stones = []
+    black = go_rules.Color.black
+    white = go_rules.Color.white
+    empty = go_rules.Color.empty
     goban = [[dict(
         img=IMG_PATH_EMPTY,
         classes='gopoint row-{row} col-{col}'.format(row=str(j), col=str(i))
     )
              for i in range(19)]
              for j in range(19)]
-    for move in moves + setup_stones:
-        if move.color == Move.Color.black:
-            goban[move.row][move.column]['img'] = IMG_PATH_BLACK
-            goban[move.row][move.column]['classes'] += ' blackstone'
-        elif move.color == Move.Color.white:
-            goban[move.row][move.column]['img'] = IMG_PATH_WHITE
-            goban[move.row][move.column]['classes'] += ' whitestone'
-        else:
-            assert False, "unknown move color"
+    for (r, c), color in rules_board.items():
+        if color == black:
+            goban[r][c]['img'] = IMG_PATH_BLACK
+            goban[r][c]['classes'] += ' blackstone'
+        elif color == white:
+            goban[r][c]['img'] = IMG_PATH_WHITE
+            goban[r][c]['classes'] += ' whitestone'
+        elif color == empty:
+            goban[r][c]['classes'] += ' nostone'
     return goban
 
 def get_status_lists(player_email):
@@ -409,6 +463,8 @@ def get_stones_from_text_map(text_map, game):
     """Given a list of strings, return a list of setup stones for `game`.
 
     An example text map is [[".b.","bw.",".b."]]
+
+    Pure function; does not commit stones to the database.
     """
     stones = []
     for rowno, row in enumerate(text_map):
@@ -477,7 +533,7 @@ class Move(db.Model):
 
     def __repr__(self):
         return '<Move {0}: {1} at ({2},{3})>'.format(
-                self.move_no, self.Color(self.color).name,
+                self.move_no, self.color.name,
                 self.column, self.row)
 
 class SetupStone(db.Model):
@@ -498,7 +554,7 @@ class SetupStone(db.Model):
 
     def __repr__(self):
         return '<SetupStone {0}: {1} at ({2},{3})>'.format(
-                self.before_move, self.Color(self.color).name,
+                self.before_move, self.color.name,
                 self.column, self.row)
 
 
