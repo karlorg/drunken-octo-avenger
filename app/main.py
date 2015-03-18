@@ -89,8 +89,8 @@ def playstone():
     board = get_rules_board_from_db_objects(moves=moves,
                                             setup_stones=game.setup_stones)
     try:
-        go_rules.update_board_with_move(
-                board, new_move.color,
+        board.update_with_move(
+                new_move.color,
                 new_move.row, new_move.column, new_move.move_no)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
@@ -338,13 +338,14 @@ def get_rules_board_from_db_objects(moves, setup_stones):
 
     def place_stones_for_move(n):
         for stone in filter(lambda s: s.before_move == n, setup_stones):
-            board[(stone.row, stone.column)] = rules_color(stone.color)
+            board.set_point(stone.row, stone.column,
+                            rules_color(stone.color))
 
-    board = go_rules.empty_board()
+    board = go_rules.Board()
     for move in sorted(moves, key=lambda m: m.move_no):
         place_stones_for_move(move.move_no)
-        go_rules.update_board_with_move(
-                board, rules_color(move.color), move.row, move.column)
+        board.update_with_move(
+                rules_color(move.color), move.row, move.column)
     max_move_no = max([-1] + [m.move_no for m in moves])
     place_stones_for_move(max_move_no + 1)
     return board
@@ -361,7 +362,8 @@ def get_goban_data_from_rules_board(rules_board):
     * each point should have classes `row-y` and `col-x` where `y` and `x` are
       numbers
 
-    * points with stones should have `blackstone` or `whitestone`
+    * points with stones should have `blackstone` or `whitestone`; empty points
+      should have `nostone`
 
     Pure function.
     """
