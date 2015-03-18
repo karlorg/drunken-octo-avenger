@@ -11,6 +11,8 @@ DOMAIN = 'localhost'
 
 DEBUG = True
 
+LIVESERVER_PORT = 5000
+
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, '../db.sqlite')
 
 SECRET_KEY = ':\x8dkR\xf9\x05\xc2\xd2,\xd4t\x0f\x0bvB\xbb\x1a.\xce\xbd\x0b\x17\xdc\xb7'  # noqa

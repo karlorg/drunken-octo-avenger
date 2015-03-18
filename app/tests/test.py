@@ -368,6 +368,7 @@ class TestGetGobanFromMoves(unittest.TestCase):
         self.assert_in(img, point['img'])
         self.assert_in('row-{}'.format(str(row)), point['classes'])
         self.assert_in('col-{}'.format(str(col)), point['classes'])
+        self.assert_in('gopoint', point['classes'])
         self.assert_in(stone_class, point['classes'])
 
 
