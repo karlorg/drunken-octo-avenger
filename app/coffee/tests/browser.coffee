@@ -41,11 +41,11 @@ casper.test.begin "Game interface", 29, (test) ->
 
   countStonesAndPoints = ->
     counts = casper.evaluate () ->
-      goPoints = $('table.goban .gopoint').length
-      blackStones = $('.blackstone').length
-      whiteStones = $('.whitestone').length
+      emptyStones = $('.goban .nostone').length
+      blackStones = $('.goban .blackstone').length
+      whiteStones = $('.goban .whitestone').length
       counts =
-        'empty': goPoints - (blackStones + whiteStones)
+        'empty': emptyStones
         'black': blackStones
         'white': whiteStones
       return counts

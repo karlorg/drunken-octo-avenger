@@ -43,12 +43,12 @@
     countStonesAndPoints = function() {
       var counts;
       counts = casper.evaluate(function() {
-        var blackStones, goPoints, whiteStones;
-        goPoints = $('table.goban .gopoint').length;
-        blackStones = $('.blackstone').length;
-        whiteStones = $('.whitestone').length;
+        var blackStones, emptyStones, whiteStones;
+        emptyStones = $('.goban .nostone').length;
+        blackStones = $('.goban .blackstone').length;
+        whiteStones = $('.goban .whitestone').length;
         counts = {
-          'empty': goPoints - (blackStones + whiteStones),
+          'empty': emptyStones,
           'black': blackStones,
           'white': whiteStones
         };
