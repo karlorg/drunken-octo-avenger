@@ -37,7 +37,7 @@
     });
   });
 
-  casper.test.begin("Game interface", 29, function(test) {
+  casper.test.begin("Game interface", 35, function(test) {
     var ONE_EMAIL, TWO_EMAIL, countStonesAndPoints, initialEmptyCount, pointSelector;
     casper.start();
     countStonesAndPoints = function() {
@@ -55,6 +55,16 @@
         return counts;
       });
       return counts;
+    };
+    test.assertStonePointCounts = function(nostone, black, white) {
+      var counts;
+      counts = countStonesAndPoints();
+      test.assertEqual(counts.empty, nostone);
+      test.assertEqual(counts.black, black);
+      return test.assertEqual(counts.white, white);
+    };
+    test.assertEmptyBoard = function() {
+      return test.assertStonePointCounts(19 * 19, 0, 0);
     };
     pointSelector = function(x, y) {
       return ".col-" + x + ".row-" + y;
@@ -83,10 +93,8 @@
       }), 'exactly two games listed');
     });
     casper.thenClick('#your_turn_games li:last-child a', function() {
-      var empty;
       test.assertExists('table.goban');
-      empty = countStonesAndPoints().empty;
-      test.assertEqual(initialEmptyCount, empty);
+      test.assertStonePointCounts(initialEmptyCount, 2, 2);
       test.assertTrue(casper.evaluate(function() {
         var result;
         result = false;
@@ -101,28 +109,16 @@
       return test.assertDoesntExist('.confirm_button:enabled', 'no usable confirm button appears');
     });
     casper.thenClick(pointSelector(1, 1), function() {
-      var counts;
-      counts = countStonesAndPoints();
-      test.assertEquals(initialEmptyCount + 1, counts.empty);
-      test.assertEquals(3, counts.black);
-      test.assertEquals(0, counts.white);
+      test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
       return test.assertExists('.confirm_button:enabled');
     });
     casper.thenClick(pointSelector(15, 3), function() {
-      var counts;
-      counts = countStonesAndPoints();
-      test.assertEquals(initialEmptyCount - 1, counts.empty);
-      test.assertEquals(3, counts.black);
-      test.assertEquals(2, counts.white);
+      test.assertStonePointCounts(initialEmptyCount - 1, 3, 2);
       test.assertPointIsEmpty(1, 1);
       return test.assertPointIsWhite(1, 0);
     });
     casper.thenClick(pointSelector(1, 1), function() {
-      var counts;
-      counts = countStonesAndPoints();
-      test.assertEquals(initialEmptyCount + 1, counts.empty);
-      test.assertEquals(3, counts.black);
-      return test.assertEquals(0, counts.white);
+      return test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
     });
     casper.thenClick('.confirm_button', function() {
       return test.assertExists('#your_turn_games');
@@ -134,30 +130,18 @@
       }), "exactly one game listed in which it's P2's turn");
     });
     casper.thenClick('#your_turn_games a', function() {
-      var counts;
-      counts = countStonesAndPoints();
-      test.assertEquals(initialEmptyCount + 1, counts.empty);
-      test.assertEquals(3, counts.black);
-      return test.assertEquals(0, counts.white);
+      return test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
     });
     casper.thenClick(pointSelector(1, 1), function() {
-      var counts;
-      counts = countStonesAndPoints();
-      test.assertEquals(initialEmptyCount + 1, counts.empty);
-      test.assertEquals(3, counts.black);
-      return test.assertEquals(0, counts.white);
+      return test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
     });
     casper.thenClick(pointSelector(3, 3), function() {
-      var counts;
-      counts = countStonesAndPoints();
-      return test.assertEquals(1, counts.white);
+      return test.assertStonePointCounts(initialEmptyCount, 3, 1);
     });
     casper.thenClick('.confirm_button');
     casper.thenClick('#not_your_turn_games li:first-child a', function() {
-      var counts;
       test.assertExists('.goban');
-      counts = countStonesAndPoints();
-      return test.assertEquals(19 * 19, counts.empty, 'second board empty');
+      return test.assertEmptyBoard();
     });
     return casper.then(function() {
       return test.done();
