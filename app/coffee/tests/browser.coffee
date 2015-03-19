@@ -36,19 +36,19 @@ casper.test.begin 'Test the login procedure', 3, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Game interface", 23, (test) ->
+casper.test.begin "Game interface", 29, (test) ->
   casper.start()
 
   countStonesAndPoints = ->
     counts = casper.evaluate () ->
-        go_points = $('table.goban .gopoint').length
-        black_stones = $('.blackstone').length
-        white_stones = $('.whitestone').length
-        counts =
-          'empty': go_points - (black_stones + white_stones)
-          'black': black_stones
-          'white': white_stones
-        return counts
+      goPoints = $('table.goban .gopoint').length
+      blackStones = $('.blackstone').length
+      whiteStones = $('.whitestone').length
+      counts =
+        'empty': goPoints - (blackStones + whiteStones)
+        'black': blackStones
+        'white': whiteStones
+      return counts
     return counts
 
   pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
@@ -63,15 +63,17 @@ casper.test.begin "Game interface", 23, (test) ->
   ONE_EMAIL = 'player@one.com'
   TWO_EMAIL = 'playa@dos.es'
   # create a couple of games
-  clear_games_for_player ONE_EMAIL
-  clear_games_for_player TWO_EMAIL
-  create_game ONE_EMAIL, TWO_EMAIL
-  create_game ONE_EMAIL, TWO_EMAIL
+  clearGamesForPlayer ONE_EMAIL
+  clearGamesForPlayer TWO_EMAIL
+  createGame ONE_EMAIL, TWO_EMAIL
+  createGame ONE_EMAIL, TWO_EMAIL, ['wwb',
+                                    'b..']
+  initialEmptyCount = 19*19-4
 
   # -- PLAYER ONE
   # player one logs in and gets the front page; should see a page listing
   # games
-  create_login_session ONE_EMAIL
+  createLoginSession ONE_EMAIL
   casper.thenOpen serverUrl, ->
     test.assertExists '#your_turn_games'
     test.assertEqual 2,
@@ -83,7 +85,7 @@ casper.test.begin "Game interface", 23, (test) ->
     test.assertExists 'table.goban'
     # on the game page are 19x19 imgs representing empty board points
     empty = countStonesAndPoints().empty
-    test.assertEqual 19*19, empty, "19x19 empty points on board"
+    test.assertEqual initialEmptyCount, empty
     # check one of those images can be loaded
     test.assertTrue (casper.evaluate ->
       result = false
@@ -96,22 +98,32 @@ casper.test.begin "Game interface", 23, (test) ->
                            'no usable confirm button appears'
 
   # user clicks an empty spot, which is a link
-  casper.thenClick pointSelector(15, 3), ->
-    # now on the board is one black stone and 19x19-1 empty points
+  casper.thenClick pointSelector(1, 1), ->
+    # the board updates to show a stone there and other stones captured
     counts = countStonesAndPoints()
-    test.assertEquals 19*19-1, counts.empty
-    test.assertEquals 1, counts.black
+    test.assertEquals initialEmptyCount+1, counts.empty
+    test.assertEquals 3, counts.black
+    test.assertEquals 0, counts.white
     # a confirm button is now available
     test.assertExists '.confirm_button:enabled'
 
-  # we click a different point, and now our new stone is on that point
-  # instead of the previous one
-  casper.thenClick pointSelector(15, 2), ->
+  # we click a different point
+  casper.thenClick pointSelector(15, 3), ->
+    # now the capture is undone
     counts = countStonesAndPoints()
-    test.assertEquals 19*19-1, counts.empty
-    test.assertEquals 1, counts.black
-    test.assertPointIsEmpty 15, 3
-    test.assertPointIsBlack 15, 2
+    test.assertEquals initialEmptyCount-1, counts.empty
+    test.assertEquals 3, counts.black
+    test.assertEquals 2, counts.white
+    test.assertPointIsEmpty 1, 1
+    test.assertPointIsWhite 1, 0
+
+  # we click the capturing point again, as we'll want to see what happens when
+  # we confirm a capturing move
+  casper.thenClick pointSelector(1, 1), ->
+    counts = countStonesAndPoints()
+    test.assertEquals initialEmptyCount+1, counts.empty
+    test.assertEquals 3, counts.black
+    test.assertEquals 0, counts.white
 
   # we confirm this new move
   casper.thenClick '.confirm_button', ->
@@ -120,27 +132,29 @@ casper.test.begin "Game interface", 23, (test) ->
 
   # -- PLAYER TWO
   # now the white player logs in and visits the same game
-  create_login_session TWO_EMAIL
+  createLoginSession TWO_EMAIL
   casper.thenOpen serverUrl, ->
     test.assertEqual 1,
                      (casper.evaluate -> $('#your_turn_games a').length),
                      "exactly one game listed in which it's P2's turn"
-  casper.thenClick '#your_turn_games a'
+  casper.thenClick '#your_turn_games a', ->
+    # the captured stones are still captured
+    counts = countStonesAndPoints()
+    test.assertEquals initialEmptyCount+1, counts.empty
+    test.assertEquals 3, counts.black
+    test.assertEquals 0, counts.white
 
   # clicking the point with a black stone does nothing
-  casper.thenClick pointSelector(15, 2), ->
-    # still one black stone, no white, rest empty
+  casper.thenClick pointSelector(1, 1), ->
     counts = countStonesAndPoints()
-    test.assertEquals 19*19-1, counts.empty
-    test.assertEquals 1, counts.black
+    test.assertEquals initialEmptyCount+1, counts.empty
+    test.assertEquals 3, counts.black
     test.assertEquals 0, counts.white
 
   # user clicks an empty spot
   casper.thenClick pointSelector(3, 3), ->
-    # now one black stone, one white, rest empty
+    # a white stone is placed
     counts = countStonesAndPoints()
-    test.assertEquals 19*19-2, counts.empty
-    test.assertEquals 1, counts.black
     test.assertEquals 1, counts.white
 
   # confirm move
@@ -158,20 +172,21 @@ casper.test.begin "Game interface", 23, (test) ->
 
 # helper functions
 
-clear_games_for_player = (email) ->
+clearGamesForPlayer = (email) ->
   casper.thenOpen "#{serverUrl}/testing_clear_games_for_player",
     method: 'post'
     data:
       'email': email
 
-create_game = (black_email, white_email) ->
+createGame = (black_email, white_email, stones=[]) ->
   casper.thenOpen "#{serverUrl}/testing_create_game",
     method: 'post'
     data:
       'black_email': black_email
       'white_email': white_email
+      'stones': JSON.stringify stones
 
-create_login_session = (email) ->
+createLoginSession = (email) ->
   "Add steps to the stack to create a login session on the server and set its
   cookie in the browser."
   casper.thenOpen "#{serverUrl}/testing_create_login_session",

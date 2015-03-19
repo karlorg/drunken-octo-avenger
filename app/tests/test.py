@@ -15,6 +15,7 @@ import flask.ext.testing
 import requests
 from werkzeug.datastructures import MultiDict
 
+from .. import go_rules
 from .. import main
 from ..main import Game, Move, db
 
@@ -363,11 +364,16 @@ class TestGetGobanFromMoves(unittest.TestCase):
         assert substr in string, '{exp} not found in {act}'.format(
                 exp=substr, act=string)
 
-    def assert_point(self, goban, row, col, img, stone_class=''):
+    def assert_point(self, goban, row, col, color):
+        """`color` in this case is 'e', 'b' or 'w'"""
+        img, stone_class = {'e': ('e.gif', 'nostone'),
+                            'b': ('b.gif', 'blackstone'),
+                            'w': ('w.gif', 'whitestone')}[color]
         point = goban[row][col]
         self.assert_in(img, point['img'])
         self.assert_in('row-{}'.format(str(row)), point['classes'])
         self.assert_in('col-{}'.format(str(col)), point['classes'])
+        self.assert_in('gopoint', point['classes'])
         self.assert_in(stone_class, point['classes'])
 
 
@@ -380,11 +386,65 @@ class TestGetGobanFromMoves(unittest.TestCase):
                 game_no=1, move_no=1,
                 row=15, column=16, color=Move.Color.white)
         ])
-        self.assert_point(goban, 3, 3, 'e.gif')
-        self.assert_point(goban, 15, 16, 'w.gif', 'whitestone')
-        self.assert_point(goban, 3, 4, 'b.gif', 'blackstone')
+        self.assert_point(goban, 3, 3, 'e')
+        self.assert_point(goban, 15, 16, 'w')
+        self.assert_point(goban, 3, 4, 'b')
         ## regression: shared list pointers cause stones to appear on all rows
-        self.assert_point(goban, 4, 4, 'e.gif')
+        self.assert_point(goban, 4, 4, 'e')
+
+    def test_applies_go_rules(self):
+        game = Game()
+        goban = main.get_goban_from_moves([
+            Move(
+                game_no=1, move_no=0,
+                row=1, column=1, color=Move.Color.black),
+            Move(
+                game_no=1, move_no=1,
+                row=1, column=3, color=Move.Color.white)
+        ], setup_stones=main.get_stones_from_text_map([
+            '.ww.',
+            'w.b.',
+            '.ww.'
+        ], game))
+        self.assert_point(goban, 0, 1, 'w')
+        self.assert_point(goban, 1, 2, 'e')
+        self.assert_point(goban, 1, 3, 'w')
+
+
+class TestGetRulesBoardFromDbObjects(unittest.TestCase):
+
+    def test_combination(self):
+        game = Game()
+        moves = [Move(game.id, 0, 2, 3, Move.Color.black)]
+        setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        self.assertEqual(board[(0, 0)], go_rules.Color.empty)
+        self.assertEqual(board[(0, 1)], go_rules.Color.black)
+        self.assertEqual(board[(0, 2)], go_rules.Color.white)
+        self.assertEqual(board[(2, 3)], go_rules.Color.black)
+
+    def test_setup_stones(self):
+        """Regression test: need to process setup stones after last move.
+
+        eg. setup stones for 'before move 0' when there are no moves yet.
+        """
+        game = Game()
+        moves = []
+        setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        self.assertEqual(board[(0, 1)], go_rules.Color.black)
+
+class TestGetGobanDataFromRulesBoard(unittest.TestCase):
+
+    def test_simple(self):
+        board = go_rules.empty_board()
+        board[(0, 1)] = go_rules.Color.black
+        board[(1, 2)] = go_rules.Color.white
+        goban = main.get_goban_data_from_rules_board(board)
+        assert 'b.gif' in goban[0][1]['img']
+        assert 'blackstone' in goban[0][1]['classes']
+        assert 'w.gif' in goban[1][2]['img']
+        assert 'whitestone' in goban[1][2]['classes']
 
 
 class TestPlayStoneIntegrated(TestWithDb):
@@ -463,17 +523,27 @@ class TestPlayStoneIntegrated(TestWithDb):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                mock_get_stone = Mock(spec=main.get_stone_if_args_good)
-                mock_get_stone.return_value = None
+                mock_get_move = Mock(spec=main.get_move_if_args_good)
+                mock_get_move.return_value = None
                 with patch(
-                        'app.main.get_stone_if_args_good', mock_get_stone
+                        'app.main.get_move_if_args_good', mock_get_move
                 ):
                     test_client.post('/playstone', data=dict(
                         game_no=game.id, move_no=0, row=9, column=9
                     ))
-                assert mock_get_stone.call_args is not None
-                passed_dict = mock_get_stone.call_args[1]['args']
+                assert mock_get_move.call_args is not None
+                passed_dict = mock_get_move.call_args[1]['args']
                 assert not isinstance(passed_dict, MultiDict)
+
+    def test_returns_to_game_on_illegal_move(self):
+        game = self.add_game()
+        main.add_stones_from_text_map_to_game(['.b'], game)
+        with self.patch_render_template():
+            with self.set_email('black@black.com') as test_client:
+                response = test_client.post('/playstone', data=dict(
+                    game_no=game.id, move_no=0, row=0, column=1
+                ))
+        self.assert_redirects(response, url_for('game', game_no=game.id))
 
     @unittest.skip(
             """haven't decided yet what should be returned after a move is
@@ -493,27 +563,27 @@ class TestPlayStoneIntegrated(TestWithDb):
 class TestGetStoneIfArgsGood(unittest.TestCase):
 
     def test_returns_none_for_missing_args(self):
-        assert main.get_stone_if_args_good(args={}, moves=[]) is None
-        assert main.get_stone_if_args_good(
+        assert main.get_move_if_args_good(args={}, moves=[]) is None
+        assert main.get_move_if_args_good(
                 args={'game_no': 1, 'move_no': 0, 'row': 0}, moves=[]) is None
-        assert main.get_stone_if_args_good(
+        assert main.get_move_if_args_good(
                 args={'game_no': 1, 'move_no': 0, 'column': 0}, moves=[]
         ) is None
-        assert main.get_stone_if_args_good(
+        assert main.get_move_if_args_good(
                 args={'column': 0, 'row': 0}, moves=[]) is None
 
     def test_returns_none_if_move_no_bad(self):
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
                 args={'game_no': 1, 'move_no': 0, 'row': 3, 'column': 3})
         assert stone is None
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
                 args={'game_no': 1, 'move_no': 2, 'row': 3, 'column': 3})
         assert stone is None
 
     def test_returns_black_stone_as_first_move(self):
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[],
                 args={'game_no': 1, 'move_no': 0, 'row': 9, 'column': 9})
         assert stone.row == 9
@@ -521,7 +591,7 @@ class TestGetStoneIfArgsGood(unittest.TestCase):
         assert stone.color == Move.Color.black
 
     def test_returns_white_stone_as_second_move(self):
-        stone = main.get_stone_if_args_good(
+        stone = main.get_move_if_args_good(
                 moves=[{'row': 9, 'column': 9}],
                 args={'game_no': 1, 'move_no': 1, 'row': 3, 'column': 3})
         assert stone.row == 3

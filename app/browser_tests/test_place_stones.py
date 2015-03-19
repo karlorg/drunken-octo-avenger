@@ -53,12 +53,12 @@ class PlaceStonesTest(SeleniumTest):
         self.wait_for(check_goban_exists)
 
         # the 3x3 block at top left is as we specified
-        assert 'stone' not in self.get_point(0, 0).get_attribute('class')
+        assert 'nostone' in self.get_point(0, 0).get_attribute('class')
         assert 'blackstone' in self.get_point(1, 0).get_attribute('class')
-        assert 'stone' not in self.get_point(2, 0).get_attribute('class')
+        assert 'nostone' in self.get_point(2, 0).get_attribute('class')
         assert 'blackstone' in self.get_point(0, 1).get_attribute('class')
         assert 'whitestone' in self.get_point(1, 1).get_attribute('class')
-        assert 'stone' not in self.get_point(2, 1).get_attribute('class')
-        assert 'stone' not in self.get_point(0, 2).get_attribute('class')
+        assert 'nostone' in self.get_point(2, 1).get_attribute('class')
+        assert 'nostone' in self.get_point(0, 2).get_attribute('class')
         assert 'blackstone' in self.get_point(1, 2).get_attribute('class')
-        assert 'stone' not in self.get_point(2, 2).get_attribute('class')
+        assert 'nostone' in self.get_point(2, 2).get_attribute('class')
