@@ -59,7 +59,11 @@ class PhantomTest(unittest.TestCase):
             self._process.terminate()
 
     def run_phantom_test(self):
-        subprocess.call(["cake", "build"])
+        cake_output = subprocess.check_output(["cake", "build"],
+                                              stderr=subprocess.STDOUT)
+        self.assertEqual (cake_output, b'', 'phantomjs test failed: '
+                                           'coffeescript build error\n' +
+                                           str(cake_output))
         return_code = subprocess.call([
                 "./node_modules/.bin/casperjs", "test",
                 "--fail-fast",  # stop at first failed assertion
