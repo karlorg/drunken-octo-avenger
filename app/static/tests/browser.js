@@ -37,8 +37,8 @@
     });
   });
 
-  casper.test.begin("Tests the 'Challenge a player process", 6, function(test) {
-    var OCHI_EMAIL, SHINDOU_EMAIL, TOUYA_EMAIL, i, len, p, ref;
+  casper.test.begin("Tests the 'Challenge a player process", 8, function(test) {
+    var OCHI_EMAIL, SHINDOU_EMAIL, TOUYA_EMAIL, i, len, p, ref, shindous_game_link, shindous_game_text;
     casper.start();
     SHINDOU_EMAIL = 'shindou@ki-in.jp';
     TOUYA_EMAIL = 'touya@ki-in.jp';
@@ -62,24 +62,33 @@
       };
       return this.fillSelectors('form', form_values, true);
     });
+    shindous_game_link = null;
+    shindous_game_text = null;
     casper.thenOpen(serverUrl, function() {
-      var shindous_game_link;
       test.assertEqual(casper.evaluate(function() {
         return $('#not_your_turn_games a').length;
       }), 1);
-      return shindous_game_link = casper.evaluate(function() {
-        return $('#not_your_turn_games li:last a').getAttribute("href");
+      shindous_game_link = casper.evaluate(function() {
+        return $('#not_your_turn_games li:last a').attr("href");
+      });
+      return shindous_game_text = casper.evaluate(function() {
+        return $('#not_your_turn_games li:last a').text();
       });
     });
     createLoginSession(TOUYA_EMAIL);
     casper.thenOpen(serverUrl, function() {
-      var touyas_game_link;
+      var touyas_game_link, touyas_game_text;
       test.assertEqual(casper.evaluate(function() {
         return $('#your_turn_games a').length;
       }), 1);
-      return touyas_game_link = casper.evaluate(function() {
-        return $('#your_turn_games li:last a');
+      touyas_game_link = casper.evaluate(function() {
+        return $('#your_turn_games li:last a').attr("href");
       });
+      touyas_game_text = casper.evaluate(function() {
+        return $('#your_turn_games li:last a').text();
+      });
+      test.assertEqual(shindous_game_link, touyas_game_link, "both players see the same game link");
+      return test.assertEqual(shindous_game_text, touyas_game_text, "both players see the same game text");
     });
     createLoginSession(OCHI_EMAIL);
     casper.thenOpen(serverUrl, function() {
