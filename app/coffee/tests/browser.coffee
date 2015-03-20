@@ -36,6 +36,63 @@ casper.test.begin 'Test the login procedure', 3, (test) ->
   casper.then ->
     test.done()
 
+casper.test.begin "Tests the 'Challenge a player process", 6, (test) ->
+  # Be sure not to use the 'create_game' shortcut.
+  casper.start()
+
+  SHINDOU_EMAIL = 'shindou@ki-in.jp'
+  TOUYA_EMAIL = 'touya@ki-in.jp'
+  OCHI_EMAIL = 'ochino1@ki-in.jp'
+
+  clearGamesForPlayer p for p in [SHINDOU_EMAIL, TOUYA_EMAIL, OCHI_EMAIL]
+
+  # Shindou opens the front page and follows a link to create a new game
+  createLoginSession SHINDOU_EMAIL
+  casper.thenOpen serverUrl, ->
+    test.assertExists '#your_turn_games'
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length),
+                     0, 'games are cleared so no games listed'
+
+  casper.thenClick '#challenge_link', ->
+    form_values = 'input[name="opponent_email"]' : TOUYA_EMAIL
+    # The final 'true' argument means that the form is submitted.
+    this.fillSelectors 'form', form_values, true
+
+  # both players load the front page and see links to the same game
+
+  # Shindou
+  casper.thenOpen serverUrl, ->
+    test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 1
+    shindous_game_link = casper.evaluate -> 
+                           $('#not_your_turn_games li:last a').getAttribute("href")
+    # this.echo shindous_game_link
+    #shindous_game_link_text = shindous_game_link.text
+    #shindous_game_link_target = shindous_game_link.get_attribute('href')
+
+  ## Touya
+  createLoginSession TOUYA_EMAIL
+  casper.thenOpen serverUrl, ->
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1
+    touyas_game_link = casper.evaluate -> 
+                           $('#your_turn_games li:last a')
+    #this.echo touyas_game_link
+    #touyas_game_link_text = shindous_game_link.text
+    #touyas_game_link_target = shindous_game_link.get_attribute('href')
+
+
+  #test.assertEqual touyas_game_link_text, shindous_game_link_text
+  #test.assertEqual shindous_game_link_target, touyas_game_link_target
+
+    # a third user, Ochi, logs in.  The new game is not on his list.
+  createLoginSession OCHI_EMAIL
+  casper.thenOpen serverUrl, ->
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 0
+    test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 0
+
+  casper.then ->
+    test.done()
+
+
 casper.test.begin "Game interface", 35, (test) ->
   casper.start()
 

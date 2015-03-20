@@ -37,6 +37,64 @@
     });
   });
 
+  casper.test.begin("Tests the 'Challenge a player process", 6, function(test) {
+    var OCHI_EMAIL, SHINDOU_EMAIL, TOUYA_EMAIL, i, len, p, ref;
+    casper.start();
+    SHINDOU_EMAIL = 'shindou@ki-in.jp';
+    TOUYA_EMAIL = 'touya@ki-in.jp';
+    OCHI_EMAIL = 'ochino1@ki-in.jp';
+    ref = [SHINDOU_EMAIL, TOUYA_EMAIL, OCHI_EMAIL];
+    for (i = 0, len = ref.length; i < len; i++) {
+      p = ref[i];
+      clearGamesForPlayer(p);
+    }
+    createLoginSession(SHINDOU_EMAIL);
+    casper.thenOpen(serverUrl, function() {
+      test.assertExists('#your_turn_games');
+      return test.assertEqual(casper.evaluate(function() {
+        return $('#your_turn_games a').length;
+      }), 0, 'games are cleared so no games listed');
+    });
+    casper.thenClick('#challenge_link', function() {
+      var form_values;
+      form_values = {
+        'input[name="opponent_email"]': TOUYA_EMAIL
+      };
+      return this.fillSelectors('form', form_values, true);
+    });
+    casper.thenOpen(serverUrl, function() {
+      var shindous_game_link;
+      test.assertEqual(casper.evaluate(function() {
+        return $('#not_your_turn_games a').length;
+      }), 1);
+      return shindous_game_link = casper.evaluate(function() {
+        return $('#not_your_turn_games li:last a').getAttribute("href");
+      });
+    });
+    createLoginSession(TOUYA_EMAIL);
+    casper.thenOpen(serverUrl, function() {
+      var touyas_game_link;
+      test.assertEqual(casper.evaluate(function() {
+        return $('#your_turn_games a').length;
+      }), 1);
+      return touyas_game_link = casper.evaluate(function() {
+        return $('#your_turn_games li:last a');
+      });
+    });
+    createLoginSession(OCHI_EMAIL);
+    casper.thenOpen(serverUrl, function() {
+      test.assertEqual(casper.evaluate(function() {
+        return $('#your_turn_games a').length;
+      }), 0);
+      return test.assertEqual(casper.evaluate(function() {
+        return $('#not_your_turn_games a').length;
+      }), 0);
+    });
+    return casper.then(function() {
+      return test.done();
+    });
+  });
+
   casper.test.begin("Game interface", 35, function(test) {
     var ONE_EMAIL, TWO_EMAIL, countStonesAndPoints, initialEmptyCount, pointSelector;
     casper.start();
