@@ -37,7 +37,7 @@ casper.test.begin 'Test the login procedure', 3, (test) ->
     test.done()
 
 casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
-  # Be sure not to use the 'create_game' shortcut.
+  # Be sure not to use the 'createGame' shortcut.
   casper.start()
 
   SHINDOU_EMAIL = 'shindou@ki-in.jp'
@@ -83,9 +83,6 @@ casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
     test.assertEqual shindous_game_text, touyas_game_text,
                      "both players see the same game text"
 
-  #test.assertEqual touyas_game_link_text, shindous_game_link_text
-  #test.assertEqual shindous_game_link_target, touyas_game_link_target
-
   # a third user, Ochi, logs in.  The new game is not on his list.
   createLoginSession OCHI_EMAIL
   casper.thenOpen serverUrl, ->
@@ -95,6 +92,39 @@ casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
   casper.then ->
     test.done()
 
+
+casper.test.begin "Status Listings", 6, (test) ->
+  casper.start()
+
+  ONE_EMAIL = 'playa@uno.es'
+  TWO_EMAIL = 'player@two.co.uk'
+  THREE_EMAIL = 'plagxo@tri.eo'
+  clearGamesForPlayer p for p in [ONE_EMAIL, TWO_EMAIL, THREE_EMAIL]
+
+  createGame ONE_EMAIL, TWO_EMAIL
+  createGame ONE_EMAIL, THREE_EMAIL
+  createGame THREE_EMAIL, ONE_EMAIL
+
+  assertNumGames = (player, players_turn, players_wait) ->
+    createLoginSession player
+    casper.thenOpen serverUrl, ->
+      game_counts = casper.evaluate () ->
+        counts =
+          'your_turn': $('#your_turn_games a').length
+          'not_your_turn': $('#not_your_turn_games a').length
+        return counts
+      test.assertEqual game_counts.your_turn, players_turn
+      test.assertEqual game_counts.not_your_turn, players_wait
+
+  # player one has two games in which it's her turn, and one other
+  assertNumGames ONE_EMAIL, 2, 1
+  # player two has no games in which it's her turn, and one other
+  assertNumGames TWO_EMAIL, 0, 1
+  # player three has one game in which it's her turn, and one other
+  assertNumGames THREE_EMAIL, 1, 1
+
+  casper.then ->
+    test.done()
 
 casper.test.begin "Game interface", 35, (test) ->
   casper.start()
@@ -223,6 +253,16 @@ casper.test.begin "Game interface", 35, (test) ->
     test.done()
 
 # helper functions
+
+numGamesForPlayer = (email) ->
+  createLoginSession email
+  casper.thenOpen serverUrl, ->
+    game_counts = casper.evaluate () ->
+      counts =
+        'your_turn': $('#your_turn_games a').length
+        'not_your_turn': $('#not_your_turn_games a').length
+      return counts
+    return game_counts
 
 clearGamesForPlayer = (email) ->
   casper.thenOpen "#{serverUrl}/testing_clear_games_for_player",
