@@ -36,7 +36,7 @@ casper.test.begin 'Test the login procedure', 3, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Tests the 'Challenge a player process", 6, (test) ->
+casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
   # Be sure not to use the 'create_game' shortcut.
   casper.start()
 
@@ -56,34 +56,37 @@ casper.test.begin "Tests the 'Challenge a player process", 6, (test) ->
   casper.thenClick '#challenge_link', ->
     form_values = 'input[name="opponent_email"]' : TOUYA_EMAIL
     # The final 'true' argument means that the form is submitted.
-    this.fillSelectors 'form', form_values, true
+    @fillSelectors 'form', form_values, true
 
   # both players load the front page and see links to the same game
 
+  shindous_game_link = null
+  shindous_game_text = null
   # Shindou
   casper.thenOpen serverUrl, ->
     test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 1
-    shindous_game_link = casper.evaluate -> 
-                           $('#not_your_turn_games li:last a').getAttribute("href")
-    # this.echo shindous_game_link
-    #shindous_game_link_text = shindous_game_link.text
-    #shindous_game_link_target = shindous_game_link.get_attribute('href')
+    shindous_game_link = casper.evaluate ->
+      $('#not_your_turn_games li:last a').attr("href")
+    shindous_game_text = casper.evaluate ->
+      $('#not_your_turn_games li:last a').text()
 
   ## Touya
   createLoginSession TOUYA_EMAIL
   casper.thenOpen serverUrl, ->
     test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1
-    touyas_game_link = casper.evaluate -> 
-                           $('#your_turn_games li:last a')
-    #this.echo touyas_game_link
-    #touyas_game_link_text = shindous_game_link.text
-    #touyas_game_link_target = shindous_game_link.get_attribute('href')
-
+    touyas_game_link = casper.evaluate ->
+      $('#your_turn_games li:last a').attr("href")
+    touyas_game_text = casper.evaluate ->
+      $('#your_turn_games li:last a').text()
+    test.assertEqual shindous_game_link, touyas_game_link,
+                     "both players see the same game link"
+    test.assertEqual shindous_game_text, touyas_game_text,
+                     "both players see the same game text"
 
   #test.assertEqual touyas_game_link_text, shindous_game_link_text
   #test.assertEqual shindous_game_link_target, touyas_game_link_target
 
-    # a third user, Ochi, logs in.  The new game is not on his list.
+  # a third user, Ochi, logs in.  The new game is not on his list.
   createLoginSession OCHI_EMAIL
   casper.thenOpen serverUrl, ->
     test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 0
