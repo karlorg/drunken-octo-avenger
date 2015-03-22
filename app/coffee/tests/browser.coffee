@@ -254,16 +254,6 @@ casper.test.begin "Game interface", 35, (test) ->
 
 # helper functions
 
-numGamesForPlayer = (email) ->
-  createLoginSession email
-  casper.thenOpen serverUrl, ->
-    game_counts = casper.evaluate () ->
-      counts =
-        'your_turn': $('#your_turn_games a').length
-        'not_your_turn': $('#not_your_turn_games a').length
-      return counts
-    return game_counts
-
 clearGamesForPlayer = (email) ->
   casper.thenOpen "#{serverUrl}/testing_clear_games_for_player",
     method: 'post'
