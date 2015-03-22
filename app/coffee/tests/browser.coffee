@@ -49,7 +49,7 @@ casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
   # Shindou opens the front page and follows a link to create a new game
   createLoginSession SHINDOU_EMAIL
   casper.thenOpen serverUrl, ->
-    test.assertExists '#your_turn_games'
+    test.assertExists '#your_turn_games', "Status has a list of your turn games"
     test.assertEqual (casper.evaluate -> $('#your_turn_games a').length),
                      0, 'games are cleared so no games listed'
 
@@ -73,7 +73,8 @@ casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
   ## Touya
   createLoginSession TOUYA_EMAIL
   casper.thenOpen serverUrl, ->
-    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
+                     'Touya has the expected number of your turn games'
     touyas_game_link = casper.evaluate ->
       $('#your_turn_games li:last a').attr("href")
     touyas_game_text = casper.evaluate ->
@@ -86,8 +87,10 @@ casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
   # a third user, Ochi, logs in.  The new game is not on his list.
   createLoginSession OCHI_EMAIL
   casper.thenOpen serverUrl, ->
-    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 0
-    test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 0
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 0,
+                     'Ochi does not see any your turn games'
+    test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 0,
+                     'Ochi does not see any not your turn games'
 
   casper.then ->
     test.done()
@@ -113,8 +116,10 @@ casper.test.begin "Status Listings", 6, (test) ->
           'your_turn': $('#your_turn_games a').length
           'not_your_turn': $('#not_your_turn_games a').length
         return counts
-      test.assertEqual game_counts.your_turn, players_turn
-      test.assertEqual game_counts.not_your_turn, players_wait
+      test.assertEqual game_counts.your_turn, players_turn,
+                       'Expected number of your-turn games'
+      test.assertEqual game_counts.not_your_turn, players_wait,
+                       'Expected number of not-your-turn games'
 
   # player one has two games in which it's her turn, and one other
   assertNumGames ONE_EMAIL, 2, 1
@@ -142,9 +147,9 @@ casper.test.begin "Game interface", 35, (test) ->
     return counts
   test.assertStonePointCounts = (nostone, black, white) ->
     counts = countStonesAndPoints()
-    test.assertEqual(counts.empty, nostone)
-    test.assertEqual(counts.black, black)
-    test.assertEqual(counts.white, white)
+    test.assertEqual counts.empty, nostone, 'Expected number of empty points'
+    test.assertEqual counts.black, black, 'Expected number of black stones'
+    test.assertEqual counts.white, white, 'Expected number of white stones'
 
   test.assertEmptyBoard = ->
     test.assertStonePointCounts 19*19, 0, 0
@@ -152,11 +157,14 @@ casper.test.begin "Game interface", 35, (test) ->
   pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 
   test.assertPointIsBlack = (x,y) ->
-    test.assertExists pointSelector(x,y) + ".blackstone"
+    test.assertExists pointSelector(x,y) + ".blackstone",
+                      'There is a black stone at the expected point'
   test.assertPointIsWhite = (x,y) ->
-    test.assertExists pointSelector(x,y) + ".whitestone"
+    test.assertExists pointSelector(x,y) + ".whitestone",
+                      'There is a white stone at the expected point'
   test.assertPointIsEmpty = (x,y) ->
-    test.assertExists pointSelector(x,y) + ".nostone"
+    test.assertExists pointSelector(x,y) + ".nostone",
+                      'The specified point is empty as expected'
 
   ONE_EMAIL = 'player@one.com'
   TWO_EMAIL = 'playa@dos.es'
@@ -173,14 +181,13 @@ casper.test.begin "Game interface", 35, (test) ->
   # games
   createLoginSession ONE_EMAIL
   casper.thenOpen serverUrl, ->
-    test.assertExists '#your_turn_games'
-    test.assertEqual 2,
-                     (casper.evaluate -> $('#your_turn_games a').length),
+    test.assertExists '#your_turn_games', 'There is a list of your-turn games'
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 2,
                      'exactly two games listed'
   # select the most recent game
   casper.thenClick '#your_turn_games li:last-child a', ->
     # on the game page is a table with class 'goban'
-    test.assertExists 'table.goban'
+    test.assertExists 'table.goban', 'The Go board does exist.'
     # on the game page are 19*19 points, most of which should be empty but
     # there are the initial stones set in 'createGame'
     test.assertStonePointCounts initialEmptyCount, 2, 2
@@ -217,14 +224,14 @@ casper.test.begin "Game interface", 35, (test) ->
   # we confirm this new move
   casper.thenClick '.confirm_button', ->
     # now we're taken back to the status page
-    test.assertExists '#your_turn_games'
+    test.assertExists '#your_turn_games',
+                      'There still exists a list of your-turn games'
 
   # -- PLAYER TWO
   # now the white player logs in and visits the same game
   createLoginSession TWO_EMAIL
   casper.thenOpen serverUrl, ->
-    test.assertEqual 1,
-                     (casper.evaluate -> $('#your_turn_games a').length),
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
                      "exactly one game listed in which it's P2's turn"
   casper.thenClick '#your_turn_games a', ->
     # the captured stones are still captured
@@ -246,7 +253,7 @@ casper.test.begin "Game interface", 35, (test) ->
   # (it should be the first listed under 'not your turn')
   casper.thenClick '#not_your_turn_games li:first-child a', ->
     # we should be back to an empty board
-    test.assertExists '.goban'
+    test.assertExists '.goban', 'The Go board still exists.'
     test.assertEmptyBoard()
 
   casper.then ->

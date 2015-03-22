@@ -50,7 +50,7 @@
     }
     createLoginSession(SHINDOU_EMAIL);
     casper.thenOpen(serverUrl, function() {
-      test.assertExists('#your_turn_games');
+      test.assertExists('#your_turn_games', "Status has a list of your turn games");
       return test.assertEqual(casper.evaluate(function() {
         return $('#your_turn_games a').length;
       }), 0, 'games are cleared so no games listed');
@@ -80,7 +80,7 @@
       var touyas_game_link, touyas_game_text;
       test.assertEqual(casper.evaluate(function() {
         return $('#your_turn_games a').length;
-      }), 1);
+      }), 1, 'Touya has the expected number of your turn games');
       touyas_game_link = casper.evaluate(function() {
         return $('#your_turn_games li:last a').attr("href");
       });
@@ -94,10 +94,10 @@
     casper.thenOpen(serverUrl, function() {
       test.assertEqual(casper.evaluate(function() {
         return $('#your_turn_games a').length;
-      }), 0);
+      }), 0, 'Ochi does not see any your turn games');
       return test.assertEqual(casper.evaluate(function() {
         return $('#not_your_turn_games a').length;
-      }), 0);
+      }), 0, 'Ochi does not see any not your turn games');
     });
     return casper.then(function() {
       return test.done();
@@ -130,8 +130,8 @@
           };
           return counts;
         });
-        test.assertEqual(game_counts.your_turn, players_turn);
-        return test.assertEqual(game_counts.not_your_turn, players_wait);
+        test.assertEqual(game_counts.your_turn, players_turn, 'Expected number of your-turn games');
+        return test.assertEqual(game_counts.not_your_turn, players_wait, 'Expected number of not-your-turn games');
       });
     };
     assertNumGames(ONE_EMAIL, 2, 1);
@@ -164,9 +164,9 @@
     test.assertStonePointCounts = function(nostone, black, white) {
       var counts;
       counts = countStonesAndPoints();
-      test.assertEqual(counts.empty, nostone);
-      test.assertEqual(counts.black, black);
-      return test.assertEqual(counts.white, white);
+      test.assertEqual(counts.empty, nostone, 'Expected number of empty points');
+      test.assertEqual(counts.black, black, 'Expected number of black stones');
+      return test.assertEqual(counts.white, white, 'Expected number of white stones');
     };
     test.assertEmptyBoard = function() {
       return test.assertStonePointCounts(19 * 19, 0, 0);
@@ -175,13 +175,13 @@
       return ".col-" + x + ".row-" + y;
     };
     test.assertPointIsBlack = function(x, y) {
-      return test.assertExists(pointSelector(x, y) + ".blackstone");
+      return test.assertExists(pointSelector(x, y) + ".blackstone", 'There is a black stone at the expected point');
     };
     test.assertPointIsWhite = function(x, y) {
-      return test.assertExists(pointSelector(x, y) + ".whitestone");
+      return test.assertExists(pointSelector(x, y) + ".whitestone", 'There is a white stone at the expected point');
     };
     test.assertPointIsEmpty = function(x, y) {
-      return test.assertExists(pointSelector(x, y) + ".nostone");
+      return test.assertExists(pointSelector(x, y) + ".nostone", 'The specified point is empty as expected');
     };
     ONE_EMAIL = 'player@one.com';
     TWO_EMAIL = 'playa@dos.es';
@@ -192,13 +192,13 @@
     initialEmptyCount = 19 * 19 - 4;
     createLoginSession(ONE_EMAIL);
     casper.thenOpen(serverUrl, function() {
-      test.assertExists('#your_turn_games');
-      return test.assertEqual(2, casper.evaluate(function() {
+      test.assertExists('#your_turn_games', 'There is a list of your-turn games');
+      return test.assertEqual(casper.evaluate(function() {
         return $('#your_turn_games a').length;
-      }), 'exactly two games listed');
+      }), 2, 'exactly two games listed');
     });
     casper.thenClick('#your_turn_games li:last-child a', function() {
-      test.assertExists('table.goban');
+      test.assertExists('table.goban', 'The Go board does exist.');
       test.assertStonePointCounts(initialEmptyCount, 2, 2);
       test.assertTrue(casper.evaluate(function() {
         var result;
@@ -226,13 +226,13 @@
       return test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
     });
     casper.thenClick('.confirm_button', function() {
-      return test.assertExists('#your_turn_games');
+      return test.assertExists('#your_turn_games', 'There still exists a list of your-turn games');
     });
     createLoginSession(TWO_EMAIL);
     casper.thenOpen(serverUrl, function() {
-      return test.assertEqual(1, casper.evaluate(function() {
+      return test.assertEqual(casper.evaluate(function() {
         return $('#your_turn_games a').length;
-      }), "exactly one game listed in which it's P2's turn");
+      }), 1, "exactly one game listed in which it's P2's turn");
     });
     casper.thenClick('#your_turn_games a', function() {
       return test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
@@ -245,7 +245,7 @@
     });
     casper.thenClick('.confirm_button');
     casper.thenClick('#not_your_turn_games li:first-child a', function() {
-      test.assertExists('.goban');
+      test.assertExists('.goban', 'The Go board still exists.');
       return test.assertEmptyBoard();
     });
     return casper.then(function() {
