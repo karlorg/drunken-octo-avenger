@@ -131,6 +131,68 @@ casper.test.begin "Status Listings", 6, (test) ->
   casper.then ->
     test.done()
 
+
+casper.test.begin "Test Placing Stones", 13, (test) ->
+  casper.start()
+
+  ONE_EMAIL = 'player@one.com'
+  TWO_EMAIL = 'playa@dos.es'
+
+  test.assertPointIsBlack = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".blackstone",
+                      'There is a black stone at the expected point'
+  test.assertPointIsWhite = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".whitestone",
+                      'There is a white stone at the expected point'
+  test.assertPointIsEmpty = (x,y) ->
+    test.assertExists pointSelector(x,y) + ".nostone",
+                      'The specified point is empty as expected'
+
+
+  ## create a couple of games
+  clearGamesForPlayer ONE_EMAIL
+  clearGamesForPlayer TWO_EMAIL
+  createGame ONE_EMAIL, TWO_EMAIL, ['.b.',
+                                    'bw.',
+                                    '.b.']
+  initialEmptyCount = 19*19-4
+
+  # -- PLAYER ONE
+  # player one logs in and gets the front page; should see a page listing games
+  createLoginSession ONE_EMAIL
+  casper.thenOpen serverUrl, ->
+    test.assertExists '#your_turn_games', 'There is a list of your-turn games'
+    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
+                     'exactly one game listed'
+
+  # select the most recent game
+  casper.thenClick '#your_turn_games li:last-child a', ->
+    # on the game page is a table with class 'goban'
+    test.assertExists 'table.goban', 'The Go board does exist.'
+    # on the game page are 19*19 points, most of which should be empty but
+    # there are the initial stones set in 'createGame'
+    # test.assertStonePointCounts initialEmptyCount, 2, 2
+    # no (usable) confirm button appears yet
+    test.assertDoesntExist '.confirm_button:enabled',
+                           'no usable confirm button appears'
+
+    # the 3x3 block at top left is as we specified
+    test.assertPointIsEmpty 0, 0
+    test.assertPointIsBlack 1, 0
+    test.assertPointIsEmpty 2, 0
+
+    test.assertPointIsBlack 0, 1
+    test.assertPointIsWhite 1, 1
+    test.assertPointIsEmpty 2, 1
+
+    test.assertPointIsEmpty 0, 2
+    test.assertPointIsBlack 1, 2
+    test.assertPointIsEmpty 2, 2
+
+  casper.then ->
+    test.done()
+
+
 casper.test.begin "Game interface", 35, (test) ->
   casper.start()
 
@@ -153,8 +215,6 @@ casper.test.begin "Game interface", 35, (test) ->
 
   test.assertEmptyBoard = ->
     test.assertStonePointCounts 19*19, 0, 0
-
-  pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 
   test.assertPointIsBlack = (x,y) ->
     test.assertExists pointSelector(x,y) + ".blackstone",
@@ -290,6 +350,9 @@ createLoginSession = (email) ->
       'name': name
       'value': value
       'path': path
+
+pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
+
 
 casper.run ->
   casper.log "shutting down..."
