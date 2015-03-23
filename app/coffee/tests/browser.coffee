@@ -44,8 +44,8 @@ class BrowserTest
       test.assertEqual game_counts.not_your_turn, players_wait,
                        'Expected number of not-your-turn games'
 
-  assertEmptyBoard: (test) ->
-      test.assertStonePointCounts 19*19, 0, 0
+  assertEmptyBoard: (test) =>
+      @assertStonePointCounts test, 19*19, 0, 0
 
   assertPointIsBlack: (test, x, y) ->
     test.assertExists pointSelector(x,y) + ".blackstone",
@@ -59,6 +59,22 @@ class BrowserTest
     test.assertExists pointSelector(x,y) + ".nostone",
                       'The specified point is empty as expected'
 
+  countStonesAndPoints: ->
+    counts = casper.evaluate () ->
+      emptyStones = $('.goban .nostone').length
+      blackStones = $('.goban .blackstone').length
+      whiteStones = $('.goban .whitestone').length
+      counts =
+        'empty': emptyStones
+        'black': blackStones
+        'white': whiteStones
+      return counts
+    return counts
+  assertStonePointCounts: (test, nostone, black, white) =>
+    counts = @countStonesAndPoints()
+    test.assertEqual counts.empty, nostone, 'Expected number of empty points'
+    test.assertEqual counts.black, black, 'Expected number of black stones'
+    test.assertEqual counts.white, white, 'Expected number of white stones'
 
 
 class LoginTest extends BrowserTest
@@ -169,7 +185,7 @@ challengeTest.run()
 
 class PlaceStonesTest extends BrowserTest
   description: "Test Placing Stones"
-  num_tests: 15
+  num_tests: 18
   test_body: (test) =>
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
@@ -194,7 +210,7 @@ class PlaceStonesTest extends BrowserTest
       test.assertExists 'table.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
-      # test.assertStonePointCounts initialEmptyCount, 2, 2
+      @assertStonePointCounts test, initialEmptyCount, 3, 1
       # no (usable) confirm button appears yet
       test.assertDoesntExist '.confirm_button:enabled',
                              'no usable confirm button appears'
@@ -220,23 +236,6 @@ class GameInterfaceTest extends BrowserTest
   num_tests: 43
   test_body: (test) =>
 
-    countStonesAndPoints = ->
-      counts = casper.evaluate () ->
-        emptyStones = $('.goban .nostone').length
-        blackStones = $('.goban .blackstone').length
-        whiteStones = $('.goban .whitestone').length
-        counts =
-          'empty': emptyStones
-          'black': blackStones
-          'white': whiteStones
-        return counts
-      return counts
-    test.assertStonePointCounts = (nostone, black, white) ->
-      counts = countStonesAndPoints()
-      test.assertEqual counts.empty, nostone, 'Expected number of empty points'
-      test.assertEqual counts.black, black, 'Expected number of black stones'
-      test.assertEqual counts.white, white, 'Expected number of white stones'
-
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
 
@@ -255,12 +254,12 @@ class GameInterfaceTest extends BrowserTest
       @assertNumGames test, 2, 0
 
     # select the most recent game
-    casper.thenClick '#your_turn_games li:last-child a', ->
+    casper.thenClick '#your_turn_games li:last-child a', =>
       # on the game page is a table with class 'goban'
       test.assertExists 'table.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
-      test.assertStonePointCounts initialEmptyCount, 2, 2
+      @assertStonePointCounts test, initialEmptyCount, 2, 2
       # check one of those images can be loaded
       test.assertTrue (casper.evaluate ->
         result = false
@@ -273,23 +272,23 @@ class GameInterfaceTest extends BrowserTest
                              'no usable confirm button appears'
 
     # user clicks an empty spot, which is a link
-    casper.thenClick pointSelector(1, 1), ->
+    casper.thenClick pointSelector(1, 1), =>
       # the board updates to show a stone there and other stones captured
-      test.assertStonePointCounts initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
       # a confirm button is now available
       test.assertExists '.confirm_button:enabled'
 
     # we click a different point
     casper.thenClick pointSelector(15, 3), =>
       # now the capture is undone
-      test.assertStonePointCounts initialEmptyCount-1, 3, 2
+      @assertStonePointCounts test, initialEmptyCount-1, 3, 2
       @assertPointIsEmpty test, 1, 1
       @assertPointIsWhite test, 1, 0
 
     # we click the capturing point again, as we'll want to see what happens when
     # we confirm a capturing move
-    casper.thenClick pointSelector(1, 1), ->
-      test.assertStonePointCounts initialEmptyCount+1, 3, 0
+    casper.thenClick pointSelector(1, 1), =>
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
 
     # we confirm this new move
     casper.thenClick '.confirm_button', =>
@@ -302,19 +301,19 @@ class GameInterfaceTest extends BrowserTest
     casper.thenOpen serverUrl, =>
       @assertNumGames test, 1, 1
       
-    casper.thenClick '#your_turn_games a', ->
+    casper.thenClick '#your_turn_games a', =>
       # the captured stones are still captured
-      test.assertStonePointCounts initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
 
     # clicking the point with a black stone does nothing
-    casper.thenClick pointSelector(1, 1), ->
-      test.assertStonePointCounts initialEmptyCount+1, 3, 0
+    casper.thenClick pointSelector(1, 1), =>
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
 
     # user clicks an empty spot
-    casper.thenClick pointSelector(3, 3), ->
+    casper.thenClick pointSelector(3, 3), =>
       # a white stone is placed, reduces the empty count by 1 and increments
       # the count of white stones
-      test.assertStonePointCounts initialEmptyCount, 3, 1
+      @assertStonePointCounts test, initialEmptyCount, 3, 1
 
     # confirm move
     casper.thenClick '.confirm_button'
