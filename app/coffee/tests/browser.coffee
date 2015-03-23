@@ -95,41 +95,55 @@ casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
   casper.then ->
     test.done()
 
+class BrowserTest
+  # An abstract base class for our browser tests
+  # A concrete instance must define the 'test_body' method called by
+  # the 'run' method below.
+  constructor: (@description, @num_tests) ->
 
-casper.test.begin "Status Listings", 6, (test) ->
-  casper.start()
+  run: =>
+    casper.test.begin @description, @num_tests, (test) =>
+      casper.start()
+      @test_body(test)
+      casper.then ->
+        test.done()
 
-  ONE_EMAIL = 'playa@uno.es'
-  TWO_EMAIL = 'player@two.co.uk'
-  THREE_EMAIL = 'plagxo@tri.eo'
-  clearGamesForPlayer p for p in [ONE_EMAIL, TWO_EMAIL, THREE_EMAIL]
+  # Utility functions used by more than one test class
 
-  createGame ONE_EMAIL, TWO_EMAIL
-  createGame ONE_EMAIL, THREE_EMAIL
-  createGame THREE_EMAIL, ONE_EMAIL
+class StatusTest extends BrowserTest
+  test_body: (test) =>
+    ONE_EMAIL = 'playa@uno.es'
+    TWO_EMAIL = 'player@two.co.uk'
+    THREE_EMAIL = 'plagxo@tri.eo'
+    clearGamesForPlayer p for p in [ONE_EMAIL, TWO_EMAIL, THREE_EMAIL]
 
-  assertNumGames = (player, players_turn, players_wait) ->
-    createLoginSession player
-    casper.thenOpen serverUrl, ->
-      game_counts = casper.evaluate () ->
-        counts =
-          'your_turn': $('#your_turn_games a').length
-          'not_your_turn': $('#not_your_turn_games a').length
-        return counts
-      test.assertEqual game_counts.your_turn, players_turn,
-                       'Expected number of your-turn games'
-      test.assertEqual game_counts.not_your_turn, players_wait,
-                       'Expected number of not-your-turn games'
+    createGame ONE_EMAIL, TWO_EMAIL
+    createGame ONE_EMAIL, THREE_EMAIL
+    createGame THREE_EMAIL, ONE_EMAIL
 
-  # player one has two games in which it's her turn, and one other
-  assertNumGames ONE_EMAIL, 2, 1
-  # player two has no games in which it's her turn, and one other
-  assertNumGames TWO_EMAIL, 0, 1
-  # player three has one game in which it's her turn, and one other
-  assertNumGames THREE_EMAIL, 1, 1
+    assertNumGames = (player, players_turn, players_wait) ->
+      createLoginSession player
+      casper.thenOpen serverUrl, ->
+        game_counts = casper.evaluate () ->
+          counts =
+            'your_turn': $('#your_turn_games a').length
+            'not_your_turn': $('#not_your_turn_games a').length
+          return counts
+        test.assertEqual game_counts.your_turn, players_turn,
+                         'Expected number of your-turn games'
+        test.assertEqual game_counts.not_your_turn, players_wait,
+                         'Expected number of not-your-turn games'
 
-  casper.then ->
-    test.done()
+    # player one has two games in which it's her turn, and one other
+    assertNumGames ONE_EMAIL, 2, 1
+    # player two has no games in which it's her turn, and one other
+    assertNumGames TWO_EMAIL, 0, 1
+    # player three has one game in which it's her turn, and one other
+    assertNumGames THREE_EMAIL, 1, 1
+
+
+status_test = new StatusTest "Status Listings", 6
+status_test.run()
 
 
 casper.test.begin "Test Placing Stones", 13, (test) ->
