@@ -28,6 +28,21 @@ class BrowserTest
         test.done()
 
   # Utility functions used by more than one test class
+  assertNumGames: (test, players_turn, players_wait) ->
+    casper.thenOpen serverUrl, ->
+      test.assertExists '#your_turn_games',
+                        "Status has a list of 'your turn' games"
+      test.assertExists '#not_your_turn_games',
+                        "Status has a list of 'not your turn' games"
+      game_counts = casper.evaluate () ->
+        counts =
+          'your_turn': $('#your_turn_games a').length
+          'not_your_turn': $('#not_your_turn_games a').length
+        return counts
+      test.assertEqual game_counts.your_turn, players_turn,
+                       'Expected number of your-turn games'
+      test.assertEqual game_counts.not_your_turn, players_wait,
+                       'Expected number of not-your-turn games'
 
 
 class LoginTest extends BrowserTest
@@ -56,7 +71,7 @@ loginTest.run()
 
 class StatusTest extends BrowserTest
   description: 'Test the status listings'
-  num_tests: 6
+  num_tests: 12
   test_body: (test) =>
     ONE_EMAIL = 'playa@uno.es'
     TWO_EMAIL = 'player@two.co.uk'
@@ -67,19 +82,10 @@ class StatusTest extends BrowserTest
     createGame ONE_EMAIL, THREE_EMAIL
     createGame THREE_EMAIL, ONE_EMAIL
 
-    assertNumGames = (player, players_turn, players_wait) ->
+    assertNumGames = (player, players_turn, players_wait) =>
       createLoginSession player
-      casper.thenOpen serverUrl, ->
-        game_counts = casper.evaluate () ->
-          counts =
-            'your_turn': $('#your_turn_games a').length
-            'not_your_turn': $('#not_your_turn_games a').length
-          return counts
-        test.assertEqual game_counts.your_turn, players_turn,
-                         'Expected number of your-turn games'
-        test.assertEqual game_counts.not_your_turn, players_wait,
-                         'Expected number of not-your-turn games'
-
+      @assertNumGames test, players_turn, players_wait
+      
     # player one has two games in which it's her turn, and one other
     assertNumGames ONE_EMAIL, 2, 1
     # player two has no games in which it's her turn, and one other
@@ -92,7 +98,7 @@ statusTest.run()
 
 class ChallengeTest extends BrowserTest
   description: "Tests the 'Challenge a player process"
-  num_tests: 8
+  num_tests: 18
   test_body: (test) =>
   # Be sure not to use the 'createGame' shortcut.
     SHINDOU_EMAIL = 'shindou@ki-in.jp'
@@ -103,11 +109,8 @@ class ChallengeTest extends BrowserTest
 
     # Shindou opens the front page and follows a link to create a new game
     createLoginSession SHINDOU_EMAIL
-    casper.thenOpen serverUrl, ->
-      test.assertExists '#your_turn_games',
-                        "Status has a list of 'your turn' games"
-      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length),
-                       0, 'games are cleared so no games listed'
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 0, 0
 
     casper.thenClick '#challenge_link', ->
       form_values = 'input[name="opponent_email"]' : TOUYA_EMAIL
@@ -119,8 +122,8 @@ class ChallengeTest extends BrowserTest
     shindous_game_link = null
     shindous_game_text = null
     # Shindou
-    casper.thenOpen serverUrl, ->
-      test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 1
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 0, 1
       shindous_game_link = casper.evaluate ->
         $('#not_your_turn_games li:last a').attr("href")
       shindous_game_text = casper.evaluate ->
@@ -128,9 +131,8 @@ class ChallengeTest extends BrowserTest
 
     ## Touya
     createLoginSession TOUYA_EMAIL
-    casper.thenOpen serverUrl, ->
-      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
-                       'Touya has the expected number of your turn games'
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 1, 0
       touyas_game_link = casper.evaluate ->
         $('#your_turn_games li:last a').attr("href")
       touyas_game_text = casper.evaluate ->
@@ -142,18 +144,16 @@ class ChallengeTest extends BrowserTest
 
     # a third user, Ochi, logs in.  The new game is not on his list.
     createLoginSession OCHI_EMAIL
-    casper.thenOpen serverUrl, ->
-      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 0,
-                       'Ochi does not see any your turn games'
-      test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 0,
-                       'Ochi does not see any not your turn games'
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 0, 0
+
 
 challengeTest = new ChallengeTest
 challengeTest.run()
 
 class PlaceStonesTest extends BrowserTest
   description: "Test Placing Stones"
-  num_tests: 13
+  num_tests: 15
   test_body: (test) =>
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
@@ -179,10 +179,8 @@ class PlaceStonesTest extends BrowserTest
     # player one logs in and gets the front page;
     # should see a page listing games
     createLoginSession ONE_EMAIL
-    casper.thenOpen serverUrl, ->
-      test.assertExists '#your_turn_games', 'There is a list of your-turn games'
-      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
-                       'exactly one game listed'
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 1, 0
 
     # select the most recent game
     casper.thenClick '#your_turn_games li:last-child a', ->
@@ -213,7 +211,7 @@ placeStonesTest.run()
 
 class GameInterfaceTest extends BrowserTest
   description: "Game interface"
-  num_tests: 35
+  num_tests: 43
   test_body: (test) =>
 
     countStonesAndPoints = ->
@@ -260,10 +258,9 @@ class GameInterfaceTest extends BrowserTest
     # player one logs in and gets the front page; should see a page listing
     # games
     createLoginSession ONE_EMAIL
-    casper.thenOpen serverUrl, ->
-      test.assertExists '#your_turn_games', 'There is a list of your-turn games'
-      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 2,
-                       'exactly two games listed'
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 2, 0
+
     # select the most recent game
     casper.thenClick '#your_turn_games li:last-child a', ->
       # on the game page is a table with class 'goban'
@@ -302,17 +299,16 @@ class GameInterfaceTest extends BrowserTest
       test.assertStonePointCounts initialEmptyCount+1, 3, 0
 
     # we confirm this new move
-    casper.thenClick '.confirm_button', ->
+    casper.thenClick '.confirm_button', =>
       # now we're taken back to the status page
-      test.assertExists '#your_turn_games',
-                        'There still exists a list of your-turn games'
+      @assertNumGames test, 1, 1
 
     # -- PLAYER TWO
     # now the white player logs in and visits the same game
     createLoginSession TWO_EMAIL
-    casper.thenOpen serverUrl, ->
-      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
-                       "exactly one game listed in which it's P2's turn"
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 1, 1
+      
     casper.thenClick '#your_turn_games a', ->
       # the captured stones are still captured
       test.assertStonePointCounts initialEmptyCount+1, 3, 0
