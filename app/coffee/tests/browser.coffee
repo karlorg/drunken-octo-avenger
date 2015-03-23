@@ -14,6 +14,22 @@ serverUrl = "#{host}#{portString}"
 casper.echo "Testing against server at #{serverUrl}"
 
 # test suites
+class BrowserTest
+  # An abstract base class for our browser tests
+  # A concrete instance must define the 'test_body' method called by
+  # the 'run' method below. You must also set the 'description' and 'num_tests'
+  # properties
+
+  run: =>
+    casper.test.begin @description, @num_tests, (test) =>
+      casper.start()
+      @test_body(test)
+      casper.then ->
+        test.done()
+
+  # Utility functions used by more than one test class
+
+
 
 casper.test.begin 'Test the login procedure', 3, (test) ->
   casper.start serverUrl, ->
@@ -36,81 +52,9 @@ casper.test.begin 'Test the login procedure', 3, (test) ->
   casper.then ->
     test.done()
 
-casper.test.begin "Tests the 'Challenge a player process", 8, (test) ->
-  # Be sure not to use the 'createGame' shortcut.
-  casper.start()
-
-  SHINDOU_EMAIL = 'shindou@ki-in.jp'
-  TOUYA_EMAIL = 'touya@ki-in.jp'
-  OCHI_EMAIL = 'ochino1@ki-in.jp'
-
-  clearGamesForPlayer p for p in [SHINDOU_EMAIL, TOUYA_EMAIL, OCHI_EMAIL]
-
-  # Shindou opens the front page and follows a link to create a new game
-  createLoginSession SHINDOU_EMAIL
-  casper.thenOpen serverUrl, ->
-    test.assertExists '#your_turn_games', "Status has a list of your turn games"
-    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length),
-                     0, 'games are cleared so no games listed'
-
-  casper.thenClick '#challenge_link', ->
-    form_values = 'input[name="opponent_email"]' : TOUYA_EMAIL
-    # The final 'true' argument means that the form is submitted.
-    @fillSelectors 'form', form_values, true
-
-  # both players load the front page and see links to the same game
-
-  shindous_game_link = null
-  shindous_game_text = null
-  # Shindou
-  casper.thenOpen serverUrl, ->
-    test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 1
-    shindous_game_link = casper.evaluate ->
-      $('#not_your_turn_games li:last a').attr("href")
-    shindous_game_text = casper.evaluate ->
-      $('#not_your_turn_games li:last a').text()
-
-  ## Touya
-  createLoginSession TOUYA_EMAIL
-  casper.thenOpen serverUrl, ->
-    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
-                     'Touya has the expected number of your turn games'
-    touyas_game_link = casper.evaluate ->
-      $('#your_turn_games li:last a').attr("href")
-    touyas_game_text = casper.evaluate ->
-      $('#your_turn_games li:last a').text()
-    test.assertEqual shindous_game_link, touyas_game_link,
-                     "both players see the same game link"
-    test.assertEqual shindous_game_text, touyas_game_text,
-                     "both players see the same game text"
-
-  # a third user, Ochi, logs in.  The new game is not on his list.
-  createLoginSession OCHI_EMAIL
-  casper.thenOpen serverUrl, ->
-    test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 0,
-                     'Ochi does not see any your turn games'
-    test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 0,
-                     'Ochi does not see any not your turn games'
-
-  casper.then ->
-    test.done()
-
-class BrowserTest
-  # An abstract base class for our browser tests
-  # A concrete instance must define the 'test_body' method called by
-  # the 'run' method below.
-  constructor: (@description, @num_tests) ->
-
-  run: =>
-    casper.test.begin @description, @num_tests, (test) =>
-      casper.start()
-      @test_body(test)
-      casper.then ->
-        test.done()
-
-  # Utility functions used by more than one test class
-
 class StatusTest extends BrowserTest
+  description: 'Test the status listings'
+  num_tests: 6
   test_body: (test) =>
     ONE_EMAIL = 'playa@uno.es'
     TWO_EMAIL = 'player@two.co.uk'
@@ -141,10 +85,69 @@ class StatusTest extends BrowserTest
     # player three has one game in which it's her turn, and one other
     assertNumGames THREE_EMAIL, 1, 1
 
-
-status_test = new StatusTest "Status Listings", 6
+status_test = new StatusTest
 status_test.run()
 
+class ChallengeTest extends BrowserTest
+  description: "Tests the 'Challenge a player process"
+  num_tests: 8
+  test_body: (test) =>
+  # Be sure not to use the 'createGame' shortcut.
+    SHINDOU_EMAIL = 'shindou@ki-in.jp'
+    TOUYA_EMAIL = 'touya@ki-in.jp'
+    OCHI_EMAIL = 'ochino1@ki-in.jp'
+
+    clearGamesForPlayer p for p in [SHINDOU_EMAIL, TOUYA_EMAIL, OCHI_EMAIL]
+
+    # Shindou opens the front page and follows a link to create a new game
+    createLoginSession SHINDOU_EMAIL
+    casper.thenOpen serverUrl, ->
+      test.assertExists '#your_turn_games',
+                        "Status has a list of 'your turn' games"
+      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length),
+                       0, 'games are cleared so no games listed'
+
+    casper.thenClick '#challenge_link', ->
+      form_values = 'input[name="opponent_email"]' : TOUYA_EMAIL
+      # The final 'true' argument means that the form is submitted.
+      @fillSelectors 'form', form_values, true
+
+    # both players load the front page and see links to the same game
+
+    shindous_game_link = null
+    shindous_game_text = null
+    # Shindou
+    casper.thenOpen serverUrl, ->
+      test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 1
+      shindous_game_link = casper.evaluate ->
+        $('#not_your_turn_games li:last a').attr("href")
+      shindous_game_text = casper.evaluate ->
+        $('#not_your_turn_games li:last a').text()
+
+    ## Touya
+    createLoginSession TOUYA_EMAIL
+    casper.thenOpen serverUrl, ->
+      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 1,
+                       'Touya has the expected number of your turn games'
+      touyas_game_link = casper.evaluate ->
+        $('#your_turn_games li:last a').attr("href")
+      touyas_game_text = casper.evaluate ->
+        $('#your_turn_games li:last a').text()
+      test.assertEqual shindous_game_link, touyas_game_link,
+                       "both players see the same game link"
+      test.assertEqual shindous_game_text, touyas_game_text,
+                       "both players see the same game text"
+
+    # a third user, Ochi, logs in.  The new game is not on his list.
+    createLoginSession OCHI_EMAIL
+    casper.thenOpen serverUrl, ->
+      test.assertEqual (casper.evaluate -> $('#your_turn_games a').length), 0,
+                       'Ochi does not see any your turn games'
+      test.assertEqual (casper.evaluate -> $('#not_your_turn_games a').length), 0,
+                       'Ochi does not see any not your turn games'
+
+challenge_test = new ChallengeTest
+challenge_test.run()
 
 casper.test.begin "Test Placing Stones", 13, (test) ->
   casper.start()
