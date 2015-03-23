@@ -44,6 +44,22 @@ class BrowserTest
       test.assertEqual game_counts.not_your_turn, players_wait,
                        'Expected number of not-your-turn games'
 
+  assertEmptyBoard: (test) ->
+      test.assertStonePointCounts 19*19, 0, 0
+
+  assertPointIsBlack: (test, x, y) ->
+    test.assertExists pointSelector(x,y) + ".blackstone",
+                      'There is a black stone at the expected point'
+
+  assertPointIsWhite: (test, x, y) ->
+    test.assertExists pointSelector(x,y) + ".whitestone",
+                      'There is a white stone at the expected point'
+
+  assertPointIsEmpty: (test, x, y) ->
+    test.assertExists pointSelector(x,y) + ".nostone",
+                      'The specified point is empty as expected'
+
+
 
 class LoginTest extends BrowserTest
   description: 'Test the login procedure'
@@ -158,16 +174,6 @@ class PlaceStonesTest extends BrowserTest
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
 
-    test.assertPointIsBlack = (x,y) ->
-      test.assertExists pointSelector(x,y) + ".blackstone",
-                        'There is a black stone at the expected point'
-    test.assertPointIsWhite = (x,y) ->
-      test.assertExists pointSelector(x,y) + ".whitestone",
-                        'There is a white stone at the expected point'
-    test.assertPointIsEmpty = (x,y) ->
-      test.assertExists pointSelector(x,y) + ".nostone",
-                        'The specified point is empty as expected'
-
     clearGamesForPlayer ONE_EMAIL
     clearGamesForPlayer TWO_EMAIL
     createGame ONE_EMAIL, TWO_EMAIL, ['.b.',
@@ -183,7 +189,7 @@ class PlaceStonesTest extends BrowserTest
       @assertNumGames test, 1, 0
 
     # select the most recent game
-    casper.thenClick '#your_turn_games li:last-child a', ->
+    casper.thenClick '#your_turn_games li:last-child a', =>
       # on the game page is a table with class 'goban'
       test.assertExists 'table.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
@@ -194,17 +200,17 @@ class PlaceStonesTest extends BrowserTest
                              'no usable confirm button appears'
 
       # the 3x3 block at top left is as we specified
-      test.assertPointIsEmpty 0, 0
-      test.assertPointIsBlack 1, 0
-      test.assertPointIsEmpty 2, 0
+      @assertPointIsEmpty test, 0, 0
+      @assertPointIsBlack test, 1, 0
+      @assertPointIsEmpty test, 2, 0
 
-      test.assertPointIsBlack 0, 1
-      test.assertPointIsWhite 1, 1
-      test.assertPointIsEmpty 2, 1
+      @assertPointIsBlack test, 0, 1
+      @assertPointIsWhite test, 1, 1
+      @assertPointIsEmpty test, 2, 1
 
-      test.assertPointIsEmpty 0, 2
-      test.assertPointIsBlack 1, 2
-      test.assertPointIsEmpty 2, 2
+      @assertPointIsEmpty test, 0, 2
+      @assertPointIsBlack test, 1, 2
+      @assertPointIsEmpty test, 2, 2
 
 placeStonesTest = new PlaceStonesTest
 placeStonesTest.run()
@@ -230,19 +236,6 @@ class GameInterfaceTest extends BrowserTest
       test.assertEqual counts.empty, nostone, 'Expected number of empty points'
       test.assertEqual counts.black, black, 'Expected number of black stones'
       test.assertEqual counts.white, white, 'Expected number of white stones'
-
-    test.assertEmptyBoard = ->
-      test.assertStonePointCounts 19*19, 0, 0
-
-    test.assertPointIsBlack = (x,y) ->
-      test.assertExists pointSelector(x,y) + ".blackstone",
-                        'There is a black stone at the expected point'
-    test.assertPointIsWhite = (x,y) ->
-      test.assertExists pointSelector(x,y) + ".whitestone",
-                      'There is a white stone at the expected point'
-    test.assertPointIsEmpty = (x,y) ->
-      test.assertExists pointSelector(x,y) + ".nostone",
-                        'The specified point is empty as expected'
 
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
@@ -287,11 +280,11 @@ class GameInterfaceTest extends BrowserTest
       test.assertExists '.confirm_button:enabled'
 
     # we click a different point
-    casper.thenClick pointSelector(15, 3), ->
+    casper.thenClick pointSelector(15, 3), =>
       # now the capture is undone
       test.assertStonePointCounts initialEmptyCount-1, 3, 2
-      test.assertPointIsEmpty 1, 1
-      test.assertPointIsWhite 1, 0
+      @assertPointIsEmpty test, 1, 1
+      @assertPointIsWhite test, 1, 0
 
     # we click the capturing point again, as we'll want to see what happens when
     # we confirm a capturing move
@@ -327,10 +320,10 @@ class GameInterfaceTest extends BrowserTest
     casper.thenClick '.confirm_button'
     # reload front page and get the other game
     # (it should be the first listed under 'not your turn')
-    casper.thenClick '#not_your_turn_games li:first-child a', ->
+    casper.thenClick '#not_your_turn_games li:first-child a', =>
       # we should be back to an empty board
       test.assertExists '.goban', 'The Go board still exists.'
-      test.assertEmptyBoard()
+      @assertEmptyBoard test
 
 gameInterfaceTest = new GameInterfaceTest
 gameInterfaceTest.run()

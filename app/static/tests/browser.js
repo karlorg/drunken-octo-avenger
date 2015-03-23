@@ -56,6 +56,22 @@
       });
     };
 
+    BrowserTest.prototype.assertEmptyBoard = function(test) {
+      return test.assertStonePointCounts(19 * 19, 0, 0);
+    };
+
+    BrowserTest.prototype.assertPointIsBlack = function(test, x, y) {
+      return test.assertExists(pointSelector(x, y) + ".blackstone", 'There is a black stone at the expected point');
+    };
+
+    BrowserTest.prototype.assertPointIsWhite = function(test, x, y) {
+      return test.assertExists(pointSelector(x, y) + ".whitestone", 'There is a white stone at the expected point');
+    };
+
+    BrowserTest.prototype.assertPointIsEmpty = function(test, x, y) {
+      return test.assertExists(pointSelector(x, y) + ".nostone", 'The specified point is empty as expected');
+    };
+
     return BrowserTest;
 
   })();
@@ -235,15 +251,6 @@
       var ONE_EMAIL, TWO_EMAIL, initialEmptyCount;
       ONE_EMAIL = 'player@one.com';
       TWO_EMAIL = 'playa@dos.es';
-      test.assertPointIsBlack = function(x, y) {
-        return test.assertExists(pointSelector(x, y) + ".blackstone", 'There is a black stone at the expected point');
-      };
-      test.assertPointIsWhite = function(x, y) {
-        return test.assertExists(pointSelector(x, y) + ".whitestone", 'There is a white stone at the expected point');
-      };
-      test.assertPointIsEmpty = function(x, y) {
-        return test.assertExists(pointSelector(x, y) + ".nostone", 'The specified point is empty as expected');
-      };
       clearGamesForPlayer(ONE_EMAIL);
       clearGamesForPlayer(TWO_EMAIL);
       createGame(ONE_EMAIL, TWO_EMAIL, ['.b.', 'bw.', '.b.']);
@@ -254,19 +261,21 @@
           return _this.assertNumGames(test, 1, 0);
         };
       })(this));
-      return casper.thenClick('#your_turn_games li:last-child a', function() {
-        test.assertExists('table.goban', 'The Go board does exist.');
-        test.assertDoesntExist('.confirm_button:enabled', 'no usable confirm button appears');
-        test.assertPointIsEmpty(0, 0);
-        test.assertPointIsBlack(1, 0);
-        test.assertPointIsEmpty(2, 0);
-        test.assertPointIsBlack(0, 1);
-        test.assertPointIsWhite(1, 1);
-        test.assertPointIsEmpty(2, 1);
-        test.assertPointIsEmpty(0, 2);
-        test.assertPointIsBlack(1, 2);
-        return test.assertPointIsEmpty(2, 2);
-      });
+      return casper.thenClick('#your_turn_games li:last-child a', (function(_this) {
+        return function() {
+          test.assertExists('table.goban', 'The Go board does exist.');
+          test.assertDoesntExist('.confirm_button:enabled', 'no usable confirm button appears');
+          _this.assertPointIsEmpty(test, 0, 0);
+          _this.assertPointIsBlack(test, 1, 0);
+          _this.assertPointIsEmpty(test, 2, 0);
+          _this.assertPointIsBlack(test, 0, 1);
+          _this.assertPointIsWhite(test, 1, 1);
+          _this.assertPointIsEmpty(test, 2, 1);
+          _this.assertPointIsEmpty(test, 0, 2);
+          _this.assertPointIsBlack(test, 1, 2);
+          return _this.assertPointIsEmpty(test, 2, 2);
+        };
+      })(this));
     };
 
     return PlaceStonesTest;
@@ -314,18 +323,6 @@
         test.assertEqual(counts.black, black, 'Expected number of black stones');
         return test.assertEqual(counts.white, white, 'Expected number of white stones');
       };
-      test.assertEmptyBoard = function() {
-        return test.assertStonePointCounts(19 * 19, 0, 0);
-      };
-      test.assertPointIsBlack = function(x, y) {
-        return test.assertExists(pointSelector(x, y) + ".blackstone", 'There is a black stone at the expected point');
-      };
-      test.assertPointIsWhite = function(x, y) {
-        return test.assertExists(pointSelector(x, y) + ".whitestone", 'There is a white stone at the expected point');
-      };
-      test.assertPointIsEmpty = function(x, y) {
-        return test.assertExists(pointSelector(x, y) + ".nostone", 'The specified point is empty as expected');
-      };
       ONE_EMAIL = 'player@one.com';
       TWO_EMAIL = 'playa@dos.es';
       clearGamesForPlayer(ONE_EMAIL);
@@ -359,11 +356,13 @@
         test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
         return test.assertExists('.confirm_button:enabled');
       });
-      casper.thenClick(pointSelector(15, 3), function() {
-        test.assertStonePointCounts(initialEmptyCount - 1, 3, 2);
-        test.assertPointIsEmpty(1, 1);
-        return test.assertPointIsWhite(1, 0);
-      });
+      casper.thenClick(pointSelector(15, 3), (function(_this) {
+        return function() {
+          test.assertStonePointCounts(initialEmptyCount - 1, 3, 2);
+          _this.assertPointIsEmpty(test, 1, 1);
+          return _this.assertPointIsWhite(test, 1, 0);
+        };
+      })(this));
       casper.thenClick(pointSelector(1, 1), function() {
         return test.assertStonePointCounts(initialEmptyCount + 1, 3, 0);
       });
@@ -388,10 +387,12 @@
         return test.assertStonePointCounts(initialEmptyCount, 3, 1);
       });
       casper.thenClick('.confirm_button');
-      return casper.thenClick('#not_your_turn_games li:first-child a', function() {
-        test.assertExists('.goban', 'The Go board still exists.');
-        return test.assertEmptyBoard();
-      });
+      return casper.thenClick('#not_your_turn_games li:first-child a', (function(_this) {
+        return function() {
+          test.assertExists('.goban', 'The Go board still exists.');
+          return _this.assertEmptyBoard(test);
+        };
+      })(this));
     };
 
     return GameInterfaceTest;
