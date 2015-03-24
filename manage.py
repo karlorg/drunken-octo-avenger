@@ -19,6 +19,14 @@ def remake_db():
     db.drop_all()
     db.create_all()
 
+def run_command(command):
+    result = os.system(command)
+    return 0 if result == 0 else 1
+
+@manager.command
+def coffeelint():
+    run_command('coffeelint app/coffee')
+
 @manager.command
 def test_browser(name):
     """Run a single browser test, given its name (excluding `test_`)"""
