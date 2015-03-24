@@ -524,7 +524,11 @@
     return ".col-" + x + ".row-" + y;
   };
 
-  runTest('ClientSideJsTest');
+  if (casper.cli.has("single")) {
+    runTest(casper.cli.options['single']);
+  } else {
+    runAll();
+  }
 
   casper.run(function() {
     casper.log("shutting down...");

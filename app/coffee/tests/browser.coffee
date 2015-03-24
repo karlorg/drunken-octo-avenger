@@ -396,7 +396,10 @@ pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 
 # run it
 
-runAll()
+if casper.cli.has("single")
+  runTest casper.cli.options['single']
+else
+  runAll()
 
 casper.run ->
   casper.log "shutting down..."

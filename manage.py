@@ -27,6 +27,15 @@ def test_browser(name):
     return (0 if result == 0 else 1)
 
 @manager.command
+def test_casper(name=None):
+    """Run the specified single CasperJS test, or all if not given"""
+    from app.browser_tests.test_phantom import PhantomTest
+    phantom_test = PhantomTest('test_run')
+    phantom_test.set_single(name)
+    result = phantom_test.test_run()
+    return (0 if result == 0 else 1)
+
+@manager.command
 def test_module(module):
     """ For example you might do `python manage.py test_module app.tests.test'
     """
@@ -44,10 +53,12 @@ def test_all():
     return (0 if result == 0 else 1)
 
 @manager.command
-def test(browser=None, module=None, package=None):
+def test(browser=None, casper=None, module=None, package=None):
     """For convenience, you can use `test -x` as a shorthand for other tests"""
     if browser is not None:
         return test_browser(browser)
+    elif casper is not None:
+        return test_casper(casper)
     elif module is not None:
         return test_module(module)
     elif package is not None:
