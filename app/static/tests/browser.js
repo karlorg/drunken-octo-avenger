@@ -58,6 +58,21 @@
       });
     };
 
+    BrowserTest.prototype.getLastGameLink = function(your_turn) {
+      var evaluate_fun, list_id, selector;
+      list_id = your_turn ? 'your_turn_games' : 'not_your_turn_games';
+      selector = '#' + list_id + ' li:last a';
+      evaluate_fun = function(selector) {
+        var link;
+        link = {
+          target: $(selector).attr('href'),
+          text: $(selector).text()
+        };
+        return link;
+      };
+      return casper.evaluate(evaluate_fun, selector);
+    };
+
     BrowserTest.prototype.assertEmptyBoard = function(test) {
       return this.assertStonePointCounts(test, 19 * 19, 0, 0);
     };
@@ -193,10 +208,10 @@
 
     ChallengeTest.prototype.description = "Tests the 'Challenge a player process";
 
-    ChallengeTest.prototype.num_tests = 18;
+    ChallengeTest.prototype.num_tests = 17;
 
     ChallengeTest.prototype.test_body = function(test) {
-      var OCHI_EMAIL, SHINDOU_EMAIL, TOUYA_EMAIL, i, len, p, ref, shindous_game_link, shindous_game_text;
+      var OCHI_EMAIL, SHINDOU_EMAIL, TOUYA_EMAIL, i, len, p, ref, shindous_game_link;
       SHINDOU_EMAIL = 'shindou@ki-in.jp';
       TOUYA_EMAIL = 'touya@ki-in.jp';
       OCHI_EMAIL = 'ochino1@ki-in.jp';
@@ -219,31 +234,19 @@
         return this.fillSelectors('form', form_values, true);
       });
       shindous_game_link = null;
-      shindous_game_text = null;
       casper.thenOpen(serverUrl, (function(_this) {
         return function() {
           _this.assertNumGames(test, 0, 1);
-          shindous_game_link = casper.evaluate(function() {
-            return $('#not_your_turn_games li:last a').attr("href");
-          });
-          return shindous_game_text = casper.evaluate(function() {
-            return $('#not_your_turn_games li:last a').text();
-          });
+          return shindous_game_link = _this.getLastGameLink(false);
         };
       })(this));
       createLoginSession(TOUYA_EMAIL);
       casper.thenOpen(serverUrl, (function(_this) {
         return function() {
-          var touyas_game_link, touyas_game_text;
+          var touyas_game_link;
           _this.assertNumGames(test, 1, 0);
-          touyas_game_link = casper.evaluate(function() {
-            return $('#your_turn_games li:last a').attr("href");
-          });
-          touyas_game_text = casper.evaluate(function() {
-            return $('#your_turn_games li:last a').text();
-          });
-          test.assertEqual(shindous_game_link, touyas_game_link, "both players see the same game link");
-          return test.assertEqual(shindous_game_text, touyas_game_text, "both players see the same game text");
+          touyas_game_link = _this.getLastGameLink(true);
+          return test.assertEqual(shindous_game_link, touyas_game_link, "both players see the same game link (target & text)");
         };
       })(this));
       createLoginSession(OCHI_EMAIL);

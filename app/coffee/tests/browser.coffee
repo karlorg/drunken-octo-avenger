@@ -44,6 +44,16 @@ class BrowserTest
       test.assertEqual game_counts.not_your_turn, players_wait,
                        'Expected number of not-your-turn games'
 
+  getLastGameLink: (your_turn) ->
+    list_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
+    selector = '#' + list_id + ' li:last a'
+    evaluate_fun = (selector) ->
+      link = 
+        target: $(selector).attr('href')
+        text: $(selector).text()
+      return link
+    casper.evaluate evaluate_fun, selector
+
   assertEmptyBoard: (test) =>
       @assertStonePointCounts test, 19*19, 0, 0
 
@@ -130,7 +140,7 @@ statusTest.run()
 
 class ChallengeTest extends BrowserTest
   description: "Tests the 'Challenge a player process"
-  num_tests: 18
+  num_tests: 17
   test_body: (test) =>
   # Be sure not to use the 'createGame' shortcut.
     SHINDOU_EMAIL = 'shindou@ki-in.jp'
@@ -152,27 +162,18 @@ class ChallengeTest extends BrowserTest
     # both players load the front page and see links to the same game
 
     shindous_game_link = null
-    shindous_game_text = null
     # Shindou
     casper.thenOpen serverUrl, =>
       @assertNumGames test, 0, 1
-      shindous_game_link = casper.evaluate ->
-        $('#not_your_turn_games li:last a').attr("href")
-      shindous_game_text = casper.evaluate ->
-        $('#not_your_turn_games li:last a').text()
+      shindous_game_link = @getLastGameLink false
 
     ## Touya
     createLoginSession TOUYA_EMAIL
     casper.thenOpen serverUrl, =>
       @assertNumGames test, 1, 0
-      touyas_game_link = casper.evaluate ->
-        $('#your_turn_games li:last a').attr("href")
-      touyas_game_text = casper.evaluate ->
-        $('#your_turn_games li:last a').text()
+      touyas_game_link = @getLastGameLink true
       test.assertEqual shindous_game_link, touyas_game_link,
-                       "both players see the same game link"
-      test.assertEqual shindous_game_text, touyas_game_text,
-                       "both players see the same game text"
+                       "both players see the same game link (target & text)"
 
     # a third user, Ochi, logs in.  The new game is not on his list.
     createLoginSession OCHI_EMAIL
