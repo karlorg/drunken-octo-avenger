@@ -62,10 +62,10 @@
     }
 
     BrowserTest.prototype.run = function() {
-      return casper.test.begin(this.description, this.num_tests, (function(_this) {
+      return casper.test.begin(this.description, this.numTests, (function(_this) {
         return function(test) {
           casper.start();
-          _this.test_body(test);
+          _this.testBody(test);
           return casper.then(function() {
             return test.done();
           });
@@ -77,7 +77,7 @@
 
     BrowserTest.prototype.description = 'This class needs a description';
 
-    BrowserTest.prototype.num_tests = 0;
+    BrowserTest.prototype.numTests = 0;
 
     BrowserTest.prototype.assertNumGames = function(test, players_turn, players_wait) {
       return casper.thenOpen(serverUrl, function() {
@@ -172,9 +172,9 @@
 
     ClientSideJsTest.prototype.description = "Run client-side JS tests and ensure they pass.";
 
-    ClientSideJsTest.prototype.num_tests = 1;
+    ClientSideJsTest.prototype.numTests = 1;
 
-    ClientSideJsTest.prototype.test_body = function(test) {
+    ClientSideJsTest.prototype.testBody = function(test) {
       return casper.thenOpen(serverUrl + "/static/tests/tests.html", function() {
         var foundFunc, predicate, timeoutFunc;
         predicate = function() {
@@ -211,9 +211,9 @@
 
     LoginTest.prototype.description = 'Test the login procedure';
 
-    LoginTest.prototype.num_tests = 3;
+    LoginTest.prototype.numTests = 3;
 
-    LoginTest.prototype.test_body = function(test) {
+    LoginTest.prototype.testBody = function(test) {
       casper.thenOpen(serverUrl, function() {
         return test.assertTitle('Go', 'The front page title is the one expected');
       });
@@ -239,7 +239,7 @@
     extend(StatusTest, superClass);
 
     function StatusTest() {
-      this.test_body = bind(this.test_body, this);
+      this.testBody = bind(this.testBody, this);
       return StatusTest.__super__.constructor.apply(this, arguments);
     }
 
@@ -247,9 +247,9 @@
 
     StatusTest.prototype.description = 'Test the status listings';
 
-    StatusTest.prototype.num_tests = 12;
+    StatusTest.prototype.numTests = 12;
 
-    StatusTest.prototype.test_body = function(test) {
+    StatusTest.prototype.testBody = function(test) {
       var ONE_EMAIL, THREE_EMAIL, TWO_EMAIL, assertNumGames, i, len, p, ref;
       ONE_EMAIL = 'playa@uno.es';
       TWO_EMAIL = 'player@two.co.uk';
@@ -283,7 +283,7 @@
     extend(ChallengeTest, superClass);
 
     function ChallengeTest() {
-      this.test_body = bind(this.test_body, this);
+      this.testBody = bind(this.testBody, this);
       return ChallengeTest.__super__.constructor.apply(this, arguments);
     }
 
@@ -291,9 +291,9 @@
 
     ChallengeTest.prototype.description = "Tests the 'Challenge a player process";
 
-    ChallengeTest.prototype.num_tests = 17;
+    ChallengeTest.prototype.numTests = 17;
 
-    ChallengeTest.prototype.test_body = function(test) {
+    ChallengeTest.prototype.testBody = function(test) {
       var OCHI_EMAIL, SHINDOU_EMAIL, TOUYA_EMAIL, i, len, p, ref, shindous_game_link;
       SHINDOU_EMAIL = 'shindou@ki-in.jp';
       TOUYA_EMAIL = 'touya@ki-in.jp';
@@ -350,7 +350,7 @@
     extend(PlaceStonesTest, superClass);
 
     function PlaceStonesTest() {
-      this.test_body = bind(this.test_body, this);
+      this.testBody = bind(this.testBody, this);
       return PlaceStonesTest.__super__.constructor.apply(this, arguments);
     }
 
@@ -358,9 +358,9 @@
 
     PlaceStonesTest.prototype.description = "Test Placing Stones";
 
-    PlaceStonesTest.prototype.num_tests = 18;
+    PlaceStonesTest.prototype.numTests = 18;
 
-    PlaceStonesTest.prototype.test_body = function(test) {
+    PlaceStonesTest.prototype.testBody = function(test) {
       var ONE_EMAIL, TWO_EMAIL, initialEmptyCount;
       ONE_EMAIL = 'player@one.com';
       TWO_EMAIL = 'playa@dos.es';
@@ -402,7 +402,7 @@
     extend(GameInterfaceTest, superClass);
 
     function GameInterfaceTest() {
-      this.test_body = bind(this.test_body, this);
+      this.testBody = bind(this.testBody, this);
       return GameInterfaceTest.__super__.constructor.apply(this, arguments);
     }
 
@@ -410,9 +410,9 @@
 
     GameInterfaceTest.prototype.description = "Game interface";
 
-    GameInterfaceTest.prototype.num_tests = 43;
+    GameInterfaceTest.prototype.numTests = 43;
 
-    GameInterfaceTest.prototype.test_body = function(test) {
+    GameInterfaceTest.prototype.testBody = function(test) {
       var ONE_EMAIL, TWO_EMAIL, initialEmptyCount;
       ONE_EMAIL = 'player@one.com';
       TWO_EMAIL = 'playa@dos.es';
