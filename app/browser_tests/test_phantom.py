@@ -61,7 +61,7 @@ class PhantomTest(unittest.TestCase):
     def run_phantom_test(self):
         cake_output = subprocess.check_output(["cake", "build"],
                                               stderr=subprocess.STDOUT)
-        self.assertEqual (cake_output, b'', 'phantomjs test failed: '
+        self.assertEqual(cake_output, b'', 'phantomjs test failed: '
                                            'coffeescript build error\n' +
                                            str(cake_output))
         return_code = subprocess.call([

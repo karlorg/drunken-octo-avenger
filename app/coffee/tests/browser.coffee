@@ -13,6 +13,21 @@ unless (host.match /localhost/) or (host.match /staging/)
 serverUrl = "#{host}#{portString}"
 casper.echo "Testing against server at #{serverUrl}"
 
+# test inventory management
+
+testObjects = {}
+
+registerTest = (className, test) ->
+  testObjects[className] = test
+
+runTest = (name) ->
+  test = testObjects[name]
+  test.run()
+
+runAll = ->
+  for own name of testObjects
+    runTest name
+
 # test suites
 class BrowserTest
   # An abstract base class for our browser tests
@@ -104,8 +119,7 @@ class ClientSideJsTest extends BrowserTest
       timeoutFunc = -> test.fail "Couldn't detect pass or fail for Qunit tests"
       casper.waitFor predicate, foundFunc, timeoutFunc, 5000
 
-clientSideJsTest = new ClientSideJsTest
-clientSideJsTest.run()
+registerTest 'ClientSideJsTest', new ClientSideJsTest
 
 
 class LoginTest extends BrowserTest
@@ -129,8 +143,7 @@ class LoginTest extends BrowserTest
       test.skip 1
       # test.assertExists '#logout'
 
-loginTest = new LoginTest
-loginTest.run()
+registerTest 'LoginTest', new LoginTest
 
 class StatusTest extends BrowserTest
   description: 'Test the status listings'
@@ -156,8 +169,7 @@ class StatusTest extends BrowserTest
     # player three has one game in which it's her turn, and one other
     assertNumGames THREE_EMAIL, 1, 1
 
-statusTest = new StatusTest
-statusTest.run()
+registerTest 'StatusTest', new StatusTest
 
 class ChallengeTest extends BrowserTest
   description: "Tests the 'Challenge a player process"
@@ -202,8 +214,7 @@ class ChallengeTest extends BrowserTest
       @assertNumGames test, 0, 0
 
 
-challengeTest = new ChallengeTest
-challengeTest.run()
+registerTest 'ChallengeTest', new ChallengeTest
 
 class PlaceStonesTest extends BrowserTest
   description: "Test Placing Stones"
@@ -250,8 +261,7 @@ class PlaceStonesTest extends BrowserTest
       @assertPointIsBlack test, 1, 2
       @assertPointIsEmpty test, 2, 2
 
-placeStonesTest = new PlaceStonesTest
-placeStonesTest.run()
+registerTest 'PlaceStonesTest', new PlaceStonesTest
 
 class GameInterfaceTest extends BrowserTest
   description: "Game interface"
@@ -347,8 +357,7 @@ class GameInterfaceTest extends BrowserTest
       test.assertExists '.goban', 'The Go board still exists.'
       @assertEmptyBoard test
 
-gameInterfaceTest = new GameInterfaceTest
-gameInterfaceTest.run()
+registerTest 'GameInterfaceTest', new GameInterfaceTest
 
 
 # helper functions
@@ -385,6 +394,9 @@ createLoginSession = (email) ->
 
 pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 
+# run it
+
+runAll()
 
 casper.run ->
   casper.log "shutting down..."
