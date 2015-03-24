@@ -44,15 +44,17 @@ class BrowserTest
       test.assertEqual game_counts.not_your_turn, players_wait,
                        'Expected number of not-your-turn games'
 
-  getLastGameLink: (your_turn) ->
+  lastGameSelector: (your_turn) ->
     list_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
-    selector = '#' + list_id + ' li:last a'
+    return '#' + list_id + ' li:last-child a'
+
+  getLastGameLink: (your_turn) =>
     evaluate_fun = (selector) ->
       link = 
         target: $(selector).attr('href')
         text: $(selector).text()
       return link
-    casper.evaluate evaluate_fun, selector
+    casper.evaluate evaluate_fun, @lastGameSelector(your_turn)
 
   assertEmptyBoard: (test) =>
       @assertStonePointCounts test, 19*19, 0, 0
@@ -206,7 +208,7 @@ class PlaceStonesTest extends BrowserTest
       @assertNumGames test, 1, 0
 
     # select the most recent game
-    casper.thenClick '#your_turn_games li:last-child a', =>
+    casper.thenClick (@lastGameSelector true), =>
       # on the game page is a table with class 'goban'
       test.assertExists 'table.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
@@ -255,7 +257,7 @@ class GameInterfaceTest extends BrowserTest
       @assertNumGames test, 2, 0
 
     # select the most recent game
-    casper.thenClick '#your_turn_games li:last-child a', =>
+    casper.thenClick (@lastGameSelector true), =>
       # on the game page is a table with class 'goban'
       test.assertExists 'table.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
@@ -301,8 +303,9 @@ class GameInterfaceTest extends BrowserTest
     createLoginSession TWO_EMAIL
     casper.thenOpen serverUrl, =>
       @assertNumGames test, 1, 1
-      
-    casper.thenClick '#your_turn_games a', =>
+
+    # It should be the only game in player two's 'your_turn' games
+    casper.thenClick (@lastGameSelector true), =>
       # the captured stones are still captured
       @assertStonePointCounts test, initialEmptyCount+1, 3, 0
 

@@ -25,6 +25,7 @@
     function BrowserTest() {
       this.assertStonePointCounts = bind(this.assertStonePointCounts, this);
       this.assertEmptyBoard = bind(this.assertEmptyBoard, this);
+      this.getLastGameLink = bind(this.getLastGameLink, this);
       this.run = bind(this.run, this);
     }
 
@@ -58,10 +59,14 @@
       });
     };
 
-    BrowserTest.prototype.getLastGameLink = function(your_turn) {
-      var evaluate_fun, list_id, selector;
+    BrowserTest.prototype.lastGameSelector = function(your_turn) {
+      var list_id;
       list_id = your_turn ? 'your_turn_games' : 'not_your_turn_games';
-      selector = '#' + list_id + ' li:last a';
+      return '#' + list_id + ' li:last-child a';
+    };
+
+    BrowserTest.prototype.getLastGameLink = function(your_turn) {
+      var evaluate_fun;
       evaluate_fun = function(selector) {
         var link;
         link = {
@@ -70,7 +75,7 @@
         };
         return link;
       };
-      return casper.evaluate(evaluate_fun, selector);
+      return casper.evaluate(evaluate_fun, this.lastGameSelector(your_turn));
     };
 
     BrowserTest.prototype.assertEmptyBoard = function(test) {
@@ -291,7 +296,7 @@
           return _this.assertNumGames(test, 1, 0);
         };
       })(this));
-      return casper.thenClick('#your_turn_games li:last-child a', (function(_this) {
+      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban', 'The Go board does exist.');
           _this.assertStonePointCounts(test, initialEmptyCount, 3, 1);
@@ -344,7 +349,7 @@
           return _this.assertNumGames(test, 2, 0);
         };
       })(this));
-      casper.thenClick('#your_turn_games li:last-child a', (function(_this) {
+      casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban', 'The Go board does exist.');
           _this.assertStonePointCounts(test, initialEmptyCount, 2, 2);
@@ -391,7 +396,7 @@
           return _this.assertNumGames(test, 1, 1);
         };
       })(this));
-      casper.thenClick('#your_turn_games a', (function(_this) {
+      casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0);
         };
