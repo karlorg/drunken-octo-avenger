@@ -127,7 +127,6 @@
     extend(LoginTest, superClass);
 
     function LoginTest() {
-      this.test_body = bind(this.test_body, this);
       return LoginTest.__super__.constructor.apply(this, arguments);
     }
 

@@ -50,14 +50,14 @@ class BrowserTest
 
   getLastGameLink: (your_turn) =>
     evaluate_fun = (selector) ->
-      link = 
+      link =
         target: $(selector).attr('href')
         text: $(selector).text()
       return link
     casper.evaluate evaluate_fun, @lastGameSelector(your_turn)
 
   assertEmptyBoard: (test) =>
-      @assertStonePointCounts test, 19*19, 0, 0
+    @assertStonePointCounts test, 19*19, 0, 0
 
   assertPointIsBlack: (test, x, y) ->
     test.assertExists pointSelector(x,y) + ".blackstone",
@@ -92,7 +92,7 @@ class BrowserTest
 class LoginTest extends BrowserTest
   description: 'Test the login procedure'
   num_tests: 3
-  test_body: (test) =>
+  test_body: (test) ->
     casper.thenOpen serverUrl, ->
       test.assertTitle 'Go', 'The front page title is the one expected'
 
