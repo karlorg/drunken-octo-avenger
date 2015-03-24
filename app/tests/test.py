@@ -245,13 +245,19 @@ class TestStatusIntegrated(TestWithDb):
             with self.patch_render_template() as mock_render:
                 test_client.get(url_for('status'))
                 args, kwargs = mock_render.call_args
-        assert args[0] == "status.html"
+        self.assertEqual(args[0], "status.html")
         your_turn_games = kwargs['your_turn_games']
         not_your_turn_games = kwargs['not_your_turn_games']
-        assert game1 in your_turn_games
-        assert game4 in your_turn_games
-        assert game3 not in your_turn_games
-        assert game3 in not_your_turn_games
+
+        self.assertIn(game1, your_turn_games)
+        self.assertNotIn(game2, your_turn_games)
+        self.assertNotIn(game3, your_turn_games)
+        self.assertIn(game4, your_turn_games)
+
+        self.assertNotIn(game1, not_your_turn_games)
+        self.assertNotIn(game2, not_your_turn_games)
+        self.assertIn(game3, not_your_turn_games)
+        self.assertNotIn(game4, not_your_turn_games)
 
     def test_games_come_out_sorted(self):
         """Regression test: going via dictionaries can break sorting"""
@@ -370,11 +376,11 @@ class TestGetGobanFromMoves(unittest.TestCase):
                             'b': ('b.gif', 'blackstone'),
                             'w': ('w.gif', 'whitestone')}[color]
         point = goban[row][col]
-        self.assert_in(img, point['img'])
-        self.assert_in('row-{}'.format(str(row)), point['classes'])
-        self.assert_in('col-{}'.format(str(col)), point['classes'])
-        self.assert_in('gopoint', point['classes'])
-        self.assert_in(stone_class, point['classes'])
+        self.assertIn(img, point['img'])
+        self.assertIn('row-{}'.format(str(row)), point['classes'])
+        self.assertIn('col-{}'.format(str(col)), point['classes'])
+        self.assertIn('gopoint', point['classes'])
+        self.assertIn(stone_class, point['classes'])
 
 
     def test_simple_example_game(self):

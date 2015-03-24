@@ -69,7 +69,11 @@ def game(game_no):
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
-    """If a valid move was specified, play it (add to db)."""
+    """If a valid move was specified, play it (add to db).
+
+    We require that the supplied move include the move number to help detect
+    duplicated requests.
+    """
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
@@ -261,12 +265,18 @@ def clear_games_for_player_internal(email):
     games_as_black = Game.query.filter(Game.black == email).all()
     games_as_white = Game.query.filter(Game.white == email).all()
     games = games_as_black + games_as_white
-    moves = Move.query.filter(Move.game in games).all()
+    for game in games:
+        delete_game_from_db(game)
+
+def delete_game_from_db(game):
+    moves = Move.query.filter(Move.game == game).all()
     for move in moves:
         db.session.delete(move)
-    for game in games:
-        db.session.delete(game)
-        db.session.commit()
+    setup_stones = SetupStone.query.filter(SetupStone.game == game).all()
+    for setup_stone in setup_stones:
+        db.session.delete(setup_stone)
+    db.session.delete(game)
+    db.session.commit()
 
 
 # helper functions
@@ -535,7 +545,7 @@ class Move(db.Model):
 
     def __repr__(self):
         return '<Move {0}: {1} at ({2},{3})>'.format(
-                self.move_no, self.color.name,
+                self.move_no, Move.Color(self.color).name,
                 self.column, self.row)
 
 class SetupStone(db.Model):
@@ -556,7 +566,7 @@ class SetupStone(db.Model):
 
     def __repr__(self):
         return '<SetupStone {0}: {1} at ({2},{3})>'.format(
-                self.before_move, self.color.name,
+                self.before_move, Move.Color(self.color).name,
                 self.column, self.row)
 
 
