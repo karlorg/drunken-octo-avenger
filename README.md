@@ -66,10 +66,11 @@ You can also use various `python manage.py` commands, eg.:
     python manage.py test_package app.tests
     python manage.py test_module app.browser_tests.test_frontpage
     python manage.py test_browser frontpage
+    python manage.py test_casper ChallengeTest
 
 As a shorthand, you can also use `python manage.py test -x` where `x` is `p`
-for package, `m` for module or `b` for browser, or leave out the option to test
-all.
+for package, `m` for module, `b` for browser or `c` for casper, or leave out
+the option to test all.
 
 You can also use `python -m unittest [discover]` as normal.
 
