@@ -89,6 +89,25 @@ class BrowserTest
     test.assertEqual counts.white, white, 'Expected number of white stones'
 
 
+class ClientSideJsTest extends BrowserTest
+  description: "Run client-side JS tests and ensure they pass."
+  num_tests: 1
+  test_body: (test) ->
+    casper.thenOpen serverUrl + "/static/tests/tests.html", ->
+      predicate = ->
+        (casper.exists '.qunit-pass') or (casper.exists '.qunit-fail')
+      foundFunc = ->
+        if casper.exists '.qunit-pass'
+          test.pass 'Qunit tests passed'
+        else if casper.exists '.qunit-fail'
+          test.fail 'Qunit tests failed'
+      timeoutFunc = -> test.fail "Couldn't detect pass or fail for Qunit tests"
+      casper.waitFor predicate, foundFunc, timeoutFunc, 5000
+
+clientSideJsTest = new ClientSideJsTest
+clientSideJsTest.run()
+
+
 class LoginTest extends BrowserTest
   description: 'Test the login procedure'
   num_tests: 3
