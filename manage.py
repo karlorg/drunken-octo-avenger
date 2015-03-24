@@ -20,36 +20,36 @@ def remake_db():
     db.create_all()
 
 def run_command(command):
+    """ We frequently inspect the return result of a command so this is just
+        a utility function to do this. Generally we call this as:
+        return run_command ('command_name args')
+    """
     result = os.system(command)
     return 0 if result == 0 else 1
 
 @manager.command
 def coffeelint():
-    run_command('coffeelint app/coffee')
+    return run_command('coffeelint app/coffee')
 
 @manager.command
 def test_browser(name):
     """Run a single browser test, given its name (excluding `test_`)"""
-    result = os.system(
-            "python -m unittest app.browser_tests.test_{}".format(name))
-    return (0 if result == 0 else 1)
+    command = "python -m unittest app.browser_tests.test_{}".format(name)
+    return run_command(command)
 
 @manager.command
 def test_module(module):
     """ For example you might do `python manage.py test_module app.tests.test'
     """
-    result = os.system("python -m unittest " + module)
-    return (0 if result == 0 else 1)
+    return run_command("python -m unittest " + module)
 
 @manager.command
 def test_package(directory):
-    result = os.system("python -m unittest discover " + directory)
-    return (0 if result == 0 else 1)
+    return run_command("python -m unittest discover " + directory)
 
 @manager.command
 def test_all():
-    result = os.system("python -m unittest discover")
-    return (0 if result == 0 else 1)
+    return run_command("python -m unittest discover")
 
 @manager.command
 def test(browser=None, module=None, package=None):
