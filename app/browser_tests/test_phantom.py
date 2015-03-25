@@ -75,7 +75,6 @@ class PhantomTest(unittest.TestCase):
         coffee_build_result = manage.coffeebuild()
         self.assertEqual (coffee_build_result, 0,
                           'phantomjs test failed: coffeescript build error.')
-        return_code = subprocess.call([
         command = [
                 "./node_modules/.bin/casperjs", "test",
                 "--fail-fast",  # stop at first failed assertion
