@@ -32,6 +32,10 @@ def coffeelint():
     return run_command('coffeelint app/coffee')
 
 @manager.command
+def coffeebuild():
+    return run_command('coffee -c -o app/static app/coffee')
+
+@manager.command
 def test_browser(name):
     """Run a single browser test, given its name (excluding `test_`)"""
     command = "python -m unittest app.browser_tests.test_{}".format(name)
