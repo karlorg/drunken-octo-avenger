@@ -21,13 +21,18 @@ def board_from_strings(rows):
     board = go_rules.Board(len(rows[0]))
     for r, row in enumerate(rows):
         for c, char in enumerate(row):
-            if char is 'b':
+            if char == 'b':
                 board.set_point(r, c, black)
-            elif char is 'w':
+            elif char == 'w':
                 board.set_point(r, c, white)
     return board
 
 class TestUpdateBoardWithMove(unittest.TestCase):
+
+    def test_place_stone(self):
+        board = board_from_strings(['..', '..'])
+        board.update_with_move(black, 0, 0)
+        self.assertEqual(board.get_point(0, 0), black)
 
     def test_single_stone_capture(self):
         board = board_from_strings(['.b.',

@@ -22,13 +22,25 @@ logging.disable(logging.CRITICAL)
 
 class PhantomTest(unittest.TestCase):
 
+    def __init__(self, methodName='runTest'):
+        self.single = None
+        super().__init__(methodName)
+
+    def set_single(self, single):
+        """Set a single CasperJS test (class name) to run."""
+        self.single = single
+
     def test_run(self):
         try:
             self._spawn_live_server()
-            self.run_phantom_test()
+            return_code = self.run_phantom_test(self.single)
         finally:
             self._post_teardown()
             self._terminate_live_server()
+        try:
+            return (0 if return_code == 0 else 1)
+        except NameError:
+            return 1
 
     def _spawn_live_server(self):
         self.port = config.LIVESERVER_PORT
@@ -58,17 +70,22 @@ class PhantomTest(unittest.TestCase):
         if self._process:
             self._process.terminate()
 
-    def run_phantom_test(self):
+    def run_phantom_test(self, single=None):
         cake_output = subprocess.check_output(["cake", "build"],
                                               stderr=subprocess.STDOUT)
-        self.assertEqual (cake_output, b'', 'phantomjs test failed: '
+        self.assertEqual(cake_output, b'', 'phantomjs test failed: '
                                            'coffeescript build error\n' +
                                            str(cake_output))
-        return_code = subprocess.call([
+        command = [
                 "./node_modules/.bin/casperjs", "test",
                 "--fail-fast",  # stop at first failed assertion
-                "app/static/tests/browser.js"])
+                "app/static/tests/browser.js"
+        ]
+        if single:
+            command.append("--single={}".format(str(single)))
+        return_code = subprocess.call(command)
         self.assertEqual(return_code, 0, "phantomjs test failed")
+        return (0 if return_code == 0 else 1)
 
 if __name__ == "__main__":
     tester = PhantomTest()

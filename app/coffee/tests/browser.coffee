@@ -13,19 +13,46 @@ unless (host.match /localhost/) or (host.match /staging/)
 serverUrl = "#{host}#{portString}"
 casper.echo "Testing against server at #{serverUrl}"
 
+# test inventory management
+
+testObjectsByName = {}
+allTestObjects = []
+
+registerTest = (test) ->
+  allTestObjects.push test
+  for name in test.names
+    testObjectsByName[name] = test
+
+runTest = (name) ->
+  test = testObjectsByName[name]
+  test.run()
+
+runAll = ->
+  for test in allTestObjects
+    test.run()
+
 # test suites
 class BrowserTest
   # An abstract base class for our browser tests
-  # A concrete instance must define the 'test_body' method called by
-  # the 'run' method below. You must also set the 'description' and 'num_tests'
-  # properties
+  #
+  # Instances should define the following properties:
+  #
+  # * testBody: called by `run` below to execute the test
+  # * names: array of names by which a caller can identify this test (with the
+  #          `--single` command line option)
+  # * description
+  # * numTests: expected number of assertions
 
   run: =>
-    casper.test.begin @description, @num_tests, (test) =>
+    casper.test.begin @description, @numTests, (test) =>
       casper.start()
-      @test_body(test)
+      @testBody(test)
       casper.then ->
         test.done()
+
+  names: []
+  description: 'This class needs a description'
+  numTests: 0
 
   # Utility functions used by more than one test class
   assertNumGames: (test, players_turn, players_wait) ->
@@ -89,10 +116,30 @@ class BrowserTest
     test.assertEqual counts.white, white, 'Expected number of white stones'
 
 
+class ClientSideJsTest extends BrowserTest
+  names: ['ClientSideJsTest', 'qunit']
+  description: "Run client-side JS tests and ensure they pass."
+  numTests: 1
+  testBody: (test) ->
+    casper.thenOpen serverUrl + "/static/tests/tests.html", ->
+      predicate = ->
+        (casper.exists '.qunit-pass') or (casper.exists '.qunit-fail')
+      foundFunc = ->
+        if casper.exists '.qunit-pass'
+          test.pass 'Qunit tests passed'
+        else if casper.exists '.qunit-fail'
+          test.fail 'Qunit tests failed'
+      timeoutFunc = -> test.fail "Couldn't detect pass or fail for Qunit tests"
+      casper.waitFor predicate, foundFunc, timeoutFunc, 5000
+
+registerTest new ClientSideJsTest
+
+
 class LoginTest extends BrowserTest
+  names: ['LoginTest', 'login']
   description: 'Test the login procedure'
-  num_tests: 3
-  test_body: (test) ->
+  numTests: 3
+  testBody: (test) ->
     casper.thenOpen serverUrl, ->
       test.assertTitle 'Go', 'The front page title is the one expected'
 
@@ -110,13 +157,13 @@ class LoginTest extends BrowserTest
       test.skip 1
       # test.assertExists '#logout'
 
-loginTest = new LoginTest
-loginTest.run()
+registerTest new LoginTest
 
 class StatusTest extends BrowserTest
+  names: ['StatusTest', 'status']
   description: 'Test the status listings'
-  num_tests: 12
-  test_body: (test) =>
+  numTests: 12
+  testBody: (test) =>
     ONE_EMAIL = 'playa@uno.es'
     TWO_EMAIL = 'player@two.co.uk'
     THREE_EMAIL = 'plagxo@tri.eo'
@@ -137,13 +184,13 @@ class StatusTest extends BrowserTest
     # player three has one game in which it's her turn, and one other
     assertNumGames THREE_EMAIL, 1, 1
 
-statusTest = new StatusTest
-statusTest.run()
+registerTest new StatusTest
 
 class ChallengeTest extends BrowserTest
+  names: ['ChallengeTest', 'challenge']
   description: "Tests the 'Challenge a player process"
-  num_tests: 17
-  test_body: (test) =>
+  numTests: 17
+  testBody: (test) =>
   # Be sure not to use the 'createGame' shortcut.
     SHINDOU_EMAIL = 'shindou@ki-in.jp'
     TOUYA_EMAIL = 'touya@ki-in.jp'
@@ -183,13 +230,13 @@ class ChallengeTest extends BrowserTest
       @assertNumGames test, 0, 0
 
 
-challengeTest = new ChallengeTest
-challengeTest.run()
+registerTest new ChallengeTest
 
 class PlaceStonesTest extends BrowserTest
+  names: ['PlaceStonesTest']
   description: "Test Placing Stones"
-  num_tests: 18
-  test_body: (test) =>
+  numTests: 18
+  testBody: (test) =>
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
 
@@ -231,13 +278,13 @@ class PlaceStonesTest extends BrowserTest
       @assertPointIsBlack test, 1, 2
       @assertPointIsEmpty test, 2, 2
 
-placeStonesTest = new PlaceStonesTest
-placeStonesTest.run()
+registerTest new PlaceStonesTest
 
 class GameInterfaceTest extends BrowserTest
+  names: ['GameInterfaceTest', 'game']
   description: "Game interface"
-  num_tests: 43
-  test_body: (test) =>
+  numTests: 43
+  testBody: (test) =>
 
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
@@ -328,8 +375,7 @@ class GameInterfaceTest extends BrowserTest
       test.assertExists '.goban', 'The Go board still exists.'
       @assertEmptyBoard test
 
-gameInterfaceTest = new GameInterfaceTest
-gameInterfaceTest.run()
+registerTest new GameInterfaceTest
 
 
 # helper functions
@@ -366,6 +412,12 @@ createLoginSession = (email) ->
 
 pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 
+# run it
+
+if casper.cli.has("single")
+  runTest casper.cli.options['single']
+else
+  runAll()
 
 casper.run ->
   casper.log "shutting down..."
