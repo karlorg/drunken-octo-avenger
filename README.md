@@ -26,7 +26,7 @@ So far the only code that needs compiling is the coffeescript in `app/coffee`
 repo, so unless you're editing it, you shouldn't need to compile even that).
 In the repository root directory, run
 
-    cake build
+    python manage.py coffeebuild
 
 ## running
 

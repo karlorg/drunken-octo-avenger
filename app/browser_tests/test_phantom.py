@@ -15,6 +15,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 import config
+import manage
 
 # importing main enables logging, we switch it off again here to prevent
 # selenium debug lines from flooding the test output
@@ -71,11 +72,10 @@ class PhantomTest(unittest.TestCase):
             self._process.terminate()
 
     def run_phantom_test(self, single=None):
-        cake_output = subprocess.check_output(["cake", "build"],
-                                              stderr=subprocess.STDOUT)
-        self.assertEqual(cake_output, b'', 'phantomjs test failed: '
-                                           'coffeescript build error\n' +
-                                           str(cake_output))
+        coffee_build_result = manage.coffeebuild()
+        self.assertEqual (coffee_build_result, 0,
+                          'phantomjs test failed: coffeescript build error.')
+        return_code = subprocess.call([
         command = [
                 "./node_modules/.bin/casperjs", "test",
                 "--fail-fast",  # stop at first failed assertion
