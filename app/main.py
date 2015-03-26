@@ -57,7 +57,7 @@ def game(game_no):
         return redirect('/')
     moves = game.moves
     setup_stones = game.setup_stones
-    is_your_turn = is_players_turn_in_game(game, moves)
+    is_your_turn = is_players_turn_in_game(game, moves, [])
     goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
@@ -81,11 +81,11 @@ def playstone():
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
-    new_move = get_move_if_args_good(args=arguments, moves=moves)
+    new_move = get_move_if_args_good(args=arguments, moves=moves, passes=[])
     if new_move is None:
         flash("Invalid move received")
         return redirect(url_for('status'))
-    if not is_players_turn_in_game(game, moves):
+    if not is_players_turn_in_game(game, moves, []):
         flash("It's not your turn!")
         return redirect(url_for('status'))
 
@@ -101,6 +101,32 @@ def playstone():
         return redirect(url_for('game', game_no=game_no))
 
     db.session.add(new_move)
+    db.session.commit()
+    return redirect(url_for('status'))
+
+@app.route('/playpass', methods=['POST'])
+def playpass():
+    """Add a pass to the game in the db.
+
+    We require that the supplied pass include the move number to help detect
+    duplicated requests.
+    """
+    arguments = request.form.to_dict()
+    try:
+        game_no = int(arguments['game_no'])
+    except (KeyError, ValueError):
+        return redirect('/')
+    game = Game.query.filter(Game.id == game_no).first()
+    moves = game.moves
+    new_pass = get_pass_if_args_good(args=arguments, moves=moves, passes=[])
+    if new_pass is None:
+        flash("Invalid pass received")
+        return redirect(url_for('status'))
+    if not is_players_turn_in_game(game, moves, []):
+        flash("It's not your turn!")
+        return redirect(url_for('status'))
+
+    db.session.add(new_pass)
     db.session.commit()
     return redirect(url_for('status'))
 
@@ -301,7 +327,7 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_move_if_args_good(args, moves):
+def get_move_if_args_good(args, moves, passes):
     """Check GET arguments and if a new move is indicated, return it.
 
     Pure function; does not commit the new stone to the database.
@@ -313,12 +339,28 @@ def get_move_if_args_good(args, moves):
         column = int(args['column'])
     except (KeyError, ValueError):
         return None
-    if move_no != len(moves):
+    if move_no != len(moves) + len(passes):
         return None
     color = (Move.Color.black, Move.Color.white)[move_no % 2]
     return Move(
             game_no=game_no, move_no=move_no,
             row=row, column=column, color=color)
+
+def get_pass_if_args_good(args, moves, passes):
+    """Check GET arguments and if a new pass is indicated, return it.
+
+    Pure function; does not commit the new pass to the database.
+    """
+    try:
+        game_no = int(args['game_no'])
+        move_no = int(args['move_no'])
+    except (KeyError, ValueError):
+        return None
+    if move_no != len(moves) + len(passes):
+        return None
+    color = (Move.Color.black, Move.Color.white)[move_no % 2]
+    return Pass(
+            game_no=game_no, move_no=move_no, color=color)
 
 def get_goban_from_moves(moves, setup_stones=None):
     """Given the moves for a game, return game template data.
@@ -431,30 +473,31 @@ def partition_by_turn(player_email, games_to_moves):
     yes_turn = []
     no_turn = []
     for (game, moves,) in games_to_moves:
-        if is_players_turn_in_game(game, moves, email=player_email):
+        if is_players_turn_in_game(game, moves, [], email=player_email):
             yes_turn.append(game)
         else:
             no_turn.append(game)
     return (yes_turn, no_turn,)
 
-def is_players_turn_in_game(game, moves, email=None):
+def is_players_turn_in_game(game, moves, passes, email=None):
     """Test if it's `email`'s turn to move in `game` given `moves`.
 
     If `email` is passed, this acts as a pure function; otherwise, it reads
     email from the session.
 
-    `moves` should be the list of moves associated with `game`, since this
-    function won't access the database itself.
+    `moves` and `passes` should list moves and passes associated with `game`,
+    since this function won't access the database itself.
     """
     if email is None:
         try:
             email = session['email']
         except KeyError:
             return False
-    if len(moves) == 0:
+    if len(moves) + len(passes) == 0:
         last_move_color = Move.Color.white  # black to move
     else:
-        last_move = max(moves, key=lambda move: move.move_no)
+        last_move = max(moves + passes,
+                        key=lambda move_or_pass: move_or_pass.move_no)
         last_move_color = last_move.color
     if (game.black == email):
         return (last_move_color == Move.Color.white)
@@ -547,6 +590,22 @@ class Move(db.Model):
         return '<Move {0}: {1} at ({2},{3})>'.format(
                 self.move_no, Move.Color(self.color).name,
                 self.column, self.row)
+
+class Pass(db.Model):
+    __tablename__ = 'passes'
+    id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
+    move_no = db.Column(db.Integer)
+    color = db.Column(db.Integer)
+
+    def __init__(self, game_no, move_no, color):
+        self.game_no = game_no
+        self.move_no = move_no
+        self.color = color
+
+    def __repr__(self):
+        return '<Pass {0}: {1}>'.format(
+                self.move_no, Move.Color(self.color).name)
 
 class SetupStone(db.Model):
     __tablename__ = 'setupstones'

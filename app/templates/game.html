@@ -21,6 +21,9 @@
     {{ form.hidden_tag() }}
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
+</form>
+<form method="POST" action="{{ url_for('playpass') }}">
+    {{ form.hidden_tag() }}
     <button type="submit"
             class="pass_button" name='pass_button'>Pass</button>
 </form>
