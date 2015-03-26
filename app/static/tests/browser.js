@@ -516,7 +516,7 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 0;
+    PassAndScoringTest.prototype.numTests = 1;
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, i, len, p, ref;
@@ -531,7 +531,10 @@
       createLoginSession(BLACK_EMAIL);
       casper.thenOpen(serverUrl);
       casper.thenClick(this.lastGameSelector(true));
-      return casper.thenClick('.pass_button');
+      casper.thenClick('.pass_button');
+      casper.thenOpen(serverUrl);
+      casper.thenClick(this.lastGameSelector(false));
+      return test.assertDoesntExist('.pass_button:enabled');
     };
 
     return PassAndScoringTest;
