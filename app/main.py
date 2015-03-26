@@ -344,8 +344,7 @@ def get_rules_board_from_db_objects(moves, setup_stones):
 
     def place_stones_for_move(n):
         for stone in filter(lambda s: s.before_move == n, setup_stones):
-            board.set_point(stone.row, stone.column,
-                            rules_color(stone.color))
+            board[stone.row, stone.column] = rules_color(stone.color)
 
     board = go_rules.Board()
     for move in sorted(moves, key=lambda m: m.move_no):

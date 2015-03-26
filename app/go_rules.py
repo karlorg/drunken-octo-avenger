@@ -18,13 +18,12 @@ class Board(object):
                         for c in range(size)}
 
     def __getitem__(self, coords):
+        """ Coords should be a pair consisting of row and column numbers """
         return self._points[coords]
 
-    def get_point(self, r, c):
-        return self._points[(r, c)]
-
-    def set_point(self, r, c, color):
-        self._points[(r, c)] = color
+    def __setitem__(self, coords, color):
+        """ As above, coords should be a pair consisting of row and column """
+        self._points[coords] = color
 
     def items(self):
         return self._points.items()

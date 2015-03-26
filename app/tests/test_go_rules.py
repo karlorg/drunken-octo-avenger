@@ -22,9 +22,9 @@ def board_from_strings(rows):
     for r, row in enumerate(rows):
         for c, char in enumerate(row):
             if char == 'b':
-                board.set_point(r, c, black)
+                board[r, c] = black
             elif char == 'w':
-                board.set_point(r, c, white)
+                board[r, c] = white
     return board
 
 class TestUpdateBoardWithMove(unittest.TestCase):
