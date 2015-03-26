@@ -32,22 +32,22 @@ class TestUpdateBoardWithMove(unittest.TestCase):
     def test_place_stone(self):
         board = board_from_strings(['..', '..'])
         board.update_with_move(black, 0, 0)
-        self.assertEqual(board.get_point(0, 0), black)
+        self.assertEqual(board[0, 0], black)
 
     def test_single_stone_capture(self):
         board = board_from_strings(['.b.',
                                     'bw.',
                                     '.b.'])
         board.update_with_move(black, 1, 2)
-        self.assertEqual(board.get_point(1, 1), empty)
+        self.assertEqual(board[1, 1], empty)
 
     def test_group_capture(self):
         board = board_from_strings(['.bb.',
                                     'bwwb',
                                     '.b..'])
         board.update_with_move(black, 2, 2)
-        self.assertEqual(board.get_point(1, 1), empty)
-        self.assertEqual(board.get_point(1, 2), empty)
+        self.assertEqual(board[1, 1], empty)
+        self.assertEqual(board[1, 2], empty)
 
     def test_group_capture_with_self_capture(self):
         # to avoid false passes depending on the order in which neighbours are
@@ -58,10 +58,10 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'wbbw.',
                                     '.ww..'])
         board.update_with_move(white, 2, 1)
-        self.assertEqual(board.get_point(1, 1), white)
-        self.assertEqual(board.get_point(2, 2), white)
-        self.assertEqual(board.get_point(3, 1), empty)
-        self.assertEqual(board.get_point(3, 2), empty)
+        self.assertEqual(board[1, 1], white)
+        self.assertEqual(board[2, 2], white)
+        self.assertEqual(board[3, 1], empty)
+        self.assertEqual(board[3, 2], empty)
 
         board = board_from_strings(['.ww..',
                                     'wbbw.',
@@ -69,10 +69,10 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'bwwb.',
                                     '.bb..'])
         board.update_with_move(white, 2, 2)
-        self.assertEqual(board.get_point(2, 1), white)
-        self.assertEqual(board.get_point(3, 2), white)
-        self.assertEqual(board.get_point(1, 1), empty)
-        self.assertEqual(board.get_point(1, 2), empty)
+        self.assertEqual(board[2, 1], white)
+        self.assertEqual(board[3, 2], white)
+        self.assertEqual(board[1, 1], empty)
+        self.assertEqual(board[1, 2], empty)
 
     def test_exception_on_simple_illegal_move(self):
         board = board_from_strings(['..', '.b'])
@@ -90,7 +90,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
         e = cm.exception
         self.assertEqual(e.move_no, 1)
         # also, the board should not have changed
-        self.assertEqual(board.get_point(1, 1), empty)
+        self.assertEqual(board[1, 1], empty)
 
 class TestCountLiberties(unittest.TestCase):
 
