@@ -378,6 +378,31 @@ class GameInterfaceTest extends BrowserTest
 registerTest new GameInterfaceTest
 
 
+class PassAndScoringTest extends BrowserTest
+  names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
+  description: "pass moves and scoring system"
+  numTests: 0
+  testBody: (test) =>
+    BLACK_EMAIL = 'black@schwarz.de'
+    WHITE_EMAIL = 'white@wit.nl'
+    clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
+    createGame BLACK_EMAIL, WHITE_EMAIL, ['.b.wb',
+                                          'bb.wb',
+                                          '...wb',
+                                          'wwwwb',
+                                          'bbbbb']
+
+    # black opens the game and passes
+    # (it should be black's turn since there are no actual moves in this game,
+    # only setup stones)
+    createLoginSession BLACK_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick @lastGameSelector true
+    casper.thenClick '.pass_button'
+
+registerTest new PassAndScoringTest
+
+
 # helper functions
 
 clearGamesForPlayer = (email) ->
