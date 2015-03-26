@@ -17,6 +17,9 @@ class Board(object):
                         for r in range(size)
                         for c in range(size)}
 
+    def __getitem__(self, coords):
+        return self._points[coords]
+
     def get_point(self, r, c):
         return self._points[(r, c)]
 

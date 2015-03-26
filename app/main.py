@@ -376,21 +376,23 @@ def get_goban_data_from_rules_board(rules_board):
     black = go_rules.Color.black
     white = go_rules.Color.white
     empty = go_rules.Color.empty
-    goban = [[dict(
-        img=IMG_PATH_EMPTY,
-        classes='gopoint row-{row} col-{col}'.format(row=str(j), col=str(i))
-    )
+
+    color_images = {black: IMG_PATH_BLACK,
+                    white: IMG_PATH_WHITE,
+                    empty: IMG_PATH_EMPTY}
+    color_classes = {black: 'blackstone', 
+                     white: 'whitestone',
+                     empty: 'nostone'}
+
+    def create_goban_point(row, column, color):
+        classes_template = 'gopoint row-{row} col-{col} {color_class}'
+        classes = classes_template.format(row=str(row),
+                                          col=str(column),
+                                          color_class=color_classes[color])
+        return dict(img=color_images[color], classes=classes)
+    goban = [[create_goban_point(j, i, rules_board[j,i])
              for i in range(19)]
              for j in range(19)]
-    for (r, c), color in rules_board.items():
-        if color == black:
-            goban[r][c]['img'] = IMG_PATH_BLACK
-            goban[r][c]['classes'] += ' blackstone'
-        elif color == white:
-            goban[r][c]['img'] = IMG_PATH_WHITE
-            goban[r][c]['classes'] += ' whitestone'
-        elif color == empty:
-            goban[r][c]['classes'] += ' nostone'
     return goban
 
 def get_status_lists(player_email):
