@@ -338,13 +338,9 @@ def get_rules_board_from_db_objects(moves, setup_stones):
     """
 
     def rules_color(db_color):
-        if db_color == Move.Color.black:
-            color = go_rules.Color.black
-        elif db_color == Move.Color.white:
-            color = go_rules.Color.white
-        else:
-            color = go_rules.Color.empty
-        return color
+        mapping = {Move.Color.black: go_rules.Color.black,
+                   Move.Color.white: go_rules.Color.white}
+        return mapping.get(db_color, go_rules.Color.empty)
 
     def place_stones_for_move(n):
         for stone in filter(lambda s: s.before_move == n, setup_stones):
@@ -404,10 +400,7 @@ def get_status_lists(player_email):
     """
     all_games = Game.query.all()
     current_player_games = get_player_games(player_email, all_games)
-    games_to_moves = [
-            (game, game.moves,)
-            for game in current_player_games
-    ]
+    games_to_moves = [(game, game.moves,) for game in current_player_games]
     your_turn_games, not_your_turn_games = partition_by_turn(
             player_email, games_to_moves)
     return (your_turn_games, not_your_turn_games,)
