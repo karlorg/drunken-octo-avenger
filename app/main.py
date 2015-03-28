@@ -69,6 +69,13 @@ def game(game_no):
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
+    return play_move_or_pass("move")
+
+@app.route('/playpass', methods=['POST'])
+def playpass():
+    return play_move_or_pass("pass")
+
+def play_move_or_pass(which):
     """If a valid move was specified, play it (add to db).
 
     We require that the supplied move include the move number to help detect
@@ -81,54 +88,35 @@ def playstone():
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
-    new_move = get_move_if_args_good(args=arguments, moves=moves, passes=[])
-    if new_move is None:
+
+    get_function = {"move": get_move_if_args_good,
+                    "pass": get_pass_if_args_good}[which]
+    new_object = get_function(
+            args=arguments, moves=moves, passes=[])
+
+    if new_object is None:
         flash("Invalid move received")
         return redirect(url_for('status'))
     if not is_players_turn_in_game(game, moves, []):
         flash("It's not your turn!")
         return redirect(url_for('status'))
 
-    # test legality
-    board = get_rules_board_from_db_objects(moves=moves,
-                                            setup_stones=game.setup_stones)
-    try:
-        board.update_with_move(
-                new_move.color,
-                new_move.row, new_move.column, new_move.move_no)
-    except go_rules.IllegalMoveException as e:
-        flash("Illegal move received: " + e.args[0])
-        return redirect(url_for('game', game_no=game_no))
+    if which == "move":
+        # test legality
+        board = get_rules_board_from_db_objects(
+                moves=moves, setup_stones=game.setup_stones)
+        try:
+            board.update_with_move(
+                    new_object.color,
+                    new_object.row, new_object.column, new_object.move_no)
+        except go_rules.IllegalMoveException as e:
+            flash("Illegal move received: " + e.args[0])
+            return redirect(url_for('game', game_no=game_no))
 
-    db.session.add(new_move)
+    db.session.add(new_object)
     db.session.commit()
     return redirect(url_for('status'))
 
-@app.route('/playpass', methods=['POST'])
-def playpass():
-    """Add a pass to the game in the db.
-
-    We require that the supplied pass include the move number to help detect
-    duplicated requests.
-    """
-    arguments = request.form.to_dict()
-    try:
-        game_no = int(arguments['game_no'])
-    except (KeyError, ValueError):
-        return redirect('/')
-    game = Game.query.filter(Game.id == game_no).first()
-    moves = game.moves
-    new_pass = get_pass_if_args_good(args=arguments, moves=moves, passes=[])
-    if new_pass is None:
-        flash("Invalid pass received")
-        return redirect(url_for('status'))
-    if not is_players_turn_in_game(game, moves, []):
-        flash("It's not your turn!")
-        return redirect(url_for('status'))
-
-    db.session.add(new_pass)
-    db.session.commit()
-    return redirect(url_for('status'))
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
