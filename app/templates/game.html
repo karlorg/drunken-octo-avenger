@@ -7,7 +7,7 @@
         {% set rowloop = loop %}
         {% for point in row %}
         <td class="{{ point['classes'] }}">
-            {% if with_links %}
+            {% if on_turn %}
             <a href="#"><img src="{{ point['img'] }}" /></a>
             {% else %}
             <img src="{{ point['img'] }}" />
@@ -22,11 +22,13 @@
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
 </form>
+{% if on_turn %}
 <form method="POST" action="{{ url_for('playpass') }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="pass_button" name='pass_button'>Pass</button>
 </form>
+{% endif %}
 {% endblock %}
 
 {% block page_scripts %}

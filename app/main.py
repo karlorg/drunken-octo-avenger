@@ -65,7 +65,7 @@ def game(game_no):
     ))
     return render_template_with_email(
             "game.html",
-            form=form, goban=goban, with_links=is_your_turn)
+            form=form, goban=goban, on_turn=is_your_turn)
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
