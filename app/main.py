@@ -56,8 +56,9 @@ def game(game_no):
         flash("Game #{game_no} not found".format(game_no=game_no))
         return redirect('/')
     moves = game.moves
+    passes = game.passes
     setup_stones = game.setup_stones
-    is_your_turn = is_players_turn_in_game(game, moves, [])
+    is_your_turn = is_players_turn_in_game(game, moves, passes)
     goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
