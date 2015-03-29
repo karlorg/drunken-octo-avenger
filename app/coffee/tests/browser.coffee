@@ -403,8 +403,8 @@ class PassAndScoringTest extends BrowserTest
     # navigate back to the game; it should not be our turn and there should no
     # longer be a usable pass button
     casper.thenOpen serverUrl
-    casper.thenClick @lastGameSelector false  # not our turn
-    test.assertDoesntExist '.pass_button:enabled'
+    casper.thenClick (@lastGameSelector false), ->  # not our turn
+      test.assertDoesntExist '.pass_button:enabled'
 
 registerTest new PassAndScoringTest
 
