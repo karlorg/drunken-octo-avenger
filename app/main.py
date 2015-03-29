@@ -88,14 +88,15 @@ def play_move_or_pass(which):
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
+    passes = game.passes
 
     new_object = get_move_or_pass_if_args_good(
-            which=which, args=arguments, moves=moves, passes=[])
+            which=which, args=arguments, moves=moves, passes=passes)
 
     if new_object is None:
         flash("Invalid move received")
         return redirect(url_for('status'))
-    if not is_players_turn_in_game(game, moves, []):
+    if not is_players_turn_in_game(game, moves, passes):
         flash("It's not your turn!")
         return redirect(url_for('status'))
 
@@ -423,12 +424,12 @@ def get_status_lists(player_email):
     """
     all_games = Game.query.all()
     current_player_games = get_player_games(player_email, all_games)
-    games_to_moves = [
-            (game, game.moves,)
+    games_to_data = [
+            (game, {'moves': game.moves, 'passes': game.passes},)
             for game in current_player_games
     ]
     your_turn_games, not_your_turn_games = partition_by_turn(
-            player_email, games_to_moves)
+            player_email, games_to_data)
     return (your_turn_games, not_your_turn_games,)
 
 def get_player_games(player_email, games):
@@ -440,17 +441,18 @@ def get_player_games(player_email, games):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
 
-def partition_by_turn(player_email, games_to_moves):
+def partition_by_turn(player_email, games_to_data):
     """Partition games into two lists, player's turn and not player's turn.
 
-    Pure function.  `games_to_moves` is a list of pairs mapping games to the
-    moves for each game, since this function may not access the database
-    itself.
+    Pure function.  `games_to_data` is a list of pairs mapping games to the
+    moves, passes etc. for each game, since this function may not access the
+    database itself.
     """
     yes_turn = []
     no_turn = []
-    for (game, moves,) in games_to_moves:
-        if is_players_turn_in_game(game, moves, [], email=player_email):
+    for (game, data,) in games_to_data:
+        if is_players_turn_in_game(
+                game, data['moves'], data['passes'], email=player_email):
             yes_turn.append(game)
         else:
             no_turn.append(game)
@@ -541,6 +543,7 @@ class Game(db.Model):
     black = db.Column(db.String(length=254))
     white = db.Column(db.String(length=254))
     moves = db.relationship('Move', backref='game')
+    passes = db.relationship('Pass', backref='game')
     setup_stones = db.relationship('SetupStone', backref='game')
 
 class Move(db.Model):

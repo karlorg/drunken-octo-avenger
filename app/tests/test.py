@@ -217,15 +217,19 @@ class TestStatusIntegrated(TestWithDb):
         game2 = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
         game3 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
         game4 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        game5 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
         main.db.session.add(game1)
         main.db.session.add(game2)
         main.db.session.add(game3)
         main.db.session.add(game4)
+        main.db.session.add(game5)
         main.db.session.commit()
         main.db.session.add(Move(
             game_no=game4.id, move_no=0,
             row=9, column=9, color=Move.Color.black))
-        return (game1, game2, game3, game4,)
+        main.db.session.add(Pass(
+            game_no=game5.id, move_no=0, color=Move.Color.black))
+        return (game1, game2, game3, game4, game5,)
 
     def test_anonymous_users_redirected_to_front(self):
         response = self.test_client.get(url_for('status'))
@@ -237,10 +241,10 @@ class TestStatusIntegrated(TestWithDb):
             response = test_client.get(url_for('status'))
         self.assertEqual(
                 self.count_pattern_in(r"Game \d", str(response.get_data())),
-                3)
+                4)
 
     def test_sends_games_to_correct_template_params(self):
-        game1, game2, game3, game4 = self.setup_test_games()
+        game1, game2, game3, game4, game5 = self.setup_test_games()
         with self.set_email() as test_client:
             with self.patch_render_template() as mock_render:
                 test_client.get(url_for('status'))
@@ -253,11 +257,13 @@ class TestStatusIntegrated(TestWithDb):
         self.assertNotIn(game2, your_turn_games)
         self.assertNotIn(game3, your_turn_games)
         self.assertIn(game4, your_turn_games)
+        self.assertIn(game5, your_turn_games)
 
         self.assertNotIn(game1, not_your_turn_games)
         self.assertNotIn(game2, not_your_turn_games)
         self.assertIn(game3, not_your_turn_games)
         self.assertNotIn(game4, not_your_turn_games)
+        self.assertNotIn(game5, not_your_turn_games)
 
     def test_games_come_out_sorted(self):
         """Regression test: going via dictionaries can break sorting"""
@@ -488,7 +494,7 @@ class TestPlayStoneIntegrated(TestWithDb):
         main.db.session.commit()
         return game
 
-    def test_can_add_stones_to_two_games(self):
+    def test_can_add_stones_and_passes_to_two_games(self):
         game1 = self.add_game()
         game2 = self.add_game()
         with self.patch_render_template():
@@ -504,10 +510,13 @@ class TestPlayStoneIntegrated(TestWithDb):
                 test_client.post('/playstone', data=dict(
                     game_no=game1.id, move_no=1, row=15, column=15
                 ))
-        game1moves = Move.query.filter(Move.game_no == game1.id).all()
-        game2moves = Move.query.filter(Move.game_no == game2.id).all()
-        self.assertEqual(len(game1moves), 2)
-        self.assertEqual(len(game2moves), 1)
+            with self.set_email('black@black.com') as test_client:
+                test_client.post('/playpass', data=dict(
+                    game_no=game1.id, move_no=2
+                ))
+        self.assertEqual(len(game1.moves), 2)
+        self.assertEqual(len(game1.passes), 1)
+        self.assertEqual(len(game2.moves), 1)
         # also check the data in one of the moves
         moves = Move.query.all()
         move = moves[0]
@@ -575,6 +584,18 @@ class TestPlayStoneIntegrated(TestWithDb):
                     game_no=game.id, move_no=0, row=0, column=1
                 ))
         self.assert_redirects(response, url_for('game', game_no=game.id))
+
+    def test_counts_passes_toward_turn_count(self):
+        game = self.add_game()
+        with self.set_email('black@black.com') as test_client:
+            test_client.post('/playpass', data=dict(
+                game_no=game.id, move_no=0
+            ))
+        with self.set_email('white@white.com') as test_client:
+            test_client.post('/playstone', data=dict(
+                game_no=game.id, move_no=1, row=15, column=15
+            ))
+        self.assertEqual(len(game.moves), 1)
 
     @unittest.skip(
             """haven't decided yet what should be returned after a move is
