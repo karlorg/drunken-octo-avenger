@@ -554,10 +554,10 @@ class TestPlayStoneIntegrated(TestWithDb):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                mock_get_move = Mock(spec=main.get_move_if_args_good)
+                mock_get_move = Mock(spec=main.get_move_or_pass_if_args_good)
                 mock_get_move.return_value = None
                 with patch(
-                        'app.main.get_move_if_args_good', mock_get_move
+                        'app.main.get_move_or_pass_if_args_good', mock_get_move
                 ):
                     test_client.post('/playstone', data=dict(
                         game_no=game.id, move_no=0, row=9, column=9
@@ -591,7 +591,7 @@ class TestPlayStoneIntegrated(TestWithDb):
         assert 'move_no=' not in str(response.get_data())
 
 
-class TestGetMoveAndPassIfArgsGood(unittest.TestCase):
+class TestGetMoveOrPassIfArgsGood(unittest.TestCase):
 
     def assert_get_move_and_pass(self,
                                  expect_color_or_none=None,
@@ -608,10 +608,10 @@ class TestGetMoveAndPassIfArgsGood(unittest.TestCase):
                 'row': row, 'column': column}
         for omit in omit_args:
             del args[omit]
-        move = main.get_move_if_args_good(
-                args=args, moves=moves, passes=passes)
-        pass_ = main.get_pass_if_args_good(
-                args=args, moves=moves, passes=passes)
+        move = main.get_move_or_pass_if_args_good(
+                which="move", args=args, moves=moves, passes=passes)
+        pass_ = main.get_move_or_pass_if_args_good(
+                which="move", args=args, moves=moves, passes=passes)
         if expect_color_or_none is None:
             self.assertIsNone(move)
             # don't assert pass is None if the only excluded arguments were

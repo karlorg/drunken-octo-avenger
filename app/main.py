@@ -89,10 +89,8 @@ def play_move_or_pass(which):
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
 
-    get_function = {"move": get_move_if_args_good,
-                    "pass": get_pass_if_args_good}[which]
-    new_object = get_function(
-            args=arguments, moves=moves, passes=[])
+    new_object = get_move_or_pass_if_args_good(
+            which=which, args=arguments, moves=moves, passes=[])
 
     if new_object is None:
         flash("Invalid move received")
@@ -116,6 +114,32 @@ def play_move_or_pass(which):
     db.session.add(new_object)
     db.session.commit()
     return redirect(url_for('status'))
+
+def get_move_or_pass_if_args_good(which, args, moves, passes):
+    """Check GET arguments and if a new move is indicated, return it.
+
+    Pure function; does not commit the new stone to the database.
+    """
+    try:
+        game_no = int(args['game_no'])
+        move_no = int(args['move_no'])
+        if which == "move":
+            row = int(args['row'])
+            column = int(args['column'])
+    except (KeyError, ValueError):
+        return None
+    if move_no != len(moves) + len(passes):
+        return None
+    color = (Move.Color.black, Move.Color.white)[move_no % 2]
+    if which == "move":
+        return Move(
+                game_no=game_no, move_no=move_no,
+                row=row, column=column, color=color)
+    elif which == "pass":
+        return Pass(
+                game_no=game_no, move_no=move_no, color=color)
+    else:
+        assert False, "bad argument to get_move_or_pass_if_args_good"
 
 
 @app.route('/challenge', methods=('GET', 'POST'))
@@ -314,41 +338,6 @@ def process_persona_response(response):
         logging.debug(str(verification_data))
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
-
-def get_move_if_args_good(args, moves, passes):
-    """Check GET arguments and if a new move is indicated, return it.
-
-    Pure function; does not commit the new stone to the database.
-    """
-    try:
-        game_no = int(args['game_no'])
-        move_no = int(args['move_no'])
-        row = int(args['row'])
-        column = int(args['column'])
-    except (KeyError, ValueError):
-        return None
-    if move_no != len(moves) + len(passes):
-        return None
-    color = (Move.Color.black, Move.Color.white)[move_no % 2]
-    return Move(
-            game_no=game_no, move_no=move_no,
-            row=row, column=column, color=color)
-
-def get_pass_if_args_good(args, moves, passes):
-    """Check GET arguments and if a new pass is indicated, return it.
-
-    Pure function; does not commit the new pass to the database.
-    """
-    try:
-        game_no = int(args['game_no'])
-        move_no = int(args['move_no'])
-    except (KeyError, ValueError):
-        return None
-    if move_no != len(moves) + len(passes):
-        return None
-    color = (Move.Color.black, Move.Color.white)[move_no % 2]
-    return Pass(
-            game_no=game_no, move_no=move_no, color=color)
 
 def get_goban_from_moves(moves, setup_stones=None):
     """Given the moves for a game, return game template data.
