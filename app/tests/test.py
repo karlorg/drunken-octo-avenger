@@ -17,7 +17,7 @@ from werkzeug.datastructures import MultiDict
 
 from .. import go_rules
 from .. import main
-from ..main import Game, Move, db
+from ..main import Game, Move, Pass, db
 
 
 class TestWithTestingApp(flask.ext.testing.TestCase):
@@ -217,15 +217,19 @@ class TestStatusIntegrated(TestWithDb):
         game2 = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
         game3 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
         game4 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        game5 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
         main.db.session.add(game1)
         main.db.session.add(game2)
         main.db.session.add(game3)
         main.db.session.add(game4)
+        main.db.session.add(game5)
         main.db.session.commit()
         main.db.session.add(Move(
             game_no=game4.id, move_no=0,
             row=9, column=9, color=Move.Color.black))
-        return (game1, game2, game3, game4,)
+        main.db.session.add(Pass(
+            game_no=game5.id, move_no=0, color=Move.Color.black))
+        return (game1, game2, game3, game4, game5,)
 
     def test_anonymous_users_redirected_to_front(self):
         response = self.test_client.get(url_for('status'))
@@ -237,10 +241,10 @@ class TestStatusIntegrated(TestWithDb):
             response = test_client.get(url_for('status'))
         self.assertEqual(
                 self.count_pattern_in(r"Game \d", str(response.get_data())),
-                3)
+                4)
 
     def test_sends_games_to_correct_template_params(self):
-        game1, game2, game3, game4 = self.setup_test_games()
+        game1, game2, game3, game4, game5 = self.setup_test_games()
         with self.set_email() as test_client:
             with self.patch_render_template() as mock_render:
                 test_client.get(url_for('status'))
@@ -253,11 +257,13 @@ class TestStatusIntegrated(TestWithDb):
         self.assertNotIn(game2, your_turn_games)
         self.assertNotIn(game3, your_turn_games)
         self.assertIn(game4, your_turn_games)
+        self.assertIn(game5, your_turn_games)
 
         self.assertNotIn(game1, not_your_turn_games)
         self.assertNotIn(game2, not_your_turn_games)
         self.assertIn(game3, not_your_turn_games)
         self.assertNotIn(game4, not_your_turn_games)
+        self.assertNotIn(game5, not_your_turn_games)
 
     def test_games_come_out_sorted(self):
         """Regression test: going via dictionaries can break sorting"""
@@ -306,30 +312,55 @@ class TestIsPlayersTurnInGame(unittest.TestCase):
         self.black_game = Game(black=self.TEST_EMAIL, white=self.OTHER_EMAIL)
         self.white_game = Game(black=self.OTHER_EMAIL, white=self.TEST_EMAIL)
 
-    def test_black_first_move(self):
+    def test_first_move(self):
         moves = []
+        passes = []
         self.assertTrue(main.is_players_turn_in_game(
-            self.black_game, moves, self.TEST_EMAIL))
-
-    def test_white_first_move(self):
-        moves = []
+            self.black_game, moves, passes, self.TEST_EMAIL))
         self.assertFalse(main.is_players_turn_in_game(
-            self.white_game, moves, self.TEST_EMAIL))
+            self.white_game, moves, passes, self.TEST_EMAIL))
 
     def test_black_second_move(self):
         moves = [Move(
             game_no=self.black_game.id, move_no=0,
             row=9, column=9, color=Move.Color.black)]
+        passes = []
         self.assertFalse(main.is_players_turn_in_game(
-            self.black_game, moves, self.TEST_EMAIL))
+            self.black_game, moves, passes, self.TEST_EMAIL))
 
     def test_white_second_move(self):
         moves = [Move(
             game_no=self.white_game.id, move_no=0,
             row=9, column=9, color=Move.Color.black)]
+        passes = []
         self.assertTrue(main.is_players_turn_in_game(
-            self.white_game, moves, self.TEST_EMAIL))
+            self.white_game, moves, passes, self.TEST_EMAIL))
 
+    def test_pass_only(self):
+        moves = []
+        passes = [Pass(
+            game_no=self.black_game.id, move_no=0, color=Move.Color.black)]
+        self.assertFalse(
+                main.is_players_turn_in_game(
+                    self.black_game, moves, passes, self.TEST_EMAIL),
+                "not Black's turn after Black passes"
+        )
+        self.assertTrue(main.is_players_turn_in_game(
+            self.black_game, moves, passes, self.OTHER_EMAIL))
+
+    def test_move_and_pass(self):
+        moves = [Move(
+            game_no=self.black_game.id, move_no=0,
+            row=9, column=9, color=Move.Color.black)]
+        passes = [Pass(
+            game_no=self.black_game.id, move_no=1, color=Move.Color.white)]
+        self.assertTrue(
+                main.is_players_turn_in_game(
+                    self.black_game, moves, passes, self.TEST_EMAIL),
+                "back to Black's turn after White passes"
+        )
+        self.assertFalse(main.is_players_turn_in_game(
+            self.black_game, moves, passes, self.OTHER_EMAIL))
 
 class TestGameIntegrated(TestWithDb):
 
@@ -463,7 +494,7 @@ class TestPlayStoneIntegrated(TestWithDb):
         main.db.session.commit()
         return game
 
-    def test_can_add_stones_to_two_games(self):
+    def test_can_add_stones_and_passes_to_two_games(self):
         game1 = self.add_game()
         game2 = self.add_game()
         with self.patch_render_template():
@@ -479,10 +510,13 @@ class TestPlayStoneIntegrated(TestWithDb):
                 test_client.post('/playstone', data=dict(
                     game_no=game1.id, move_no=1, row=15, column=15
                 ))
-        game1moves = Move.query.filter(Move.game_no == game1.id).all()
-        game2moves = Move.query.filter(Move.game_no == game2.id).all()
-        self.assertEqual(len(game1moves), 2)
-        self.assertEqual(len(game2moves), 1)
+            with self.set_email('black@black.com') as test_client:
+                test_client.post('/playpass', data=dict(
+                    game_no=game1.id, move_no=2
+                ))
+        self.assertEqual(len(game1.moves), 2)
+        self.assertEqual(len(game1.passes), 1)
+        self.assertEqual(len(game2.moves), 1)
         # also check the data in one of the moves
         moves = Move.query.all()
         move = moves[0]
@@ -529,10 +563,10 @@ class TestPlayStoneIntegrated(TestWithDb):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                mock_get_move = Mock(spec=main.get_move_if_args_good)
+                mock_get_move = Mock(spec=main.get_move_or_pass_if_args_good)
                 mock_get_move.return_value = None
                 with patch(
-                        'app.main.get_move_if_args_good', mock_get_move
+                        'app.main.get_move_or_pass_if_args_good', mock_get_move
                 ):
                     test_client.post('/playstone', data=dict(
                         game_no=game.id, move_no=0, row=9, column=9
@@ -551,6 +585,18 @@ class TestPlayStoneIntegrated(TestWithDb):
                 ))
         self.assert_redirects(response, url_for('game', game_no=game.id))
 
+    def test_counts_passes_toward_turn_count(self):
+        game = self.add_game()
+        with self.set_email('black@black.com') as test_client:
+            test_client.post('/playpass', data=dict(
+                game_no=game.id, move_no=0
+            ))
+        with self.set_email('white@white.com') as test_client:
+            test_client.post('/playstone', data=dict(
+                game_no=game.id, move_no=1, row=15, column=15
+            ))
+        self.assertEqual(len(game.moves), 1)
+
     @unittest.skip(
             """haven't decided yet what should be returned after a move is
             played""")
@@ -566,40 +612,75 @@ class TestPlayStoneIntegrated(TestWithDb):
         assert 'move_no=' not in str(response.get_data())
 
 
-class TestGetStoneIfArgsGood(unittest.TestCase):
+class TestGetMoveOrPassIfArgsGood(unittest.TestCase):
+
+    def assert_get_move_and_pass(self,
+                                 expect_color_or_none=None,
+                                 moves=None, passes=None,
+                                 game_no=1, move_no=0, row=1, column=2,
+                                 omit_args=None):
+        if moves is None:
+            moves = []
+        if passes is None:
+            passes = []
+        if omit_args is None:
+            omit_args = []
+        args = {'game_no': game_no, 'move_no': move_no,
+                'row': row, 'column': column}
+        for omit in omit_args:
+            del args[omit]
+        move = main.get_move_or_pass_if_args_good(
+                which="move", args=args, moves=moves, passes=passes)
+        pass_ = main.get_move_or_pass_if_args_good(
+                which="move", args=args, moves=moves, passes=passes)
+        if expect_color_or_none is None:
+            self.assertIsNone(move)
+            # don't assert pass is None if the only excluded arguments were
+            # ones that don't exist in Pass anyway
+            if omit_args and not(set(omit_args).issubset(['row', 'column'])):
+                self.assertIsNone(pass_)
+        else:
+            self.assertEqual(move.row, row)
+            self.assertEqual(move.column, column)
+            self.assertEqual(move.color, expect_color_or_none)
+            self.assertEqual(pass_.color, expect_color_or_none)
 
     def test_returns_none_for_missing_args(self):
-        assert main.get_move_if_args_good(args={}, moves=[]) is None
-        assert main.get_move_if_args_good(
-                args={'game_no': 1, 'move_no': 0, 'row': 0}, moves=[]) is None
-        assert main.get_move_if_args_good(
-                args={'game_no': 1, 'move_no': 0, 'column': 0}, moves=[]
-        ) is None
-        assert main.get_move_if_args_good(
-                args={'column': 0, 'row': 0}, moves=[]) is None
+        self.assert_get_move_and_pass(None, omit_args=['game_no'])
+        self.assert_get_move_and_pass(None, omit_args=['move_no'])
+        self.assert_get_move_and_pass(None, omit_args=['row'])
 
     def test_returns_none_if_move_no_bad(self):
-        stone = main.get_move_if_args_good(
-                moves=[{'row': 9, 'column': 9}],
-                args={'game_no': 1, 'move_no': 0, 'row': 3, 'column': 3})
-        assert stone is None
-        stone = main.get_move_if_args_good(
-                moves=[{'row': 9, 'column': 9}],
-                args={'game_no': 1, 'move_no': 2, 'row': 3, 'column': 3})
-        assert stone is None
+        self.assert_get_move_and_pass(
+                None,
+                moves=[{'row': 9, 'column': 9}], passes=[],
+                move_no=0)
+        self.assert_get_move_and_pass(
+                None,
+                moves=[{'row': 9, 'column': 9}], passes=[],
+                move_no=2)
+        self.assert_get_move_and_pass(
+                None,
+                moves=[{'move_no': 0, 'row': 9, 'column': 9}],
+                passes=[{'move_no': 1}],
+                move_no=1)
+        self.assert_get_move_and_pass(
+                None,
+                moves=[{'move_no': 0, 'row': 9, 'column': 9}],
+                passes=[{'move_no': 1}],
+                move_no=3)
 
-    def test_returns_black_stone_as_first_move(self):
-        stone = main.get_move_if_args_good(
-                moves=[],
-                args={'game_no': 1, 'move_no': 0, 'row': 9, 'column': 9})
-        assert stone.row == 9
-        assert stone.column == 9
-        assert stone.color == Move.Color.black
+    def test_returns_black_as_first_move(self):
+        self.assert_get_move_and_pass(
+                Move.Color.black,
+                moves=[], passes=[])
 
-    def test_returns_white_stone_as_second_move(self):
-        stone = main.get_move_if_args_good(
-                moves=[{'row': 9, 'column': 9}],
-                args={'game_no': 1, 'move_no': 1, 'row': 3, 'column': 3})
-        assert stone.row == 3
-        assert stone.column == 3
-        assert stone.color == Move.Color.white
+    def test_returns_white_as_second_move(self):
+        self.assert_get_move_and_pass(
+                Move.Color.white,
+                moves=[{'move_no': 0, 'row': 9, 'column': 9}], passes=[],
+                move_no=1)
+        self.assert_get_move_and_pass(
+                Move.Color.white,
+                moves=[], passes=[{'move_no': 0}],
+                move_no=1)

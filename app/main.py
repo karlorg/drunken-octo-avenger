@@ -57,7 +57,7 @@ def game(game_no):
         return redirect('/')
     moves = game.moves
     setup_stones = game.setup_stones
-    is_your_turn = is_players_turn_in_game(game, moves)
+    is_your_turn = is_players_turn_in_game(game, moves, [])
     goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
@@ -65,10 +65,17 @@ def game(game_no):
     ))
     return render_template_with_email(
             "game.html",
-            form=form, goban=goban, with_links=is_your_turn)
+            form=form, goban=goban, on_turn=is_your_turn)
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
+    return play_move_or_pass("move")
+
+@app.route('/playpass', methods=['POST'])
+def playpass():
+    return play_move_or_pass("pass")
+
+def play_move_or_pass(which):
     """If a valid move was specified, play it (add to db).
 
     We require that the supplied move include the move number to help detect
@@ -81,28 +88,60 @@ def playstone():
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
     moves = game.moves
-    new_move = get_move_if_args_good(args=arguments, moves=moves)
-    if new_move is None:
+    passes = game.passes
+
+    new_object = get_move_or_pass_if_args_good(
+            which=which, args=arguments, moves=moves, passes=passes)
+
+    if new_object is None:
         flash("Invalid move received")
         return redirect(url_for('status'))
-    if not is_players_turn_in_game(game, moves):
+    if not is_players_turn_in_game(game, moves, passes):
         flash("It's not your turn!")
         return redirect(url_for('status'))
 
-    # test legality
-    board = get_rules_board_from_db_objects(moves=moves,
-                                            setup_stones=game.setup_stones)
-    try:
-        board.update_with_move(
-                new_move.color,
-                new_move.row, new_move.column, new_move.move_no)
-    except go_rules.IllegalMoveException as e:
-        flash("Illegal move received: " + e.args[0])
-        return redirect(url_for('game', game_no=game_no))
+    if which == "move":
+        # test legality
+        board = get_rules_board_from_db_objects(
+                moves=moves, setup_stones=game.setup_stones)
+        try:
+            board.update_with_move(
+                    new_object.color,
+                    new_object.row, new_object.column, new_object.move_no)
+        except go_rules.IllegalMoveException as e:
+            flash("Illegal move received: " + e.args[0])
+            return redirect(url_for('game', game_no=game_no))
 
-    db.session.add(new_move)
+    db.session.add(new_object)
     db.session.commit()
     return redirect(url_for('status'))
+
+def get_move_or_pass_if_args_good(which, args, moves, passes):
+    """Check GET arguments and if a new move is indicated, return it.
+
+    Pure function; does not commit the new stone to the database.
+    """
+    try:
+        game_no = int(args['game_no'])
+        move_no = int(args['move_no'])
+        if which == "move":
+            row = int(args['row'])
+            column = int(args['column'])
+    except (KeyError, ValueError):
+        return None
+    if move_no != len(moves) + len(passes):
+        return None
+    color = (Move.Color.black, Move.Color.white)[move_no % 2]
+    if which == "move":
+        return Move(
+                game_no=game_no, move_no=move_no,
+                row=row, column=column, color=color)
+    elif which == "pass":
+        return Pass(
+                game_no=game_no, move_no=move_no, color=color)
+    else:
+        assert False, "bad argument to get_move_or_pass_if_args_good"
+
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
@@ -301,25 +340,6 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_move_if_args_good(args, moves):
-    """Check GET arguments and if a new move is indicated, return it.
-
-    Pure function; does not commit the new stone to the database.
-    """
-    try:
-        game_no = int(args['game_no'])
-        move_no = int(args['move_no'])
-        row = int(args['row'])
-        column = int(args['column'])
-    except (KeyError, ValueError):
-        return None
-    if move_no != len(moves):
-        return None
-    color = (Move.Color.black, Move.Color.white)[move_no % 2]
-    return Move(
-            game_no=game_no, move_no=move_no,
-            row=row, column=column, color=color)
-
 def get_goban_from_moves(moves, setup_stones=None):
     """Given the moves for a game, return game template data.
 
@@ -379,7 +399,7 @@ def get_goban_data_from_rules_board(rules_board):
     color_images = {black: IMG_PATH_BLACK,
                     white: IMG_PATH_WHITE,
                     empty: IMG_PATH_EMPTY}
-    color_classes = {black: 'blackstone', 
+    color_classes = {black: 'blackstone',
                      white: 'whitestone',
                      empty: 'nostone'}
 
@@ -389,7 +409,7 @@ def get_goban_data_from_rules_board(rules_board):
                                           col=str(column),
                                           color_class=color_classes[color])
         return dict(img=color_images[color], classes=classes)
-    goban = [[create_goban_point(j, i, rules_board[j,i])
+    goban = [[create_goban_point(j, i, rules_board[j, i])
              for i in range(19)]
              for j in range(19)]
     return goban
@@ -401,9 +421,12 @@ def get_status_lists(player_email):
     """
     all_games = Game.query.all()
     current_player_games = get_player_games(player_email, all_games)
-    games_to_moves = [(game, game.moves,) for game in current_player_games]
+    games_to_data = [
+            (game, {'moves': game.moves, 'passes': game.passes},)
+            for game in current_player_games
+    ]
     your_turn_games, not_your_turn_games = partition_by_turn(
-            player_email, games_to_moves)
+            player_email, games_to_data)
     return (your_turn_games, not_your_turn_games,)
 
 def get_player_games(player_email, games):
@@ -415,40 +438,42 @@ def get_player_games(player_email, games):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
 
-def partition_by_turn(player_email, games_to_moves):
+def partition_by_turn(player_email, games_to_data):
     """Partition games into two lists, player's turn and not player's turn.
 
-    Pure function.  `games_to_moves` is a list of pairs mapping games to the
-    moves for each game, since this function may not access the database
-    itself.
+    Pure function.  `games_to_data` is a list of pairs mapping games to the
+    moves, passes etc. for each game, since this function may not access the
+    database itself.
     """
     yes_turn = []
     no_turn = []
-    for (game, moves,) in games_to_moves:
-        if is_players_turn_in_game(game, moves, email=player_email):
+    for (game, data,) in games_to_data:
+        if is_players_turn_in_game(
+                game, data['moves'], data['passes'], email=player_email):
             yes_turn.append(game)
         else:
             no_turn.append(game)
     return (yes_turn, no_turn,)
 
-def is_players_turn_in_game(game, moves, email=None):
+def is_players_turn_in_game(game, moves, passes, email=None):
     """Test if it's `email`'s turn to move in `game` given `moves`.
 
     If `email` is passed, this acts as a pure function; otherwise, it reads
     email from the session.
 
-    `moves` should be the list of moves associated with `game`, since this
-    function won't access the database itself.
+    `moves` and `passes` should list moves and passes associated with `game`,
+    since this function won't access the database itself.
     """
     if email is None:
         try:
             email = session['email']
         except KeyError:
             return False
-    if len(moves) == 0:
+    if len(moves) + len(passes) == 0:
         last_move_color = Move.Color.white  # black to move
     else:
-        last_move = max(moves, key=lambda move: move.move_no)
+        last_move = max(moves + passes,
+                        key=lambda move_or_pass: move_or_pass.move_no)
         last_move_color = last_move.color
     if (game.black == email):
         return (last_move_color == Move.Color.white)
@@ -515,6 +540,7 @@ class Game(db.Model):
     black = db.Column(db.String(length=254))
     white = db.Column(db.String(length=254))
     moves = db.relationship('Move', backref='game')
+    passes = db.relationship('Pass', backref='game')
     setup_stones = db.relationship('SetupStone', backref='game')
 
 class Move(db.Model):
@@ -541,6 +567,22 @@ class Move(db.Model):
         return '<Move {0}: {1} at ({2},{3})>'.format(
                 self.move_no, Move.Color(self.color).name,
                 self.column, self.row)
+
+class Pass(db.Model):
+    __tablename__ = 'passes'
+    id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
+    move_no = db.Column(db.Integer)
+    color = db.Column(db.Integer)
+
+    def __init__(self, game_no, move_no, color):
+        self.game_no = game_no
+        self.move_no = move_no
+        self.color = color
+
+    def __repr__(self):
+        return '<Pass {0}: {1}>'.format(
+                self.move_no, Move.Color(self.color).name)
 
 class SetupStone(db.Model):
     __tablename__ = 'setupstones'
