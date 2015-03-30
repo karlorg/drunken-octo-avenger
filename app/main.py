@@ -619,8 +619,7 @@ class PlayStoneForm(Form):
     row = HiddenInteger("row", validators=[DataRequired()])
     column = HiddenInteger("column", validators=[DataRequired()])
 
-def server_player_act():
-    player_email = "serverplayer@localhost"
+def server_player_act(player_email):
     all_games = Game.query.all()
     current_player_games = get_player_games(player_email, all_games)
     return len(current_player_games)
