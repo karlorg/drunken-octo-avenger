@@ -419,8 +419,7 @@ def get_status_lists(player_email):
 
     Accesses database.
     """
-    all_games = Game.query.all()
-    current_player_games = get_player_games(player_email, all_games)
+    current_player_games = get_player_games(player_email)
     games_to_data = [
             (game, {'moves': game.moves, 'passes': game.passes},)
             for game in current_player_games
@@ -429,11 +428,13 @@ def get_status_lists(player_email):
             player_email, games_to_data)
     return (your_turn_games, not_your_turn_games,)
 
-def get_player_games(player_email, games):
-    """Filter `games` to those involving player_email.
-
-    Pure function.
+def get_player_games(player_email, games=None):
+    """ Returns the list of games in which `player_email` is involved. If
+        `games` is passed this acts as a pure function, otherwise it reads
+        the list of all games from the database.
     """
+    if games is None:
+        games = Game.query.all()
     def involved_in_game(game):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
@@ -620,6 +621,5 @@ class PlayStoneForm(Form):
     column = HiddenInteger("column", validators=[DataRequired()])
 
 def server_player_act(player_email):
-    all_games = Game.query.all()
-    current_player_games = get_player_games(player_email, all_games)
+    current_player_games = get_player_games(player_email)
     return len(current_player_games)

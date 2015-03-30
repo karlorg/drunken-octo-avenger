@@ -298,7 +298,7 @@ class TestGetPlayerGames(unittest.TestCase):
         game_white = Game(black=OTHER_EMAIL_1, white=TEST_EMAIL)
         games = [game_not_involved, game_black, game_white]
 
-        result = main.get_player_games(TEST_EMAIL, games)
+        result = main.get_player_games(TEST_EMAIL, games=games)
         assert game_not_involved not in result
         assert game_black in result
         assert game_white in result
