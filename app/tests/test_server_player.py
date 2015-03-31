@@ -19,6 +19,7 @@ class TestServerPlayer(unittest.TestCase):
         test_opponent_email = "serverplayermock@localhost"
 
         main.clear_games_for_player_internal(test_player_email)
+        main.clear_games_for_player_internal(test_opponent_email)
         main.create_game_internal(test_player_email, test_opponent_email)
         self.assert_status_list_lengths(test_player_email, 1, 0)
         main.server_player_act(test_player_email)
