@@ -533,8 +533,9 @@
       casper.thenClick(this.lastGameSelector(true));
       casper.thenClick('.pass_button');
       casper.thenOpen(serverUrl);
-      casper.thenClick(this.lastGameSelector(false));
-      return test.assertDoesntExist('.pass_button:enabled');
+      return casper.thenClick(this.lastGameSelector(false), function() {
+        return test.assertDoesntExist('.pass_button:enabled');
+      });
     };
 
     return PassAndScoringTest;

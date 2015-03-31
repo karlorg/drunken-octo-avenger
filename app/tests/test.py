@@ -684,3 +684,21 @@ class TestGetMoveOrPassIfArgsGood(unittest.TestCase):
                 Move.Color.white,
                 moves=[], passes=[{'move_no': 0}],
                 move_no=1)
+
+
+class TestServerPlayer(TestWithDb):
+
+    def assert_status_list_lengths(self, email, your_turns, not_your_turns):
+        main.get_player_games(email)
+        your_turn_games, not_your_turn_games = main.get_status_lists(email)
+        self.assertEqual(len(your_turn_games), your_turns)
+        self.assertEqual(len(not_your_turn_games), not_your_turns)
+
+    def test_server_player(self):
+        test_player_email = "serverplayer@localhost"
+        test_opponent_email = "serverplayermock@localhost"
+
+        main.create_game_internal(test_player_email, test_opponent_email)
+        self.assert_status_list_lengths(test_player_email, 1, 0)
+        main.server_player_act(test_player_email)
+        self.assert_status_list_lengths(test_player_email, 0, 1)
