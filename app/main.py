@@ -430,12 +430,14 @@ def get_status_lists(player_email):
     return (your_turn_games, not_your_turn_games,)
 
 def get_player_games(player_email, games=None):
-    """ Returns the list of games in which `player_email` is involved. If
-        `games` is passed this acts as a pure function, otherwise it reads
-        the list of all games from the database.
+    """Returns the list of games in which `player_email` is involved.
+
+    If `games` is passed this acts as a pure function, otherwise it reads the
+    list of all games from the database.
     """
     if games is None:
         games = Game.query.all()
+
     def involved_in_game(game):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
@@ -631,4 +633,3 @@ def server_player_act(player_email):
         pass_object = Pass(game_no=game.id, move_no=move_no, color=color)
         db.session.add(pass_object)
         db.session.commit()
-
