@@ -534,7 +534,6 @@
       casper.thenClick('.pass_button');
       casper.thenOpen(serverUrl);
       return casper.thenClick(this.lastGameSelector(false), function() {
-        casper.capture('../gameOffTurn.png');
         return test.assertDoesntExist('.pass_button:enabled');
       });
     };
