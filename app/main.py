@@ -621,5 +621,13 @@ class PlayStoneForm(Form):
     column = HiddenInteger("column", validators=[DataRequired()])
 
 def server_player_act(player_email):
-    current_player_games = get_player_games(player_email)
-    return len(current_player_games)
+    waiting_games, _not_waiting_gamees = get_status_lists(player_email)
+    for game in waiting_games:
+        # TODO: Temporary duplicated code. Here until we make the 'playpass'
+        # method, available outwith the application context.
+        move_no = len(game.moves) + len(game.passes)
+        color = (Move.Color.black, Move.Color.white)[move_no % 2]
+        pass_object = Pass(game_no=game.id, move_no=move_no, color=color)
+        db.session.add(pass_object)
+        db.session.commit()
+
