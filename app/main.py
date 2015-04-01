@@ -70,7 +70,22 @@ def game(game_no):
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
-    return play_move_or_pass("move")
+    players_email = session['email']
+    arguments = request.form.to_dict()
+    try:
+        game_no = int(arguments['game_no'])
+    except (KeyError, ValueError):
+        flash("Invalid game number")
+        return redirect('/')
+    game = Game.query.filter(Game.id == game_no).first()
+    try:
+        play_move(players_email, game, arguments)
+    except go_rules.IllegalMoveException as e:
+        flash("Illegal move received: " + e.args[0])
+        return redirect(url_for('game', game_no=game_no))
+
+    return redirect(url_for('status'))
+
 
 @app.route('/playpass', methods=['POST'])
 def playpass():
@@ -92,88 +107,49 @@ def playpass():
 
 
 def play_pass(player, game):
-
-    moves = game.moves
-    passes = game.passes
-
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
 
+    # TODO: We should be checking that the move number supplied in the request
+    # is correct.
     move_no = len(game.moves) + len(game.passes)
-    color = (Move.Color.black, Move.Color.white)[move_no % 2]
 
+    color = game.to_move_color()
     pass_object = Pass(game_no=game.id, move_no=move_no, color=color)
     db.session.add(pass_object)
     db.session.commit()
 
 
-def play_move_or_pass(which):
+def play_move(player_email, game, arguments):
     """If a valid move was specified, play it (add to db).
 
     We require that the supplied move include the move number to help detect
     duplicated requests.
     """
-    arguments = request.form.to_dict()
+    if game.to_move() != player_email:
+        raise go_rules.IllegalMoveException("It's not your turn!")
+
     try:
-        game_no = int(arguments['game_no'])
+        move_no = int(arguments['move_no'])
+        row = int(arguments['row'])
+        column = int(arguments['column'])
     except (KeyError, ValueError):
-        return redirect('/')
-    game = Game.query.filter(Game.id == game_no).first()
-    moves = game.moves
-    passes = game.passes
+        raise go_rules.IllegalMoveException("Invalid request made.")
+    if move_no != len(game.moves) + len(game.passes):
+        message = "Move number supplied no sequential"
+        raise go_rules.IllegalMoveException(message)
 
-    new_object = get_move_or_pass_if_args_good(
-            which=which, args=arguments, moves=moves, passes=passes)
+    move = Move(game_no=game.id, move_no=move_no,
+                row=row, column=column, color=game.to_move_color())
 
-    if new_object is None:
-        flash("Invalid move received")
-        return redirect(url_for('status'))
-    if not is_players_turn_in_game(game):
-        flash("It's not your turn!")
-        return redirect(url_for('status'))
-
-    if which == "move":
-        # test legality
-        board = get_rules_board_from_db_objects(
-                moves=moves, setup_stones=game.setup_stones)
-        try:
-            board.update_with_move(
-                    new_object.color,
-                    new_object.row, new_object.column, new_object.move_no)
-        except go_rules.IllegalMoveException as e:
-            flash("Illegal move received: " + e.args[0])
-            return redirect(url_for('game', game_no=game_no))
-
-    db.session.add(new_object)
+    # test legality, if `board.update_with_move` raises an IllegalMoveException
+    # this will be caught above and displayed to the user.
+    board = get_rules_board_from_db_objects(
+                moves=game.moves, setup_stones=game.setup_stones)
+    board.update_with_move(move.color, move.row, move.column, move.move_no)
+    # But if not exception is raise we add the move to the database.
+    db.session.add(move)
     db.session.commit()
-    return redirect(url_for('status'))
-
-def get_move_or_pass_if_args_good(which, args, moves, passes):
-    """Check GET arguments and if a new move is indicated, return it.
-
-    Pure function; does not commit the new stone to the database.
-    """
-    try:
-        game_no = int(args['game_no'])
-        move_no = int(args['move_no'])
-        if which == "move":
-            row = int(args['row'])
-            column = int(args['column'])
-    except (KeyError, ValueError):
-        return None
-    if move_no != len(moves) + len(passes):
-        return None
-    color = (Move.Color.black, Move.Color.white)[move_no % 2]
-    if which == "move":
-        return Move(
-                game_no=game_no, move_no=move_no,
-                row=row, column=column, color=color)
-    elif which == "pass":
-        return Pass(
-                game_no=game_no, move_no=move_no, color=color)
-    else:
-        assert False, "bad argument to get_move_or_pass_if_args_good"
-
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():

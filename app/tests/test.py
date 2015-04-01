@@ -558,17 +558,18 @@ class TestPlayStoneIntegrated(TestWithDb):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                mock_get_move = Mock(spec=main.get_move_or_pass_if_args_good)
-                mock_get_move.return_value = None
+                mock_play_move = Mock(spec=main.play_move)
+                mock_play_move.return_value = None
                 with patch(
-                        'app.main.get_move_or_pass_if_args_good', mock_get_move
+                        'app.main.play_move', mock_play_move
                 ):
                     test_client.post('/playstone', data=dict(
                         game_no=game.id, move_no=0, row=9, column=9
                     ))
-                assert mock_get_move.call_args is not None
-                passed_dict = mock_get_move.call_args[1]['args']
-                assert not isinstance(passed_dict, MultiDict)
+                self.assertIsNotNone(mock_play_move.call_args)
+                passed_dict = mock_play_move.call_args[0][2]
+                self.assertIsInstance(passed_dict, dict)
+                self.assertNotIsInstance(passed_dict, MultiDict)
 
     def test_returns_to_game_on_illegal_move(self):
         game = self.add_game()
@@ -607,6 +608,13 @@ class TestPlayStoneIntegrated(TestWithDb):
         assert 'move_no=' not in str(response.get_data())
 
 
+# I'm skipping this test because I have removed the method that it tests.
+# Still I think the idea of testing that nothing happens should I make an
+# invalid request is a good one. But we should test it more functionally, by
+# actually making a request, then perhaps checking that the database has not
+# moved on and/or the returned page has an error on it. So I'm leaving this
+# test here until I check that.
+@unittest.skip("Skipping test of removed method")
 class TestGetMoveOrPassIfArgsGood(unittest.TestCase):
 
     def assert_get_move_and_pass(self,
