@@ -88,19 +88,15 @@ def play_pass_or_move(which):
     players_email = session['email']
 
     try:
-        if which == "move":
-            play_move(players_email, game, arguments)
-        elif which == "pass":
-            play_pass(players_email, game, arguments)
-        else:
-            flash("Apologies, internal server error detected.")
+        validate_turn_and_record(which, players_email, game, arguments)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
 
     return redirect(url_for('status'))
 
-def validate_turn(player, game, arguments):
+def validate_turn_and_record(pass_or_move, player, game, arguments):
+    # First of all validate the turn
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
     try:
@@ -112,26 +108,17 @@ def validate_turn(player, game, arguments):
         message = "Move number supplied no sequential"
         raise go_rules.IllegalMoveException(message)
 
-    return move_no
-
-def play_pass(player, game, arguments):
-
-    move_no = validate_turn(player, game, arguments)
-
     color = game.to_move_color()
-    pass_object = Pass(game_no=game.id, move_no=move_no, color=color)
-    db.session.add(pass_object)
+    if pass_or_move == "pass":
+        turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
+    elif pass_or_move == "move":
+        turn_object = create_and_validate_move(move_no, color, game, arguments)
+
+    db.session.add(turn_object)
     db.session.commit()
 
 
-def play_move(player_email, game, arguments):
-    """If a valid move was specified, play it (add to db).
-
-    We require that the supplied move include the move number to help detect
-    duplicated requests.
-    """
-    move_no = validate_turn(player_email, game, arguments)
-
+def create_and_validate_move(move_no, color, game, arguments):
     try:
         row = int(arguments['row'])
         column = int(arguments['column'])
@@ -139,16 +126,15 @@ def play_move(player_email, game, arguments):
         raise go_rules.IllegalMoveException("Invalid request made.")
 
     move = Move(game_no=game.id, move_no=move_no,
-                row=row, column=column, color=game.to_move_color())
+                row=row, column=column, color=color)
 
     # test legality, if `board.update_with_move` raises an IllegalMoveException
     # this will be caught above and displayed to the user.
     board = get_rules_board_from_db_objects(
                 moves=game.moves, setup_stones=game.setup_stones)
     board.update_with_move(move.color, move.row, move.column, move.move_no)
-    # But if not exception is raise we add the move to the database.
-    db.session.add(move)
-    db.session.commit()
+    # But if no exception is raised then we return the move
+    return move
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
@@ -617,6 +603,12 @@ class PlayStoneForm(Form):
     column = HiddenInteger("column", validators=[DataRequired()])
 
 def server_player_act(player_email):
-    waiting_games, _not_waiting_gamees = get_status_lists(player_email)
+    waiting_games, _not_waiting_games = get_status_lists(player_email)
     for game in waiting_games:
-        play_pass(player_email, game, {'move_no': game.move_no})
+        # A request would normally include the 'move number' to make sure we are
+        # not replaying a previous move. But we're directly accessing the db
+        # here, so we get the move number from the db itself. Note that this
+        # still prevents replaying a move in the case in which (presumably,
+        # accidentally) we have two daemons running the same computer player.
+        arguments = {'move_no': game.move_no}
+        validate_turn_and_record("pass", player_email, game, arguments)

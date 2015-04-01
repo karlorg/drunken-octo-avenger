@@ -558,16 +558,16 @@ class TestPlayStoneIntegrated(TestWithDb):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                mock_play_move = Mock(spec=main.play_move)
+                mock_play_move = Mock(spec=main.validate_turn_and_record)
                 mock_play_move.return_value = None
                 with patch(
-                        'app.main.play_move', mock_play_move
+                        'app.main.validate_turn_and_record', mock_play_move
                 ):
                     test_client.post('/playstone', data=dict(
                         game_no=game.id, move_no=0, row=9, column=9
                     ))
                 self.assertIsNotNone(mock_play_move.call_args)
-                passed_dict = mock_play_move.call_args[0][2]
+                passed_dict = mock_play_move.call_args[0][3]
                 self.assertIsInstance(passed_dict, dict)
                 self.assertNotIsInstance(passed_dict, MultiDict)
 
