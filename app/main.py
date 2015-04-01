@@ -70,25 +70,14 @@ def game(game_no):
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
-    players_email = session['email']
-    arguments = request.form.to_dict()
-    try:
-        game_no = int(arguments['game_no'])
-    except (KeyError, ValueError):
-        flash("Invalid game number")
-        return redirect('/')
-    game = Game.query.filter(Game.id == game_no).first()
-    try:
-        play_move(players_email, game, arguments)
-    except go_rules.IllegalMoveException as e:
-        flash("Illegal move received: " + e.args[0])
-        return redirect(url_for('game', game_no=game_no))
-
-    return redirect(url_for('status'))
+    return play_pass_or_move("move")
 
 
 @app.route('/playpass', methods=['POST'])
 def playpass():
+    return play_pass_or_move("pass")
+
+def play_pass_or_move(which):
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
@@ -98,7 +87,12 @@ def playpass():
     game = Game.query.filter(Game.id == game_no).first()
     players_email = session['email']
     try:
-        play_pass(players_email, game)
+        if which == "move":
+            play_move(players_email, game, arguments)
+        elif which == "pass":
+            play_pass(players_email, game)
+        else:
+            flash("Apologies, internal server error detected.")
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
