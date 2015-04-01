@@ -451,14 +451,13 @@ def get_status_lists(player_email):
 
     Accesses database.
     """
-    current_player_games = get_player_games(player_email)
-    games_to_data = [
-            (game, {'moves': game.moves, 'passes': game.passes},)
-            for game in current_player_games
-    ]
-    your_turn_games, not_your_turn_games = partition_by_turn(
-            player_email, games_to_data)
-    return (your_turn_games, not_your_turn_games,)
+    player_games = get_player_games(player_email)
+    
+    your_turn_games = [g for g in player_games 
+                         if g.to_move() == player_email]
+    not_your_turn_games = [g for g in player_games 
+                             if g.to_move() != player_email]
+    return (your_turn_games, not_your_turn_games)
 
 def get_player_games(player_email, games=None):
     """ Returns the list of games in which `player_email` is involved. If
@@ -470,23 +469,6 @@ def get_player_games(player_email, games=None):
     def involved_in_game(game):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
-
-def partition_by_turn(player_email, games_to_data):
-    """Partition games into two lists, player's turn and not player's turn.
-
-    Pure function.  `games_to_data` is a list of pairs mapping games to the
-    moves, passes etc. for each game, since this function may not access the
-    database itself.
-    """
-    yes_turn = []
-    no_turn = []
-    for (game, data,) in games_to_data:
-        if is_players_turn_in_game(
-                game, email=player_email):
-            yes_turn.append(game)
-        else:
-            no_turn.append(game)
-    return (yes_turn, no_turn,)
 
 # TODO: Why does this accept as arguments 'moves' and 'passes' since these are
 # attributes of the 'game' object anyway? I understand that because of the ORM,
