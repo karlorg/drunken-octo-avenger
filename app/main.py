@@ -86,11 +86,12 @@ def play_pass_or_move(which):
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
     players_email = session['email']
+
     try:
         if which == "move":
             play_move(players_email, game, arguments)
         elif which == "pass":
-            play_pass(players_email, game)
+            play_pass(players_email, game, arguments)
         else:
             flash("Apologies, internal server error detected.")
     except go_rules.IllegalMoveException as e:
@@ -99,14 +100,23 @@ def play_pass_or_move(which):
 
     return redirect(url_for('status'))
 
-
-def play_pass(player, game):
+def validate_turn(player, game, arguments):
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
+    try:
+        move_no = int(arguments['move_no'])
+    except (KeyError, ValueError):
+        raise go_rules.IllegalMoveException("Invalid request made.")
 
-    # TODO: We should be checking that the move number supplied in the request
-    # is correct.
-    move_no = len(game.moves) + len(game.passes)
+    if move_no != len(game.moves) + len(game.passes):
+        message = "Move number supplied no sequential"
+        raise go_rules.IllegalMoveException(message)
+
+    return move_no
+
+def play_pass(player, game, arguments):
+
+    move_no = validate_turn(player, game, arguments)
 
     color = game.to_move_color()
     pass_object = Pass(game_no=game.id, move_no=move_no, color=color)
@@ -120,18 +130,13 @@ def play_move(player_email, game, arguments):
     We require that the supplied move include the move number to help detect
     duplicated requests.
     """
-    if game.to_move() != player_email:
-        raise go_rules.IllegalMoveException("It's not your turn!")
+    move_no = validate_turn(player_email, game, arguments)
 
     try:
-        move_no = int(arguments['move_no'])
         row = int(arguments['row'])
         column = int(arguments['column'])
     except (KeyError, ValueError):
         raise go_rules.IllegalMoveException("Invalid request made.")
-    if move_no != len(game.moves) + len(game.passes):
-        message = "Move number supplied no sequential"
-        raise go_rules.IllegalMoveException(message)
 
     move = Move(game_no=game.id, move_no=move_no,
                 row=row, column=column, color=game.to_move_color())
@@ -614,4 +619,4 @@ class PlayStoneForm(Form):
 def server_player_act(player_email):
     waiting_games, _not_waiting_gamees = get_status_lists(player_email)
     for game in waiting_games:
-        play_pass(player_email, game)
+        play_pass(player_email, game, {'move_no': game.move_no})
