@@ -313,54 +313,49 @@ class TestIsPlayersTurnInGame(unittest.TestCase):
         self.white_game = Game(black=self.OTHER_EMAIL, white=self.TEST_EMAIL)
 
     def test_first_move(self):
-        moves = []
-        passes = []
         self.assertTrue(main.is_players_turn_in_game(
-            self.black_game, moves, passes, self.TEST_EMAIL))
+            self.black_game, self.TEST_EMAIL))
         self.assertFalse(main.is_players_turn_in_game(
-            self.white_game, moves, passes, self.TEST_EMAIL))
+            self.white_game, self.TEST_EMAIL))
 
     def test_black_second_move(self):
-        moves = [Move(
+        self.black_game.moves = [Move(
             game_no=self.black_game.id, move_no=0,
             row=9, column=9, color=Move.Color.black)]
-        passes = []
         self.assertFalse(main.is_players_turn_in_game(
-            self.black_game, moves, passes, self.TEST_EMAIL))
+            self.black_game, self.TEST_EMAIL))
 
     def test_white_second_move(self):
-        moves = [Move(
+        self.white_game.moves = [Move(
             game_no=self.white_game.id, move_no=0,
             row=9, column=9, color=Move.Color.black)]
-        passes = []
         self.assertTrue(main.is_players_turn_in_game(
-            self.white_game, moves, passes, self.TEST_EMAIL))
+            self.white_game, self.TEST_EMAIL))
 
     def test_pass_only(self):
-        moves = []
-        passes = [Pass(
+        self.black_game.passes = [Pass(
             game_no=self.black_game.id, move_no=0, color=Move.Color.black)]
         self.assertFalse(
                 main.is_players_turn_in_game(
-                    self.black_game, moves, passes, self.TEST_EMAIL),
+                    self.black_game, self.TEST_EMAIL),
                 "not Black's turn after Black passes"
         )
         self.assertTrue(main.is_players_turn_in_game(
-            self.black_game, moves, passes, self.OTHER_EMAIL))
+            self.black_game, self.OTHER_EMAIL))
 
     def test_move_and_pass(self):
-        moves = [Move(
+        self.black_game.moves = [Move(
             game_no=self.black_game.id, move_no=0,
             row=9, column=9, color=Move.Color.black)]
-        passes = [Pass(
+        self.black_game.passes = [Pass(
             game_no=self.black_game.id, move_no=1, color=Move.Color.white)]
         self.assertTrue(
                 main.is_players_turn_in_game(
-                    self.black_game, moves, passes, self.TEST_EMAIL),
+                    self.black_game, self.TEST_EMAIL),
                 "back to Black's turn after White passes"
         )
         self.assertFalse(main.is_players_turn_in_game(
-            self.black_game, moves, passes, self.OTHER_EMAIL))
+            self.black_game, self.OTHER_EMAIL))
 
 class TestGameIntegrated(TestWithDb):
 

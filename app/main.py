@@ -58,7 +58,7 @@ def game(game_no):
     moves = game.moves
     passes = game.passes
     setup_stones = game.setup_stones
-    is_your_turn = is_players_turn_in_game(game, moves, passes)
+    is_your_turn = is_players_turn_in_game(game)
     goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
@@ -74,7 +74,38 @@ def playstone():
 
 @app.route('/playpass', methods=['POST'])
 def playpass():
-    return play_move_or_pass("pass")
+    arguments = request.form.to_dict()
+    try:
+        game_no = int(arguments['game_no'])
+    except (KeyError, ValueError):
+        flash("Invalid game number")
+        return redirect('/')
+    game = Game.query.filter(Game.id == game_no).first()
+    players_email = session['email']
+    try:
+        play_pass(players_email, game)
+    except go_rules.IllegalMoveException as e:
+        flash("Illegal move received: " + e.args[0])
+        return redirect(url_for('game', game_no=game_no))
+
+    return redirect(url_for('status'))
+
+
+def play_pass(player, game):
+
+    moves = game.moves
+    passes = game.passes
+
+    if game.to_move() != player:
+        raise go_rules.IllegalMoveException("It's not your turn!")
+
+    move_no = len(game.moves) + len(game.passes)
+    color = (Move.Color.black, Move.Color.white)[move_no % 2]
+
+    pass_object = Pass(game_no=game.id, move_no=move_no, color=color)
+    db.session.add(pass_object)
+    db.session.commit()
+
 
 def play_move_or_pass(which):
     """If a valid move was specified, play it (add to db).
@@ -97,7 +128,7 @@ def play_move_or_pass(which):
     if new_object is None:
         flash("Invalid move received")
         return redirect(url_for('status'))
-    if not is_players_turn_in_game(game, moves, passes):
+    if not is_players_turn_in_game(game):
         flash("It's not your turn!")
         return redirect(url_for('status'))
 
@@ -451,13 +482,16 @@ def partition_by_turn(player_email, games_to_data):
     no_turn = []
     for (game, data,) in games_to_data:
         if is_players_turn_in_game(
-                game, data['moves'], data['passes'], email=player_email):
+                game, email=player_email):
             yes_turn.append(game)
         else:
             no_turn.append(game)
     return (yes_turn, no_turn,)
 
-def is_players_turn_in_game(game, moves, passes, email=None):
+# TODO: Why does this accept as arguments 'moves' and 'passes' since these are
+# attributes of the 'game' object anyway? I understand that because of the ORM,
+# accessing `game.passes` may access the database.
+def is_players_turn_in_game(game, email=None):
     """Test if it's `email`'s turn to move in `game` given `moves`.
 
     If `email` is passed, this acts as a pure function; otherwise, it reads
@@ -471,16 +505,7 @@ def is_players_turn_in_game(game, moves, passes, email=None):
             email = session['email']
         except KeyError:
             return False
-    if len(moves) + len(passes) == 0:
-        last_move_color = Move.Color.white  # black to move
-    else:
-        last_move = max(moves + passes,
-                        key=lambda move_or_pass: move_or_pass.move_no)
-        last_move_color = last_move.color
-    if (game.black == email):
-        return (last_move_color == Move.Color.white)
-    else:  # player is white
-        return (last_move_color == Move.Color.black)
+    return game.to_move() == email
 
 def add_stones_from_text_map_to_game(text_map, game):
     """Given a list of strings, add setup stones to the given game.
@@ -544,6 +569,19 @@ class Game(db.Model):
     moves = db.relationship('Move', backref='game')
     passes = db.relationship('Pass', backref='game')
     setup_stones = db.relationship('SetupStone', backref='game')
+
+    @property
+    def move_no(self):
+        return len(self.moves) + len(self.passes)
+
+    def to_move(self):
+        move_no = self.move_no
+        return (self.black, self.white)[move_no % 2]
+
+
+    def to_move_color(self):
+        move_no = self.move_no
+        return (Move.Color.black, Move.Color.white)[move_no % 2]
 
 class Move(db.Model):
     __tablename__ = 'moves'
@@ -624,11 +662,4 @@ class PlayStoneForm(Form):
 def server_player_act(player_email):
     waiting_games, _not_waiting_gamees = get_status_lists(player_email)
     for game in waiting_games:
-        # TODO: Temporary duplicated code. Here until we make the 'playpass'
-        # method, available outwith the application context.
-        move_no = len(game.moves) + len(game.passes)
-        color = (Move.Color.black, Move.Color.white)[move_no % 2]
-        pass_object = Pass(game_no=game.id, move_no=move_no, color=color)
-        db.session.add(pass_object)
-        db.session.commit()
-
+        play_pass(player_email, game)
