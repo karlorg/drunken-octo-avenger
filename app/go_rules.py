@@ -4,9 +4,9 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
-from enum import Enum
+from enum import IntEnum
 
-class Color(Enum):
+class Color(IntEnum):
     empty = 0
     black = 1
     white = 2
@@ -28,14 +28,14 @@ class Board(object):
     def items(self):
         return self._points.items()
 
-    def update_with_move(self, color, r, c, move_no=None):
+    def update_with_move(self, move):
         """Update board to the state it should be in after the move is played.
 
         Modifies self.
         """
         try:
             enemy = {Color.white: Color.black,
-                     Color.black: Color.white}.get(color)
+                     Color.black: Color.white}.get(move.color)
         except:  # pragma: no cover
             assert False, "attempted board update with invalid color"
 
@@ -46,13 +46,13 @@ class Board(object):
                         for p in self._get_group(r0, c0):
                             self._points[p] = Color.empty
 
-        if self._points[(r, c)] == Color.empty:
-            self._points[(r, c)] = color
+        if self._points[(move.row, move.column)] == Color.empty:
+            self._points[(move.row, move.column)] = move.color
         else:
-            raise IllegalMoveException("point already occupied", move_no)
-        process_captures(r, c)
+            raise IllegalMoveException("point already occupied", move.move_no)
+        process_captures(move.row, move.column)
 
-        if self._count_liberties(r, c) == 0:
+        if self._count_liberties(move.row, move.column) == 0:
             # thankfully, if we still have no liberties then no captures have
             # occurred, so we can revert the board position simply by removing
             # the stone we just played

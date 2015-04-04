@@ -132,7 +132,7 @@ def create_and_validate_move(move_no, color, game, arguments):
     # this will be caught above and displayed to the user.
     board = get_rules_board_from_db_objects(
                 moves=game.moves, setup_stones=game.setup_stones)
-    board.update_with_move(move.color, move.row, move.column, move.move_no)
+    board.update_with_move(move)
     # But if no exception is raised then we return the move
     return move
 
@@ -349,21 +349,14 @@ def get_rules_board_from_db_objects(moves, setup_stones):
 
     Pure function.
     """
-
-    def rules_color(db_color):
-        mapping = {Move.Color.black: go_rules.Color.black,
-                   Move.Color.white: go_rules.Color.white}
-        return mapping.get(db_color, go_rules.Color.empty)
-
     def place_stones_for_move(n):
         for stone in filter(lambda s: s.before_move == n, setup_stones):
-            board[stone.row, stone.column] = rules_color(stone.color)
+            board[stone.row, stone.column] = stone.color
 
     board = go_rules.Board()
     for move in sorted(moves, key=lambda m: m.move_no):
         place_stones_for_move(move.move_no)
-        board.update_with_move(
-                rules_color(move.color), move.row, move.column)
+        board.update_with_move(move)
     max_move_no = max([-1] + [m.move_no for m in moves])
     place_stones_for_move(max_move_no + 1)
     return board
@@ -431,9 +424,6 @@ def get_player_games(player_email, games=None):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
 
-# TODO: Why does this accept as arguments 'moves' and 'passes' since these are
-# attributes of the 'game' object anyway? I understand that because of the ORM,
-# accessing `game.passes` may access the database.
 def is_players_turn_in_game(game, email=None):
     """Test if it's `email`'s turn to move in `game` given `moves`.
 
@@ -534,9 +524,7 @@ class Move(db.Model):
     column = db.Column(db.Integer)
     move_no = db.Column(db.Integer)
 
-    class Color(IntEnum):
-        black = 0
-        white = 1
+    Color = go_rules.Color
     color = db.Column(db.Integer)
 
     def __init__(self, game_no, move_no, row, column, color):
