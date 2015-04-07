@@ -426,20 +426,11 @@ createGame = (black_email, white_email, stones=[]) ->
       'stones': JSON.stringify stones
 
 createLoginSession = (email) ->
-  "Add steps to the stack to create a login session on the server and set its
-  cookie in the browser."
+  "Add steps to the stack to create a login session on the server."
   casper.thenOpen "#{serverUrl}/testing_create_login_session",
     method: 'post'
     data:
       'email': email
-  casper.then ->
-    content = casper.getPageContent()
-    [name, value, path] = content.split '\n'
-    casper.page.clearCookies()
-    casper.page.addCookie
-      'name': name
-      'value': value
-      'path': path
 
 pointSelector = (x, y) -> ".col-#{x}.row-#{y}"
 

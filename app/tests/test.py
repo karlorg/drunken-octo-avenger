@@ -392,10 +392,6 @@ class TestGameIntegrated(TestWithDb):
 
 class TestGetGobanFromMoves(unittest.TestCase):
 
-    def assert_in(self, substr, string):
-        assert substr in string, '{exp} not found in {act}'.format(
-                exp=substr, act=string)
-
     def assert_point(self, goban, row, col, color):
         """`color` in this case is 'e', 'b' or 'w'"""
         img, stone_class = {'e': ('e.gif', 'nostone'),

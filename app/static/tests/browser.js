@@ -568,23 +568,12 @@
   };
 
   createLoginSession = function(email) {
-    "Add steps to the stack to create a login session on the server and set its cookie in the browser.";
-    casper.thenOpen(serverUrl + "/testing_create_login_session", {
+    "Add steps to the stack to create a login session on the server.";
+    return casper.thenOpen(serverUrl + "/testing_create_login_session", {
       method: 'post',
       data: {
         'email': email
       }
-    });
-    return casper.then(function() {
-      var content, name, path, ref, value;
-      content = casper.getPageContent();
-      ref = content.split('\n'), name = ref[0], value = ref[1], path = ref[2];
-      casper.page.clearCookies();
-      return casper.page.addCookie({
-        'name': name,
-        'value': value,
-        'path': path
-      });
     });
   };
 
