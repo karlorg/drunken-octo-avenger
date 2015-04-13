@@ -7,6 +7,8 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 from collections import namedtuple
 from enum import IntEnum
 import logging
+import time
+import multiprocessing
 
 from flask import (
         Flask, abort, flash, make_response, redirect, render_template, request,
@@ -564,13 +566,48 @@ class PlayStoneForm(Form):
     row = HiddenInteger("row", validators=[DataRequired()])
     column = HiddenInteger("column", validators=[DataRequired()])
 
-def server_player_act(player_email):
-    waiting_games, _not_waiting_games = get_status_lists(player_email)
-    for game in waiting_games:
-        # A request would normally include the 'move number' to make sure we are
-        # not replaying a previous move. But we're directly accessing the db
-        # here, so we get the move number from the db itself. Note that this
-        # still prevents replaying a move in the case in which (presumably,
-        # accidentally) we have two daemons running the same computer player.
-        arguments = {'move_no': game.move_no}
-        validate_turn_and_record("pass", player_email, game, arguments)
+
+class ServerPlayer(object):
+    """ A class used to represent server players. The hope is that to create a
+        new server player, one need only override the `act` method. It should
+        be then possible to create a daemon which runs all registered server
+        players at convenient times.
+    """
+    def __init__(self, player_email, rest_interval=3600):
+        """ Specify the player-email and the rest-interval in seconds. This can
+            be specified as a floating point number for more accuracy than
+            seconds if need be.
+        """
+        self.player_email = player_email
+        self.rest_interval = rest_interval
+
+    def _daemon(self):
+        while True:
+            self.act()
+            time.sleep(self.rest_interval)
+
+    def start_daemon(self):
+        self._daemon_process = multiprocessing.Process(target=self._daemon)
+        self._daemon_process.daemon = True
+        self._daemon_process.start()
+
+    def terminate_daemon(self):
+        if self._daemon_process is not None:
+            db.session.commit()
+            db.session.close()
+            self._daemon_process.terminate()
+
+    def act(self):
+        """ The base `act` method of the `ServerPlayer` is so simple that it
+            plays a pass on every waiting game.
+        """
+        waiting_games, _not_waiting_games = get_status_lists(self.player_email)
+        for game in waiting_games:
+            # A request would normally include the 'move number' to make sure we
+            # are not replaying a previous move. But we're directly accessing
+            # the db here, so we get the move number from the db itself. Note
+            # that this still prevents replaying a move in the case in which
+            # (presumably, accidentally) we have two daemons running the same
+            # computer player.
+            arguments = {'move_no': game.move_no}
+            validate_turn_and_record("pass", self.player_email, game, arguments)
