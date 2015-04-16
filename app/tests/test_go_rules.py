@@ -48,6 +48,16 @@ class TestUpdateBoardWithMove(unittest.TestCase):
         board.update_with_move(MockMove(black, 1, 2))
         self.assertEqual(board[1, 1], empty)
 
+    def test_regression_single_capture_with_non_identity(self):
+        # check for case where color of stone to be captured is equal to, but
+        # not identical to (`==`, not `is`), the enemy color
+        board = board_from_strings(['.b.',
+                                    'bw.',
+                                    '.b.'])
+        board[1, 1] = int(Color.white)
+        board.update_with_move(MockMove(black, 1, 2))
+        self.assertEqual(board[1, 1], empty)
+
     def test_group_capture(self):
         board = board_from_strings(['.bb.',
                                     'bwwb',

@@ -41,7 +41,7 @@ class Board(object):
 
         def process_captures(r, c):
             for (r0, c0) in self._get_neighbours(r, c):
-                if self._points[(r0, c0)] is enemy:
+                if self._points[(r0, c0)] == enemy:
                     if self._count_liberties(r0, c0) == 0:
                         for p in self._get_group(r0, c0):
                             self._points[p] = Color.empty

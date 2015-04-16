@@ -168,7 +168,7 @@
       return ClientSideJsTest.__super__.constructor.apply(this, arguments);
     }
 
-    ClientSideJsTest.prototype.names = ['ClientSideJsTest', 'qunit'];
+    ClientSideJsTest.prototype.names = ['ClientSideJsTest', 'qunit', 'client'];
 
     ClientSideJsTest.prototype.description = "Run client-side JS tests and ensure they pass.";
 

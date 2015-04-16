@@ -117,7 +117,7 @@ class BrowserTest
 
 
 class ClientSideJsTest extends BrowserTest
-  names: ['ClientSideJsTest', 'qunit']
+  names: ['ClientSideJsTest', 'qunit', 'client']
   description: "Run client-side JS tests and ensure they pass."
   numTests: 1
   testBody: (test) ->
