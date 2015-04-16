@@ -2,8 +2,8 @@
 (function() {
   var BrowserTest, ChallengeTest, ClientSideJsTest, GameInterfaceTest, LoginTest, PassAndScoringTest, PlaceStonesTest, StatusTest, allTestObjects, clearGamesForPlayer, createGame, createLoginSession, defaultHost, host, pointSelector, port, portString, registerTest, runAll, runTest, serverUrl, testObjectsByName,
     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
+    hasProp = {}.hasOwnProperty,
+    extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   defaultHost = "http://localhost";
 
@@ -56,6 +56,7 @@
   BrowserTest = (function() {
     function BrowserTest() {
       this.assertStonePointCounts = bind(this.assertStonePointCounts, this);
+      this.assertGeneralPointCounts = bind(this.assertGeneralPointCounts, this);
       this.assertEmptyBoard = bind(this.assertEmptyBoard, this);
       this.getLastGameLink = bind(this.getLastGameLink, this);
       this.run = bind(this.run, this);
@@ -135,26 +136,46 @@
     BrowserTest.prototype.countStonesAndPoints = function() {
       var counts;
       counts = casper.evaluate(function() {
-        var blackStones, emptyStones, whiteStones;
+        var blackScore, blackStones, emptyStones, whiteScore, whiteStones;
         emptyStones = $('.goban .nostone').length;
         blackStones = $('.goban .blackstone').length;
         whiteStones = $('.goban .whitestone').length;
+        blackScore = $('.goban .blackscore').length;
+        whiteScore = $('.goban .whitescore').length;
         counts = {
           'empty': emptyStones,
           'black': blackStones,
-          'white': whiteStones
+          'white': whiteStones,
+          'blackscore': blackScore,
+          'whitescore': whiteScore
         };
         return counts;
       });
       return counts;
     };
 
+    BrowserTest.prototype.assertGeneralPointCounts = function(test, expected) {
+      var count, counts, label, ref, results, type;
+      label = (ref = expected.label) != null ? ref : "unlabeled";
+      delete expected.label;
+      counts = this.countStonesAndPoints();
+      results = [];
+      for (type in expected) {
+        if (!hasProp.call(expected, type)) continue;
+        count = expected[type];
+        results.push(test.assertEqual(counts[type], count, "in " + label + ": " + type + " should be " + count + ", was " + counts[type]));
+      }
+      return results;
+    };
+
     BrowserTest.prototype.assertStonePointCounts = function(test, nostone, black, white) {
       var counts;
       counts = this.countStonesAndPoints();
-      test.assertEqual(counts.empty, nostone, 'Expected number of empty points');
-      test.assertEqual(counts.black, black, 'Expected number of black stones');
-      return test.assertEqual(counts.white, white, 'Expected number of white stones');
+      return this.assertGeneralPointCounts(test, {
+        'empty': nostone,
+        'black': black,
+        'white': white
+      });
     };
 
     return BrowserTest;
@@ -533,9 +554,23 @@
       casper.thenClick(this.lastGameSelector(true));
       casper.thenClick('.pass_button');
       casper.thenOpen(serverUrl);
-      return casper.thenClick(this.lastGameSelector(false), function() {
+      casper.thenClick(this.lastGameSelector(false), function() {
         return test.assertDoesntExist('.pass_button:enabled');
       });
+      createLoginSession(WHITE_EMAIL);
+      casper.thenOpen(serverUrl);
+      casper.thenClick(this.lastGameSelector(true));
+      return casper.thenClick('.pass_button', (function(_this) {
+        return function() {
+          test.assertExists('table.goban');
+          return _this.assertGeneralPointCounts(test, {
+            label: "initial marking layout",
+            empty: 5,
+            blackscore: 19 * 19 - 25 + 1,
+            whitescore: 0
+          });
+        };
+      })(this));
     };
 
     return PassAndScoringTest;

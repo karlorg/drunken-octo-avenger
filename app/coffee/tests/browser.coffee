@@ -103,17 +103,29 @@ class BrowserTest
       emptyStones = $('.goban .nostone').length
       blackStones = $('.goban .blackstone').length
       whiteStones = $('.goban .whitestone').length
+      blackScore = $('.goban .blackscore').length
+      whiteScore = $('.goban .whitescore').length
       counts =
         'empty': emptyStones
         'black': blackStones
         'white': whiteStones
+        'blackscore': blackScore
+        'whitescore': whiteScore
       return counts
     return counts
+  assertGeneralPointCounts: (test, expected) =>
+    label = expected.label ? "unlabeled"
+    delete expected.label
+    counts = @countStonesAndPoints()
+    for own type, count of expected
+      test.assertEqual counts[type], count,
+          "in #{label}: #{type} should be #{count}, was #{counts[type]}"
   assertStonePointCounts: (test, nostone, black, white) =>
     counts = @countStonesAndPoints()
-    test.assertEqual counts.empty, nostone, 'Expected number of empty points'
-    test.assertEqual counts.black, black, 'Expected number of black stones'
-    test.assertEqual counts.white, white, 'Expected number of white stones'
+    @assertGeneralPointCounts test,
+      'empty': nostone
+      'black': black
+      'white': white
 
 
 class ClientSideJsTest extends BrowserTest
@@ -405,6 +417,24 @@ class PassAndScoringTest extends BrowserTest
     casper.thenOpen serverUrl
     casper.thenClick (@lastGameSelector false), ->  # not our turn
       test.assertDoesntExist '.pass_button:enabled'
+
+    # white opens the game and passes
+    createLoginSession WHITE_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick @lastGameSelector true  # our turn
+    casper.thenClick '.pass_button'
+
+    # black opens the game and is invited to mark dead stones
+    createLoginSession BLACK_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector true), =>  # our turn
+      test.assertExists 'table.goban'
+      @assertGeneralPointCounts test,
+        label: "initial marking layout"
+        empty: 5
+        blackscore: 19*19 - 25 + 1
+        whitescore: 0
+
 
 registerTest new PassAndScoringTest
 
