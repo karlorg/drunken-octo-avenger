@@ -5,13 +5,12 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       str, super, zip)
 
 from collections import namedtuple
-from enum import IntEnum
 import logging
 import time
 import multiprocessing
 
 from flask import (
-        Flask, abort, flash, make_response, redirect, render_template, request,
+        Flask, abort, flash, redirect, render_template, request,
         session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -58,7 +57,6 @@ def game(game_no):
         flash("Game #{game_no} not found".format(game_no=game_no))
         return redirect('/')
     moves = game.moves
-    passes = game.passes
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
     goban = get_goban_from_moves(moves, setup_stones)
@@ -380,11 +378,11 @@ def get_status_lists(player_email):
     Accesses database.
     """
     player_games = get_player_games(player_email)
-    
-    your_turn_games = [g for g in player_games 
-                         if g.to_move() == player_email]
-    not_your_turn_games = [g for g in player_games 
-                             if g.to_move() != player_email]
+
+    your_turn_games = [g for g in player_games
+                       if g.to_move() == player_email]
+    not_your_turn_games = [g for g in player_games
+                           if g.to_move() != player_email]
     return (your_turn_games, not_your_turn_games)
 
 def get_player_games(player_email, games=None):
@@ -603,11 +601,12 @@ class ServerPlayer(object):
         """
         waiting_games, _not_waiting_games = get_status_lists(self.player_email)
         for game in waiting_games:
-            # A request would normally include the 'move number' to make sure we
-            # are not replaying a previous move. But we're directly accessing
-            # the db here, so we get the move number from the db itself. Note
-            # that this still prevents replaying a move in the case in which
-            # (presumably, accidentally) we have two daemons running the same
-            # computer player.
+            # A request would normally include the 'move number' to make sure
+            # we are not replaying a previous move. But we're directly
+            # accessing the db here, so we get the move number from the db
+            # itself. Note that this still prevents replaying a move in the
+            # case in which (presumably, accidentally) we have two daemons
+            # running the same computer player.
             arguments = {'move_no': game.move_no}
-            validate_turn_and_record("pass", self.player_email, game, arguments)
+            validate_turn_and_record(
+                    "pass", self.player_email, game, arguments)

@@ -708,17 +708,17 @@ class TestServerPlayer(TestWithDb):
     # back when the thread exits. I'm not sure why. I think it may well have
     # something to do with connection pooling, but the ORM hides that well.
     #
-    # Why not use `@unittest.expectedFailure`? This means that the test will not
-    # be run at all, whereas using a `assertRaises` context manager we ensure
-    # that the test gets run and does not error out on some other exception.
-    # So in particular we are making sure that the code is at least exercised
-    # and does not fail with, for example, a type error.
+    # Why not use `@unittest.expectedFailure`? This means that the test will
+    # not be run at all, whereas using a `assertRaises` context manager we
+    # ensure that the test gets run and does not error out on some other
+    # exception.  So in particular we are making sure that the code is at least
+    # exercised and does not fail with, for example, a type error.
     def test_server_player_daemon(self):
         with self.assertRaises(AssertionError):
             rest_interval = 0.1
             server_player_email = "serverplayer@localhost"
             server_player = main.ServerPlayer(
-                               server_player_email, rest_interval=rest_interval)
+                    server_player_email, rest_interval=rest_interval)
             test_opponent_email = "serverplayermock@localhost"
 
             # We start the daemon, create a game, then wait the three times the
