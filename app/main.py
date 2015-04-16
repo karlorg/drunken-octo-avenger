@@ -54,9 +54,11 @@ def front_page():
 def game(game_no):
     game = Game.query.filter(Game.id == game_no).first()
     if game is None:
-        flash("Game #{game_no} not found".format(game_no=game_no))
+        flash("Game #{} not found".format(game_no))
         return redirect('/')
     moves = game.moves
+    passes = game.passes
+    is_passed_twice = check_two_passes(moves, passes)
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
     goban = get_goban_from_moves(moves, setup_stones)
@@ -66,7 +68,8 @@ def game(game_no):
     ))
     return render_template_with_email(
             "game.html",
-            form=form, goban=goban, on_turn=is_your_turn)
+            form=form, goban=goban,
+            on_turn=is_your_turn, with_scoring=is_passed_twice)
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
@@ -305,7 +308,7 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_goban_from_moves(moves, setup_stones=None):
+def get_goban_from_moves(moves, setup_stones=None, with_scoring=False):
     """Given the moves for a game, return game template data.
 
     Pure function.
@@ -313,7 +316,7 @@ def get_goban_from_moves(moves, setup_stones=None):
     if setup_stones is None:
         setup_stones = []
     rules_board = get_rules_board_from_db_objects(moves, setup_stones)
-    goban = get_goban_data_from_rules_board(rules_board)
+    goban = get_goban_data_from_rules_board(rules_board, with_scoring)
     return goban
 
 def get_rules_board_from_db_objects(moves, setup_stones):
@@ -333,7 +336,7 @@ def get_rules_board_from_db_objects(moves, setup_stones):
     place_stones_for_move(max_move_no + 1)
     return board
 
-def get_goban_data_from_rules_board(rules_board):
+def get_goban_data_from_rules_board(rules_board, with_scoring=False):
     """Transform a dict of {(r,c): color} to a template-ready list of dicts.
 
     Each output dictionary contains information needed by the game template to
@@ -347,6 +350,9 @@ def get_goban_data_from_rules_board(rules_board):
 
     * points with stones should have `blackstone` or `whitestone`; empty points
       should have `nostone`
+
+    * if marking points is enabled, points which can be assigned to one player
+      should have `blackscore` or `whitescore`
 
     Pure function.
     """
@@ -366,9 +372,11 @@ def get_goban_data_from_rules_board(rules_board):
         classes = classes_template.format(row=str(row),
                                           col=str(column),
                                           color_class=color_classes[color])
+        if with_scoring:
+            classes += ' blackscore'
         return dict(img=color_images[color], classes=classes)
     goban = [[create_goban_point(j, i, rules_board[j, i])
-             for i in range(19)]
+              for i in range(19)]
              for j in range(19)]
     return goban
 
@@ -397,6 +405,21 @@ def get_player_games(player_email, games=None):
     def involved_in_game(game):
         return (player_email == game.black or player_email == game.white)
     return list(filter(involved_in_game, games))
+
+def check_two_passes(moves, passes):
+    """True if last two actions are both passes, false otherwise."""
+    last_move = max([-1] + [m.move_no for m in moves])
+    last_pass = max([-1] + [p.move_no for p in passes])
+    if last_move >= last_pass:
+        return False
+    sorted_passes = sorted(passes, key=lambda p: p.move_no)
+    try:
+        if sorted_passes[-2].move_no == last_pass - 1:
+            return True
+        else:
+            return False
+    except IndexError:
+        return False
 
 def is_players_turn_in_game(game, email=None):
     """Test if it's `email`'s turn to move in `game` given `moves`.
