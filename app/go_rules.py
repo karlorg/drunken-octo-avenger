@@ -56,8 +56,9 @@ class Board(object):
             # thankfully, if we still have no liberties then no captures have
             # occurred, so we can revert the board position simply by removing
             # the stone we just played
-            self._points[(r, c)] = Color.empty
-            raise IllegalMoveException("playing into no liberties", move_no)
+            self._points[(move.row, move.column)] = Color.empty
+            raise IllegalMoveException(
+                    "playing into no liberties", move.move_no)
 
     def _get_group(self, r, c):
         """Return the group of the stone at (r,c) as an iterable of coords.

@@ -27,25 +27,32 @@ def board_from_strings(rows):
                 board[r, c] = white
     return board
 
+class MockMove(object):
+    def __init__(self, color, row, column, move_no=None):
+        self.color = color
+        self.row = row
+        self.column = column
+        self.move_no = move_no
+
 class TestUpdateBoardWithMove(unittest.TestCase):
 
     def test_place_stone(self):
         board = board_from_strings(['..', '..'])
-        board.update_with_move(black, 0, 0)
+        board.update_with_move(MockMove(black, 0, 0))
         self.assertEqual(board[0, 0], black)
 
     def test_single_stone_capture(self):
         board = board_from_strings(['.b.',
                                     'bw.',
                                     '.b.'])
-        board.update_with_move(black, 1, 2)
+        board.update_with_move(MockMove(black, 1, 2))
         self.assertEqual(board[1, 1], empty)
 
     def test_group_capture(self):
         board = board_from_strings(['.bb.',
                                     'bwwb',
                                     '.b..'])
-        board.update_with_move(black, 2, 2)
+        board.update_with_move(MockMove(black, 2, 2))
         self.assertEqual(board[1, 1], empty)
         self.assertEqual(board[1, 2], empty)
 
@@ -57,7 +64,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'b.wb.',
                                     'wbbw.',
                                     '.ww..'])
-        board.update_with_move(white, 2, 1)
+        board.update_with_move(MockMove(white, 2, 1))
         self.assertEqual(board[1, 1], white)
         self.assertEqual(board[2, 2], white)
         self.assertEqual(board[3, 1], empty)
@@ -68,7 +75,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'bw.b.',
                                     'bwwb.',
                                     '.bb..'])
-        board.update_with_move(white, 2, 2)
+        board.update_with_move(MockMove(white, 2, 2))
         self.assertEqual(board[2, 1], white)
         self.assertEqual(board[3, 2], white)
         self.assertEqual(board[1, 1], empty)
@@ -77,7 +84,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
     def test_exception_on_simple_illegal_move(self):
         board = board_from_strings(['..', '.b'])
         with self.assertRaises(IllegalMoveException) as cm:
-            board.update_with_move(black, 1, 1, move_no=1)
+            board.update_with_move(MockMove(black, 1, 1, move_no=1))
         e = cm.exception
         self.assertEqual(e.move_no, 1)
 
@@ -86,7 +93,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'w.w',
                                     '.w.'])
         with self.assertRaises(IllegalMoveException) as cm:
-            board.update_with_move(black, 1, 1, move_no=1)
+            board.update_with_move(MockMove(black, 1, 1, move_no=1))
         e = cm.exception
         self.assertEqual(e.move_no, 1)
         # also, the board should not have changed
