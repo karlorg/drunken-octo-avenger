@@ -64,7 +64,7 @@ def game(game_no):
     goban = get_goban_from_moves(moves, setup_stones)
     form = PlayStoneForm(data=dict(
         game_no=game.id,
-        move_no=len(moves)
+        move_no=game.move_no
     ))
     return render_template_with_email(
             "game.html",
@@ -107,8 +107,8 @@ def validate_turn_and_record(pass_or_move, player, game, arguments):
     except (KeyError, ValueError):
         raise go_rules.IllegalMoveException("Invalid request made.")
 
-    if move_no != len(game.moves) + len(game.passes):
-        message = "Move number supplied no sequential"
+    if move_no != game.move_no:
+        message = "Move number supplied not sequential"
         raise go_rules.IllegalMoveException(message)
 
     color = game.to_move_color()
@@ -507,7 +507,6 @@ class Game(db.Model):
     def to_move(self):
         move_no = self.move_no
         return (self.black, self.white)[move_no % 2]
-
 
     def to_move_color(self):
         move_no = self.move_no

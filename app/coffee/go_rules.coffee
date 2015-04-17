@@ -78,15 +78,23 @@ go_rules._countLiberties = countLiberties
 groupPoints = (x, y, state) ->
   "Return a list of points in the group around (x, y) from `state`, whether
   black, white, or empty."
-  groupPointsInternal = (x, y, state, seen) ->
-    color = state[y][x]
-    result = [[x, y]]
-    for [xn, yn] in neighboringPoints(x, y, state)
-      if state[yn][xn] is color and "#{xn} #{yn}" not in seen
-        result = result.concat(groupPointsInternal(
-          xn, yn, state, seen.concat("#{x} #{y}")))
-    return result
-  groupPointsInternal(x, y, state, [])
+  color = state[y][x]
+  done = []
+  doneState = (('none' for w in [0..state[0].length]) \
+               for h in [0..state.length])
+  new_ = [[x, y]]
+  doneState[y][x] = 'new'
+  while true
+    if new_.length is 0
+      return done
+    [x0, y0] = new_.pop()
+    done.push [x0, y0]
+    doneState[y0][x0] = 'done'
+    for [xn, yn] in neighboringPoints(x0, y0, state)
+      if state[yn][xn] is color and
+         doneState[yn][xn] is 'none'
+        new_.push [xn, yn]
+        doneState[yn][xn] = 'new'
 
 # export for testing
 go_rules._groupPoints = groupPoints

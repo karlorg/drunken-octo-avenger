@@ -128,21 +128,42 @@
 
   groupPoints = function(x, y, state) {
     "Return a list of points in the group around (x, y) from `state`, whether black, white, or empty.";
-    var groupPointsInternal;
-    groupPointsInternal = function(x, y, state, seen) {
-      var color, i, len, ref, ref1, ref2, result, xn, yn;
-      color = state[y][x];
-      result = [[x, y]];
-      ref = neighboringPoints(x, y, state);
-      for (i = 0, len = ref.length; i < len; i++) {
-        ref1 = ref[i], xn = ref1[0], yn = ref1[1];
-        if (state[yn][xn] === color && (ref2 = xn + " " + yn, indexOf.call(seen, ref2) < 0)) {
-          result = result.concat(groupPointsInternal(xn, yn, state, seen.concat(x + " " + y)));
+    var color, done, doneState, h, i, len, new_, ref, ref1, ref2, w, x0, xn, y0, yn;
+    color = state[y][x];
+    done = [];
+    doneState = (function() {
+      var i, ref, results;
+      results = [];
+      for (h = i = 0, ref = state.length; 0 <= ref ? i <= ref : i >= ref; h = 0 <= ref ? ++i : --i) {
+        results.push((function() {
+          var j, ref1, results1;
+          results1 = [];
+          for (w = j = 0, ref1 = state[0].length; 0 <= ref1 ? j <= ref1 : j >= ref1; w = 0 <= ref1 ? ++j : --j) {
+            results1.push('none');
+          }
+          return results1;
+        })());
+      }
+      return results;
+    })();
+    new_ = [[x, y]];
+    doneState[y][x] = 'new';
+    while (true) {
+      if (new_.length === 0) {
+        return done;
+      }
+      ref = new_.pop(), x0 = ref[0], y0 = ref[1];
+      done.push([x0, y0]);
+      doneState[y0][x0] = 'done';
+      ref1 = neighboringPoints(x0, y0, state);
+      for (i = 0, len = ref1.length; i < len; i++) {
+        ref2 = ref1[i], xn = ref2[0], yn = ref2[1];
+        if (state[yn][xn] === color && doneState[yn][xn] === 'none') {
+          new_.push([xn, yn]);
+          doneState[yn][xn] = 'new';
         }
       }
-      return result;
-    };
-    return groupPointsInternal(x, y, state, []);
+    }
   };
 
   go_rules._groupPoints = groupPoints;

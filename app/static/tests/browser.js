@@ -136,18 +136,20 @@
     BrowserTest.prototype.countStonesAndPoints = function() {
       var counts;
       counts = casper.evaluate(function() {
-        var blackScore, blackStones, emptyStones, whiteScore, whiteStones;
+        var blackScore, blackStones, emptyStones, noScore, whiteScore, whiteStones;
         emptyStones = $('.goban .nostone').length;
         blackStones = $('.goban .blackstone').length;
         whiteStones = $('.goban .whitestone').length;
         blackScore = $('.goban .blackscore').length;
         whiteScore = $('.goban .whitescore').length;
+        noScore = $('.goban td').length - blackScore - whiteScore;
         counts = {
           'empty': emptyStones,
           'black': blackStones,
           'white': whiteStones,
           'blackscore': blackScore,
-          'whitescore': whiteScore
+          'whitescore': whiteScore,
+          'noscore': noScore
         };
         return counts;
       });
@@ -537,7 +539,7 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 1;
+    PassAndScoringTest.prototype.numTests = 5;
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, i, len, p, ref;
@@ -568,7 +570,7 @@
           test.assertExists('table.goban');
           return _this.assertGeneralPointCounts(test, {
             label: "initial marking layout",
-            empty: 5,
+            noscore: 3 + 5 + 7 + 9,
             blackscore: 19 * 19 - 25 + 1,
             whitescore: 0
           });

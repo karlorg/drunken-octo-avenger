@@ -105,12 +105,14 @@ class BrowserTest
       whiteStones = $('.goban .whitestone').length
       blackScore = $('.goban .blackscore').length
       whiteScore = $('.goban .whitescore').length
+      noScore = $('.goban td').length - blackScore - whiteScore
       counts =
         'empty': emptyStones
         'black': blackStones
         'white': whiteStones
         'blackscore': blackScore
         'whitescore': whiteScore
+        'noscore': noScore
       return counts
     return counts
   assertGeneralPointCounts: (test, expected) =>
@@ -393,7 +395,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 1
+  numTests: 5
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -431,10 +433,9 @@ class PassAndScoringTest extends BrowserTest
       test.assertExists 'table.goban'
       @assertGeneralPointCounts test,
         label: "initial marking layout"
-        empty: 5
+        noscore: 3 + 5 + 7 + 9  # black group, dame, white group, black group
         blackscore: 19*19 - 25 + 1
         whitescore: 0
-
 
 registerTest new PassAndScoringTest
 
