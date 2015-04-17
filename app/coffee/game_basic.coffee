@@ -109,6 +109,24 @@ setupScoring = ->
         $td.addClass class_
   return
 
+normalClickFunc = ->
+  return unless hasCoordClass $(this)
+  [row, col] = parseCoordClass $(this)
+
+  try
+    newBoardState = go_rules.getNewState(
+      newStoneColor, col, row, initialBoardState)
+  catch error
+    if error.message is 'illegal move'
+      return
+    else
+      throw error
+  updateBoard newBoardState
+
+  $('input#row').val row.toString()
+  $('input#column').val col.toString()
+  $('button.confirm_button').prop 'disabled', false
+
 game_basic.initialize = ->
 
   initialBoardState = readBoardState()
@@ -123,20 +141,5 @@ game_basic.initialize = ->
   if $('.with_scoring').length
     setupScoring()
 
-  $('table.goban td').click ->
-    return unless hasCoordClass $(this)
-    [row, col] = parseCoordClass $(this)
-
-    try
-      newBoardState = go_rules.getNewState(
-        newStoneColor, col, row, initialBoardState)
-    catch error
-      if error.message is 'illegal move'
-        return
-      else
-        throw error
-    updateBoard newBoardState
-
-    $('input#row').val row.toString()
-    $('input#column').val col.toString()
-    $('button.confirm_button').prop 'disabled', false
+  if not $('.with_scoring').length
+    $('table.goban td').click normalClickFunc

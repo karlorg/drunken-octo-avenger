@@ -565,7 +565,7 @@
       casper.thenClick('.pass_button');
       createLoginSession(BLACK_EMAIL);
       casper.thenOpen(serverUrl);
-      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
+      casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban');
           return _this.assertGeneralPointCounts(test, {
@@ -573,6 +573,26 @@
             noscore: 3 + 5 + 7 + 9,
             blackscore: 19 * 19 - 25 + 1,
             whitescore: 0
+          });
+        };
+      })(this));
+      casper.thenClick(pointSelector(0, 0), (function(_this) {
+        return function() {
+          return _this.assertGeneralPointCounts(test, {
+            label: "after clicking empty point",
+            empty: 19 * 19 - 3 - 7 - 9
+          });
+        };
+      })(this));
+      return casper.thenClick(pointSelector(1, 0), (function(_this) {
+        return function() {
+          return _this.assertGeneralPointCounts(test, {
+            label: "black stones marked dead",
+            noscore: 7 + 9,
+            blackscore: 19 * 19 - 25,
+            whitescore: 9,
+            blackdead: 3,
+            blackstones: 9
           });
         };
       })(this));

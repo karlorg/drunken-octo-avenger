@@ -436,6 +436,21 @@ class PassAndScoringTest extends BrowserTest
         noscore: 3 + 5 + 7 + 9  # black group, dame, white group, black group
         blackscore: 19*19 - 25 + 1
         whitescore: 0
+    # clicking an empty point does nothing
+    casper.thenClick (pointSelector 0, 0), =>
+      @assertGeneralPointCounts test,
+        label: "after clicking empty point"
+        empty: 19*19 - 3 - 7 - 9
+    # we click the top left black group; the stones change appearance to show
+    # they are considered dead, and the scores change
+    casper.thenClick (pointSelector 1, 0), =>
+      @assertGeneralPointCounts test,
+        label: "black stones marked dead"
+        noscore: 7 + 9  # just white and black stones at the border
+        blackscore: 19*19 - 25
+        whitescore: 9
+        blackdead: 3
+        blackstones: 9
 
 registerTest new PassAndScoringTest
 

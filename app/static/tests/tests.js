@@ -152,6 +152,15 @@
     return assert.notOk($('.row-0.col-0').hasClass('blackscore'), "encircled point has no score class");
   });
 
+  test("clicking empty points in marking mode does nothing", function(assert) {
+    var $point;
+    tesuji_charm.game_basic.initialize();
+    $point = $('.row-1.col-1');
+    assert.notOk($point.hasClass('blackstone'), "centre point starts empty");
+    $point.click();
+    return assert.notOk($point.hasClass('blackstone'), "still empty after click");
+  });
+
   test("mixed scoring board", function(assert) {
     tesuji_charm.game_basic._updateBoardChars(['.b.', 'bww', '.w.']);
     tesuji_charm.game_basic.initialize();
