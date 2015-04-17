@@ -37,6 +37,9 @@ test 'init function sets request and logout callbacks', ->
   equal logoutCalled, true, 'logout callback called correctly'
 
 
+# ============================================================================
+
+
 module 'Basic game page',
   setup: ->
     $('input#move_no').val "0"
@@ -122,21 +125,80 @@ test "helper function readBoardState", (assert) ->
   assert.deepEqual tesuji_charm.game_basic._readBoardState(), expected
 
 test "helper function updateBoard", (assert) ->
-  tesuji_charm.game_basic._updateBoard [
-    ['empty', 'black', 'empty']
-    ['black', 'white', 'empty']
-    ['empty', 'black', 'empty']
+  tesuji_charm.game_basic._updateBoardChars [
+    '.b.'
+    'bw.'
+    '.b.'
   ]
   assert.ok $('.row-0.col-1 img').attr('src').indexOf('b.gif') > -1
   assert.ok $('.row-1.col-1 img').attr('src').indexOf('w.gif') > -1
   assert.ok $('.row-1.col-2 img').attr('src').indexOf('e.gif') > -1
-  tesuji_charm.game_basic._updateBoard [
-    ['empty', 'empty', 'empty']
-    ['empty', 'empty', 'empty']
-    ['empty', 'empty', 'empty']
+  tesuji_charm.game_basic._updateBoardChars [
+    '...'
+    '...'
+    '...'
   ]
   assert.ok $('.row-0.col-1 img').attr('src').indexOf('e.gif') > -1
   assert.ok $('.row-1.col-1 img').attr('src').indexOf('e.gif') > -1
+
+
+# ============================================================================
+
+
+module 'Game page with marking interface',
+  beforeEach: ->
+    $("#qunit-fixture").append $("<div/>",
+                                 id: 'with_scoring'
+                                 class: 'with_scoring')
+
+test "presence of score class", (assert) ->
+  tesuji_charm.game_basic._updateBoardChars [
+    '.b'
+    'bb'
+  ]
+  tesuji_charm.game_basic.initialize()
+  assert.ok $('.row-0.col-0').hasClass('blackscore'),
+    "encircled point has score class"
+
+test "presence of score class depends on '.with_scoring' element", (assert) ->
+  $('.with_scoring').remove()
+  $('#with_scoring').remove()
+  tesuji_charm.game_basic._updateBoardChars [
+    '.b'
+    'bb'
+  ]
+  tesuji_charm.game_basic.initialize()
+  assert.notOk $('.row-0.col-0').hasClass('blackscore'),
+    "encircled point has no score class"
+
+test "mixed scoring board", (assert) ->
+  tesuji_charm.game_basic._updateBoardChars [
+    '.b.'
+    'bww'
+    '.w.'
+  ]
+  tesuji_charm.game_basic.initialize()
+  assert.ok $('.row-0.col-0').hasClass('blackscore'), "(0,0) black"
+  assert.notOk $('.row-0.col-0').hasClass('whitescore'), "(0,0) white"
+  assert.notOk $('.row-0.col-1').hasClass('blackscore'), "(0,1) black"
+  assert.notOk $('.row-0.col-1').hasClass('whitescore'), "(0,1) white"
+  assert.notOk $('.row-0.col-2').hasClass('blackscore'), "(0,2) black"
+  assert.notOk $('.row-0.col-2').hasClass('whitescore'), "(0,2) white"
+  assert.notOk $('.row-1.col-0').hasClass('blackscore'), "(1,0) black"
+  assert.notOk $('.row-1.col-0').hasClass('whitescore'), "(1,0) white"
+  assert.notOk $('.row-1.col-1').hasClass('blackscore'), "(1,1) black"
+  assert.notOk $('.row-1.col-1').hasClass('whitescore'), "(1,1) white"
+  assert.notOk $('.row-1.col-2').hasClass('blackscore'), "(1,2) black"
+  assert.notOk $('.row-1.col-2').hasClass('whitescore'), "(1,2) white"
+  assert.notOk $('.row-2.col-0').hasClass('blackscore'), "(2,0) black"
+  assert.notOk $('.row-2.col-0').hasClass('whitescore'), "(2,0) white"
+  assert.notOk $('.row-2.col-1').hasClass('blackscore'), "(2,1) black"
+  assert.notOk $('.row-2.col-1').hasClass('whitescore'), "(2,1) white"
+  assert.notOk $('.row-2.col-2').hasClass('blackscore'), "(2,2) black"
+  assert.ok $('.row-2.col-2').hasClass('whitescore'), "(2,2) white"
+
+
+# ============================================================================
 
 
 module 'Go rules'

@@ -560,7 +560,10 @@
       createLoginSession(WHITE_EMAIL);
       casper.thenOpen(serverUrl);
       casper.thenClick(this.lastGameSelector(true));
-      return casper.thenClick('.pass_button', (function(_this) {
+      casper.thenClick('.pass_button');
+      createLoginSession(BLACK_EMAIL);
+      casper.thenOpen(serverUrl);
+      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban');
           return _this.assertGeneralPointCounts(test, {

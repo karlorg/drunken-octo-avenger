@@ -29,6 +29,9 @@
             class="pass_button" name='pass_button'>Pass</button>
 </form>
 {% endif %}
+{% if with_scoring %}
+<div id="with_scoring" class="with_scoring" style="display: none;" />
+{% endif %}
 {% endblock %}
 
 {% block page_scripts %}

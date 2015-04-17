@@ -22,6 +22,28 @@ go_rules.getNewState = (color, x, y, state) ->
     throw Error 'illegal move'
   return newState
 
+go_rules.boundingColor = (x, y, state) ->
+  "Return the color surrounding the empty area around (x, y), or 'neither' if
+  boundary is mixed."
+  area = groupPoints x, y, state
+  seen = 'none'
+  for [x, y] in area
+    for [x0, y0] in neighboringPoints x, y, state
+      point = state[y0][x0]
+      if point is 'empty'
+        continue
+      else if seen is 'none'
+        seen = point
+        continue
+      else if seen isnt point
+        return 'neither'
+  if seen is 'none'
+    seen = 'neither'
+  return seen
+
+# ============================================================================
+# helper functions
+
 neighboringPoints = (x, y, state) ->
   [x0, y0] \
     for [x0, y0] in [ [x, y-1], [x+1, y], [x, y+1], [x-1, y] ] \
@@ -54,6 +76,8 @@ countLiberties = (x, y, state) ->
 go_rules._countLiberties = countLiberties
 
 groupPoints = (x, y, state) ->
+  "Return a list of points in the group around (x, y) from `state`, whether
+  black, white, or empty."
   groupPointsInternal = (x, y, state, seen) ->
     color = state[y][x]
     result = [[x, y]]

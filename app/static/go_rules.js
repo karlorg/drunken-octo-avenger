@@ -41,6 +41,33 @@
     return newState;
   };
 
+  go_rules.boundingColor = function(x, y, state) {
+    "Return the color surrounding the empty area around (x, y), or 'neither' if boundary is mixed.";
+    var area, i, j, len, len1, point, ref, ref1, ref2, seen, x0, y0;
+    area = groupPoints(x, y, state);
+    seen = 'none';
+    for (i = 0, len = area.length; i < len; i++) {
+      ref = area[i], x = ref[0], y = ref[1];
+      ref1 = neighboringPoints(x, y, state);
+      for (j = 0, len1 = ref1.length; j < len1; j++) {
+        ref2 = ref1[j], x0 = ref2[0], y0 = ref2[1];
+        point = state[y0][x0];
+        if (point === 'empty') {
+          continue;
+        } else if (seen === 'none') {
+          seen = point;
+          continue;
+        } else if (seen !== point) {
+          return 'neither';
+        }
+      }
+    }
+    if (seen === 'none') {
+      seen = 'neither';
+    }
+    return seen;
+  };
+
   neighboringPoints = function(x, y, state) {
     var i, len, ref, ref1, results, x0, y0;
     ref = [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]];
@@ -100,6 +127,7 @@
   go_rules._countLiberties = countLiberties;
 
   groupPoints = function(x, y, state) {
+    "Return a list of points in the group around (x, y) from `state`, whether black, white, or empty.";
     var groupPointsInternal;
     groupPointsInternal = function(x, y, state, seen) {
       var color, i, len, ref, ref1, ref2, result, xn, yn;
