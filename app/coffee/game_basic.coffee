@@ -73,10 +73,41 @@ updateBoard = (state) ->
 # export to enable testing
 game_basic._updateBoard = updateBoard
 
+updateBoardChars = (charArray) ->
+  for row, rowString of charArray
+    for col, char of rowString
+      color = switch char
+        when "b" then "black"
+        when "w" then "white"
+        when "." then "empty"
+      $td = $(".row-#{row}.col-#{col}")
+      setPointColor $td, color
+
+# export for use by tests
+game_basic._updateBoardChars = updateBoardChars
+
 # to facilitate testing, export a function to reload our internal state from
 # the page
 game_basic._reloadBoard = ->
   initialBoardState = readBoardState()
+
+setupScoring = ->
+  for row, rowArray of initialBoardState
+    row = parseInt row, 10
+    for col, state of rowArray
+      col = parseInt col, 10
+      $td = $(".row-#{row}.col-#{col}")
+      continue if $td.hasClass 'blackscore'
+      continue if $td.hasClass 'whitescore'
+      continue unless state is 'empty'
+      boundary = go_rules.boundingColor col, row, initialBoardState
+      continue if boundary is 'neither'
+      class_ = switch boundary
+        when 'black' then 'blackscore'
+        when 'white' then 'whitescore'
+      for [x, y] in go_rules._groupPoints col, row, initialBoardState
+        $td.addClass class_
+  return
 
 game_basic.initialize = ->
 
@@ -88,6 +119,9 @@ game_basic.initialize = ->
     newStoneColor = 'white'
 
   $('button.confirm_button').prop 'disabled', true
+
+  if $('.with_scoring').length
+    setupScoring()
 
   $('table.goban td').click ->
     return unless hasCoordClass $(this)

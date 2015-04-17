@@ -390,6 +390,20 @@ class TestGameIntegrated(TestWithDb):
         assert pos_row0 < pos_row1
         assert pos_col0 < pos_col1
 
+    def test_after_two_passes_activates_scoring_interface(self):
+        game = self.add_game()
+        main.add_stones_from_text_map_to_game(['.b',
+                                               'bb'], game)
+        main.db.session.add(Pass(
+            game_no=game.id, move_no=0, color=Move.Color.black))
+        main.db.session.add(Pass(
+            game_no=game.id, move_no=1, color=Move.Color.white))
+        with self.set_email('black@black.com') as test_client:
+            with self.patch_render_template() as mock_render:
+                test_client.get(url_for('game', game_no=game.id))
+                args, kwargs = mock_render.call_args
+        self.assertEqual(kwargs['with_scoring'], True)
+
 
 class TestGetGobanFromMoves(unittest.TestCase):
 
