@@ -29,6 +29,8 @@ setPointColor = ($td, color) ->
   setImage $td, filename
   setStoneClass $td, stoneclass
 
+$pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
+
 
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/
@@ -67,7 +69,7 @@ game_basic._readBoardState = readBoardState
 updateBoard = (state) ->
   for row, rowArray of state
     for col, data of rowArray
-      $td = $(".row-#{row}.col-#{col}")
+      $td = $pointAt col, row
       setPointColor $td, data
 
 # export to enable testing
@@ -80,7 +82,7 @@ updateBoardChars = (charArray) ->
         when "b" then "black"
         when "w" then "white"
         when "." then "empty"
-      $td = $(".row-#{row}.col-#{col}")
+      $td = $pointAt col, row
       setPointColor $td, color
 
 # export for use by tests
@@ -92,22 +94,34 @@ game_basic._reloadBoard = ->
   initialBoardState = readBoardState()
 
 setupScoring = ->
-  for row, rowArray of initialBoardState
+  state = readBoardState()
+  clearScores state
+  for row, rowArray of state
     row = parseInt row, 10
-    for col, state of rowArray
+    for col, color of rowArray
       col = parseInt col, 10
-      $td = $(".row-#{row}.col-#{col}")
+      $td = $pointAt col, row
       continue if $td.hasClass 'blackscore'
       continue if $td.hasClass 'whitescore'
-      continue unless state is 'empty'
-      boundary = go_rules.boundingColor col, row, initialBoardState
+      continue if ($td.hasClass 'blackstone') or ($td.hasClass 'whitestone')
+      boundary = go_rules.boundingColor col, row, state
       continue if boundary is 'neither'
       class_ = switch boundary
         when 'black' then 'blackscore'
         when 'white' then 'whitescore'
-      for [x, y] in go_rules._groupPoints col, row, initialBoardState
+      # TODO: either make groupPoints public, or move this functionality into
+      # go_rules
+      for [x, y] in go_rules._groupPoints col, row, state
         $td.addClass class_
   return
+
+clearScores = (state) ->
+  "remove score classes from board with dimensions taken from `state`"
+  for row, rowArray of state
+    for col, _ of rowArray
+      $td = $pointAt col, row
+      $td.removeClass 'blackscore'
+      $td.removeClass 'whitescore'
 
 normalClickFunc = ->
   return unless hasCoordClass $(this)
@@ -127,6 +141,23 @@ normalClickFunc = ->
   $('input#column').val col.toString()
   $('button.confirm_button').prop 'disabled', false
 
+markingClickFunc = ->
+  return unless hasCoordClass $(this)
+  [row, col] = parseCoordClass $(this)
+  $point = $pointAt col, row
+  if $point.hasClass('blackstone')
+    oldClass = 'blackstone'
+    newClass = 'blackdead'
+  else if $point.hasClass('whitestone')
+    oldClass = 'whitestone'
+    newClass = 'whitedead'
+  else
+    return
+  for [x, y] in go_rules._groupPoints col, row, readBoardState()
+    $pointAt(x, y).removeClass oldClass
+    $pointAt(x, y).addClass newClass
+  setupScoring()
+
 game_basic.initialize = ->
 
   initialBoardState = readBoardState()
@@ -143,3 +174,5 @@ game_basic.initialize = ->
 
   if not $('.with_scoring').length
     $('table.goban td').click normalClickFunc
+  else
+    $('table.goban td').click markingClickFunc

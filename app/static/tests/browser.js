@@ -136,12 +136,14 @@
     BrowserTest.prototype.countStonesAndPoints = function() {
       var counts;
       counts = casper.evaluate(function() {
-        var blackScore, blackStones, emptyStones, noScore, whiteScore, whiteStones;
+        var blackDead, blackScore, blackStones, emptyStones, noScore, whiteDead, whiteScore, whiteStones;
         emptyStones = $('.goban .nostone').length;
         blackStones = $('.goban .blackstone').length;
         whiteStones = $('.goban .whitestone').length;
         blackScore = $('.goban .blackscore').length;
         whiteScore = $('.goban .whitescore').length;
+        blackDead = $('.goban .blackdead').length;
+        whiteDead = $('.goban .whitedead').length;
         noScore = $('.goban td').length - blackScore - whiteScore;
         counts = {
           'empty': emptyStones,
@@ -149,6 +151,8 @@
           'white': whiteStones,
           'blackscore': blackScore,
           'whitescore': whiteScore,
+          'blackdead': blackDead,
+          'whitedead': whiteDead,
           'noscore': noScore
         };
         return counts;
@@ -539,7 +543,7 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 5;
+    PassAndScoringTest.prototype.numTests = 11;
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, i, len, p, ref;
@@ -592,7 +596,7 @@
             blackscore: 19 * 19 - 25,
             whitescore: 9,
             blackdead: 3,
-            blackstones: 9
+            black: 9
           });
         };
       })(this));

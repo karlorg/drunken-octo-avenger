@@ -105,6 +105,8 @@ class BrowserTest
       whiteStones = $('.goban .whitestone').length
       blackScore = $('.goban .blackscore').length
       whiteScore = $('.goban .whitescore').length
+      blackDead = $('.goban .blackdead').length
+      whiteDead = $('.goban .whitedead').length
       noScore = $('.goban td').length - blackScore - whiteScore
       counts =
         'empty': emptyStones
@@ -112,6 +114,8 @@ class BrowserTest
         'white': whiteStones
         'blackscore': blackScore
         'whitescore': whiteScore
+        'blackdead': blackDead
+        'whitedead': whiteDead
         'noscore': noScore
       return counts
     return counts
@@ -395,7 +399,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 5
+  numTests: 11
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -450,7 +454,7 @@ class PassAndScoringTest extends BrowserTest
         blackscore: 19*19 - 25
         whitescore: 9
         blackdead: 3
-        blackstones: 9
+        black: 9
 
 registerTest new PassAndScoringTest
 

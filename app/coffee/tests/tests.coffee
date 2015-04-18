@@ -172,11 +172,27 @@ test "presence of score class depends on '.with_scoring' element", (assert) ->
     "encircled point has no score class"
 
 test "clicking empty points in marking mode does nothing", (assert) ->
-  tesuji_charm.game_basic.initialize()
   $point = $('.row-1.col-1')
   assert.notOk $point.hasClass('blackstone'), "centre point starts empty"
   $point.click()
   assert.notOk $point.hasClass('blackstone'), "still empty after click"
+
+test "clicking live stones makes them dead", (assert) ->
+  tesuji_charm.game_basic._updateBoardChars [
+    '.bw'
+    'bbw'
+    'www'
+  ]
+  tesuji_charm.game_basic.initialize()
+  $('.row-1.col-1').click()
+  assert.notOk $('.row-0.col-0').hasClass('blackscore'),
+    "black scoring point no longer counts for black with black stones dead"
+  assert.ok $('.row-0.col-0').hasClass('whitescore'),
+    "black scoring point becomes white with black stones dead"
+  assert.ok $('.row-0.col-1').hasClass('whitescore'),
+    "dead black stone has white score class"
+  assert.ok $('.row-0.col-1').hasClass('blackdead'),
+    "dead black stone has dead black stone class"
 
 test "mixed scoring board", (assert) ->
   tesuji_charm.game_basic._updateBoardChars [
