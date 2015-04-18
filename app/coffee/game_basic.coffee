@@ -19,13 +19,15 @@ setImage = ($td, filename) ->
   $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
 setStoneClass = ($td, stoneclass) ->
-  $td.removeClass('blackstone whitestone nostone').addClass(stoneclass)
+  $td.removeClass('blackstone whitestone nostone
+                   blackdead').addClass(stoneclass)
 
 setPointColor = ($td, color) ->
   [filename, stoneclass] = switch color
     when 'empty' then ['e.gif', 'nostone']
     when 'black' then ['b.gif', 'blackstone']
     when 'white' then ['w.gif', 'whitestone']
+    when 'blackdead' then ['bdwp.gif', 'blackdead']
   setImage $td, filename
   setStoneClass $td, stoneclass
 
@@ -146,16 +148,13 @@ markingClickFunc = ->
   [row, col] = parseCoordClass $(this)
   $point = $pointAt col, row
   if $point.hasClass('blackstone')
-    oldClass = 'blackstone'
-    newClass = 'blackdead'
+    newColor = 'blackdead'
   else if $point.hasClass('whitestone')
-    oldClass = 'whitestone'
-    newClass = 'whitedead'
+    newColor = 'whitedead'
   else
     return
   for [x, y] in go_rules._groupPoints col, row, readBoardState()
-    $pointAt(x, y).removeClass oldClass
-    $pointAt(x, y).addClass newClass
+    setPointColor $pointAt(x, y), newColor
   setupScoring()
 
 game_basic.initialize = ->

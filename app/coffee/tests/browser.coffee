@@ -83,6 +83,10 @@ class BrowserTest
       return link
     casper.evaluate evaluate_fun, @lastGameSelector(your_turn)
 
+  imageSrc: (x, y) ->
+    casper.evaluate ((x, y) -> $(".row-#{y}.col-#{x} img").attr('src')),
+      x, y
+
   assertEmptyBoard: (test) =>
     @assertStonePointCounts test, 19*19, 0, 0
 
@@ -399,7 +403,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 11
+  numTests: 12
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -433,8 +437,10 @@ class PassAndScoringTest extends BrowserTest
     # black opens the game and is invited to mark dead stones
     createLoginSession BLACK_EMAIL
     casper.thenOpen serverUrl
+    originalImageSrc11 = null
     casper.thenClick (@lastGameSelector true), =>  # our turn
       test.assertExists 'table.goban'
+      originalImageSrc11 = @imageSrc 1, 1
       @assertGeneralPointCounts test,
         label: "initial marking layout"
         noscore: 3 + 5 + 7 + 9  # black group, dame, white group, black group
@@ -448,6 +454,9 @@ class PassAndScoringTest extends BrowserTest
     # we click the top left black group; the stones change appearance to show
     # they are considered dead, and the scores change
     casper.thenClick (pointSelector 1, 0), =>
+      imageSrc11 = @imageSrc 1, 1
+      test.assertNotEquals imageSrc11, originalImageSrc11,
+        "black stone image source is not still #{originalImageSrc11}"
       @assertGeneralPointCounts test,
         label: "black stones marked dead"
         noscore: 7 + 9  # just white and black stones at the border

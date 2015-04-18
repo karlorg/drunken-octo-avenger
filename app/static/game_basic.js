@@ -27,7 +27,7 @@
   };
 
   setStoneClass = function($td, stoneclass) {
-    return $td.removeClass('blackstone whitestone nostone').addClass(stoneclass);
+    return $td.removeClass('blackstone whitestone nostone blackdead').addClass(stoneclass);
   };
 
   setPointColor = function($td, color) {
@@ -40,6 +40,8 @@
           return ['b.gif', 'blackstone'];
         case 'white':
           return ['w.gif', 'whitestone'];
+        case 'blackdead':
+          return ['bdwp.gif', 'blackdead'];
       }
     })(), filename = ref[0], stoneclass = ref[1];
     setImage($td, filename);
@@ -246,26 +248,23 @@
   };
 
   markingClickFunc = function() {
-    var $point, col, i, len, newClass, oldClass, ref, ref1, ref2, row, x, y;
+    var $point, col, i, len, newColor, ref, ref1, ref2, row, x, y;
     if (!hasCoordClass($(this))) {
       return;
     }
     ref = parseCoordClass($(this)), row = ref[0], col = ref[1];
     $point = $pointAt(col, row);
     if ($point.hasClass('blackstone')) {
-      oldClass = 'blackstone';
-      newClass = 'blackdead';
+      newColor = 'blackdead';
     } else if ($point.hasClass('whitestone')) {
-      oldClass = 'whitestone';
-      newClass = 'whitedead';
+      newColor = 'whitedead';
     } else {
       return;
     }
     ref1 = go_rules._groupPoints(col, row, readBoardState());
     for (i = 0, len = ref1.length; i < len; i++) {
       ref2 = ref1[i], x = ref2[0], y = ref2[1];
-      $pointAt(x, y).removeClass(oldClass);
-      $pointAt(x, y).addClass(newClass);
+      setPointColor($pointAt(x, y), newColor);
     }
     return setupScoring();
   };

@@ -117,6 +117,12 @@
       return casper.evaluate(evaluate_fun, this.lastGameSelector(your_turn));
     };
 
+    BrowserTest.prototype.imageSrc = function(x, y) {
+      return casper.evaluate((function(x, y) {
+        return $(".row-" + y + ".col-" + x + " img").attr('src');
+      }), x, y);
+    };
+
     BrowserTest.prototype.assertEmptyBoard = function(test) {
       return this.assertStonePointCounts(test, 19 * 19, 0, 0);
     };
@@ -543,10 +549,10 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 11;
+    PassAndScoringTest.prototype.numTests = 12;
 
     PassAndScoringTest.prototype.testBody = function(test) {
-      var BLACK_EMAIL, WHITE_EMAIL, i, len, p, ref;
+      var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, p, ref;
       BLACK_EMAIL = 'black@schwarz.de';
       WHITE_EMAIL = 'white@wit.nl';
       ref = [BLACK_EMAIL, WHITE_EMAIL];
@@ -569,9 +575,11 @@
       casper.thenClick('.pass_button');
       createLoginSession(BLACK_EMAIL);
       casper.thenOpen(serverUrl);
+      originalImageSrc11 = null;
       casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban');
+          originalImageSrc11 = _this.imageSrc(1, 1);
           return _this.assertGeneralPointCounts(test, {
             label: "initial marking layout",
             noscore: 3 + 5 + 7 + 9,
@@ -590,6 +598,9 @@
       })(this));
       return casper.thenClick(pointSelector(1, 0), (function(_this) {
         return function() {
+          var imageSrc11;
+          imageSrc11 = _this.imageSrc(1, 1);
+          test.assertNotEquals(imageSrc11, originalImageSrc11, "black stone image source is not still " + originalImageSrc11);
           return _this.assertGeneralPointCounts(test, {
             label: "black stones marked dead",
             noscore: 7 + 9,
