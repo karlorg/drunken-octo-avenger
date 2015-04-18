@@ -1,3 +1,19 @@
+# helpers
+
+$pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
+imageSrc = ($point) -> $point.find('img').attr('src')
+
+isPointEmpty = ($point) ->
+  (imageSrc($point).indexOf('e.gif') > -1) and ($point.hasClass('nostone'))
+isPointBlack = ($point) ->
+  (imageSrc($point).indexOf('b.gif') > -1) and ($point.hasClass('blackstone'))
+isPointWhite = ($point) ->
+  (imageSrc($point).indexOf('w.gif') > -1) and ($point.hasClass('whitestone'))
+
+
+# ============================================================================
+
+
 module 'Persona'
 
 test 'init function sets request and logout callbacks', ->
@@ -48,27 +64,20 @@ module 'Basic game page',
     tesuji_charm.game_basic.initialize()
 
 test 'clicking multiple points moves black stone', ->
-  $point1 = $('td.row-0.col-0').first()
-  $img1 = $point1.find('img').first()
-  $point2 = $('td.row-2.col-1').first()
-  $img2 = $point2.find('img').first()
+  $point1 = $pointAt 0, 0
+  $point2 = $pointAt 1, 2
 
-  ok $img1.attr('src').indexOf('e.gif') > -1,
-    'first point is initially empty (e.gif)'
+  ok isPointEmpty($point1), 'first point is initially empty'
   $point1.click()
-  ok $img1.attr('src').indexOf('e.gif') is -1,
-    'after click, no longer empty'
-  ok $img1.attr('src').indexOf('b.gif') > -1,
-    'after click, contains b.gif'
+  notOk isPointEmpty($point1), 'after click, no longer empty'
+  ok isPointBlack($point1), 'after click, is black stone'
   $point2.click()
-  ok $img1.attr('src').indexOf('e.gif') > -1,
-    'after second click, first clicked point clear'
-  ok $img2.attr('src').indexOf('b.gif') > -1,
-    'after second click, second clicked point black'
+  ok isPointEmpty($point1), 'after second click, first clicked point clear'
+  ok isPointBlack($point2), 'after second click, second clicked point black'
 
 test 'clicking multiple points updates hidden form', ->
-  $point1 = $('td.row-0.col-0').first()
-  $point2 = $('td.row-2.col-1').first()
+  $point1 = $pointAt 0, 0
+  $point2 = $pointAt 1, 2
   $row = $('input#row')
   $column = $('input#column')
 
@@ -88,35 +97,34 @@ test 'Confirm button disabled until stone placed', ->
     'enabled after stone placed'
 
 test "clicking a pre-existing stone does nothing", (assert) ->
-  $point = $('.row-1.col-1')
-  $img = $point.find('img')
-  $point.addClass('whitestone')
+  $point = $pointAt 1, 1
+  tesuji_charm.game_basic._updateBoardChars [
+    '..'
+    '.w'
+  ]
   tesuji_charm.game_basic._reloadBoard()
   # test
   $point.click()
-  assert.ok $img.attr('src').indexOf('b.gif') == -1,
-    "point has not become black"
+  assert.notOk isPointBlack($point), "point has not become black"
   assert.notEqual $('input#row').val(), "1", "row not set"
   assert.notEqual $('input#column').val(), "1", "column not set"
 
 test "captured stones are removed from the board", (assert) ->
-  # place existing stones
-  $('.row-0.col-1').addClass "blackstone"
-  $('.row-0.col-1 img').attr 'src', '/static/images/goban/b.gif'
-  $('.row-0.col-0').addClass "whitestone"
-  $('.row-0.col-0 img').attr 'src', '/static/images/goban/w.gif'
+  tesuji_charm.game_basic._updateBoardChars [
+    'wb'
+    '..'
+  ]
   tesuji_charm.game_basic._reloadBoard()
   # now make the capture
-  $('.row-1.col-0').click()
+  $pointAt(0, 1).click()
   # corner should be blank now
-  assert.ok $('.row-0.col-0 img').attr('src').indexOf('e.gif') > -1,
-    "#{$('.row-0.col-0 img').attr('src')}"
+  assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
 
 test "helper function readBoardState", (assert) ->
-  # place existing stones
-  $('.row-0.col-1').addClass "blackstone"
-  $('.row-0.col-0').addClass "whitestone"
-  # test
+  tesuji_charm.game_basic._updateBoardChars [
+    'wb'
+    '..'
+  ]
   expected = [
     ['white', 'black', 'empty']
     ['empty', 'empty', 'empty']
@@ -130,16 +138,16 @@ test "helper function updateBoard", (assert) ->
     'bw.'
     '.b.'
   ]
-  assert.ok $('.row-0.col-1 img').attr('src').indexOf('b.gif') > -1
-  assert.ok $('.row-1.col-1 img').attr('src').indexOf('w.gif') > -1
-  assert.ok $('.row-1.col-2 img').attr('src').indexOf('e.gif') > -1
+  assert.ok isPointBlack($pointAt(1, 0))
+  assert.ok isPointWhite($pointAt(1, 1))
+  assert.ok isPointEmpty($pointAt(2, 1))
   tesuji_charm.game_basic._updateBoardChars [
     '...'
     '...'
     '...'
   ]
-  assert.ok $('.row-0.col-1 img').attr('src').indexOf('e.gif') > -1
-  assert.ok $('.row-1.col-1 img').attr('src').indexOf('e.gif') > -1
+  assert.ok isPointEmpty($pointAt(1, 0))
+  assert.ok isPointEmpty($pointAt(1, 1))
 
 
 # ============================================================================
@@ -157,7 +165,7 @@ test "presence of score class", (assert) ->
     'bb'
   ]
   tesuji_charm.game_basic.initialize()
-  assert.ok $('.row-0.col-0').hasClass('blackscore'),
+  assert.ok $pointAt(0, 0).hasClass('blackscore'),
     "encircled point has score class"
 
 test "presence of score class depends on '.with_scoring' element", (assert) ->
@@ -168,7 +176,7 @@ test "presence of score class depends on '.with_scoring' element", (assert) ->
     'bb'
   ]
   tesuji_charm.game_basic.initialize()
-  assert.notOk $('.row-0.col-0').hasClass('blackscore'),
+  assert.notOk $pointAt(0, 0).hasClass('blackscore'),
     "encircled point has no score class"
 
 test "clicking empty points in marking mode does nothing", (assert) ->
@@ -201,24 +209,24 @@ test "mixed scoring board", (assert) ->
     '.w.'
   ]
   tesuji_charm.game_basic.initialize()
-  assert.ok $('.row-0.col-0').hasClass('blackscore'), "(0,0) black"
-  assert.notOk $('.row-0.col-0').hasClass('whitescore'), "(0,0) white"
-  assert.notOk $('.row-0.col-1').hasClass('blackscore'), "(0,1) black"
-  assert.notOk $('.row-0.col-1').hasClass('whitescore'), "(0,1) white"
-  assert.notOk $('.row-0.col-2').hasClass('blackscore'), "(0,2) black"
-  assert.notOk $('.row-0.col-2').hasClass('whitescore'), "(0,2) white"
-  assert.notOk $('.row-1.col-0').hasClass('blackscore'), "(1,0) black"
-  assert.notOk $('.row-1.col-0').hasClass('whitescore'), "(1,0) white"
-  assert.notOk $('.row-1.col-1').hasClass('blackscore'), "(1,1) black"
-  assert.notOk $('.row-1.col-1').hasClass('whitescore'), "(1,1) white"
-  assert.notOk $('.row-1.col-2').hasClass('blackscore'), "(1,2) black"
-  assert.notOk $('.row-1.col-2').hasClass('whitescore'), "(1,2) white"
-  assert.notOk $('.row-2.col-0').hasClass('blackscore'), "(2,0) black"
-  assert.notOk $('.row-2.col-0').hasClass('whitescore'), "(2,0) white"
-  assert.notOk $('.row-2.col-1').hasClass('blackscore'), "(2,1) black"
-  assert.notOk $('.row-2.col-1').hasClass('whitescore'), "(2,1) white"
-  assert.notOk $('.row-2.col-2').hasClass('blackscore'), "(2,2) black"
-  assert.ok $('.row-2.col-2').hasClass('whitescore'), "(2,2) white"
+  assert.ok $pointAt(0, 0).hasClass('blackscore'), "(0,0) black"
+  assert.notOk $pointAt(0, 0).hasClass('whitescore'), "(0,0) white"
+  assert.notOk $pointAt(0, 1).hasClass('blackscore'), "(0,1) black"
+  assert.notOk $pointAt(0, 1).hasClass('whitescore'), "(0,1) white"
+  assert.notOk $pointAt(0, 2).hasClass('blackscore'), "(0,2) black"
+  assert.notOk $pointAt(0, 2).hasClass('whitescore'), "(0,2) white"
+  assert.notOk $pointAt(1, 0).hasClass('blackscore'), "(1,0) black"
+  assert.notOk $pointAt(1, 0).hasClass('whitescore'), "(1,0) white"
+  assert.notOk $pointAt(1, 1).hasClass('blackscore'), "(1,1) black"
+  assert.notOk $pointAt(1, 1).hasClass('whitescore'), "(1,1) white"
+  assert.notOk $pointAt(1, 2).hasClass('blackscore'), "(1,2) black"
+  assert.notOk $pointAt(1, 2).hasClass('whitescore'), "(1,2) white"
+  assert.notOk $pointAt(2, 0).hasClass('blackscore'), "(2,0) black"
+  assert.notOk $pointAt(2, 0).hasClass('whitescore'), "(2,0) white"
+  assert.notOk $pointAt(2, 1).hasClass('blackscore'), "(2,1) black"
+  assert.notOk $pointAt(2, 1).hasClass('whitescore'), "(2,1) white"
+  assert.notOk $pointAt(2, 2).hasClass('blackscore'), "(2,2) black"
+  assert.ok $pointAt(2, 2).hasClass('whitescore'), "(2,2) white"
 
 
 # ============================================================================
