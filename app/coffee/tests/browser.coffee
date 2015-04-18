@@ -438,9 +438,11 @@ class PassAndScoringTest extends BrowserTest
     createLoginSession BLACK_EMAIL
     casper.thenOpen serverUrl
     originalImageSrc11 = null
+    originalImageSrc22 = null
     casper.thenClick (@lastGameSelector true), =>  # our turn
       test.assertExists 'table.goban'
       originalImageSrc11 = @imageSrc 1, 1
+      originalImageSrc22 = @imageSrc 2, 2
       @assertGeneralPointCounts test,
         label: "initial marking layout"
         noscore: 3 + 5 + 7 + 9  # black group, dame, white group, black group
@@ -457,6 +459,9 @@ class PassAndScoringTest extends BrowserTest
       imageSrc11 = @imageSrc 1, 1
       test.assertNotEquals imageSrc11, originalImageSrc11,
         "black stone image source is not still #{originalImageSrc11}"
+      imageSrc22 = @imageSrc 2, 2
+      test.assertNotEquals imageSrc22, originalImageSrc22,
+        "empty point image source is not still #{originalImageSrc22}"
       @assertGeneralPointCounts test,
         label: "black stones marked dead"
         noscore: 7 + 9  # just white and black stones at the border

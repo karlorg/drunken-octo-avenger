@@ -552,7 +552,7 @@
     PassAndScoringTest.prototype.numTests = 12;
 
     PassAndScoringTest.prototype.testBody = function(test) {
-      var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, p, ref;
+      var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, originalImageSrc22, p, ref;
       BLACK_EMAIL = 'black@schwarz.de';
       WHITE_EMAIL = 'white@wit.nl';
       ref = [BLACK_EMAIL, WHITE_EMAIL];
@@ -576,10 +576,12 @@
       createLoginSession(BLACK_EMAIL);
       casper.thenOpen(serverUrl);
       originalImageSrc11 = null;
+      originalImageSrc22 = null;
       casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban');
           originalImageSrc11 = _this.imageSrc(1, 1);
+          originalImageSrc22 = _this.imageSrc(2, 2);
           return _this.assertGeneralPointCounts(test, {
             label: "initial marking layout",
             noscore: 3 + 5 + 7 + 9,
@@ -598,9 +600,11 @@
       })(this));
       return casper.thenClick(pointSelector(1, 0), (function(_this) {
         return function() {
-          var imageSrc11;
+          var imageSrc11, imageSrc22;
           imageSrc11 = _this.imageSrc(1, 1);
           test.assertNotEquals(imageSrc11, originalImageSrc11, "black stone image source is not still " + originalImageSrc11);
+          imageSrc22 = _this.imageSrc(2, 2);
+          test.assertNotEquals(imageSrc22, originalImageSrc22, "empty point image source is not still " + originalImageSrc22);
           return _this.assertGeneralPointCounts(test, {
             label: "black stones marked dead",
             noscore: 7 + 9,
