@@ -20,14 +20,18 @@ setImage = ($td, filename) ->
 
 setStoneClass = ($td, stoneclass) ->
   $td.removeClass('blackstone whitestone nostone
-                   blackdead').addClass(stoneclass)
+                   blackdead whitedead blackscore whitescore'
+  ).addClass(stoneclass)
 
 setPointColor = ($td, color) ->
   [filename, stoneclass] = switch color
     when 'empty' then ['e.gif', 'nostone']
     when 'black' then ['b.gif', 'blackstone']
     when 'white' then ['w.gif', 'whitestone']
-    when 'blackdead' then ['bdwp.gif', 'blackdead']
+    when 'blackdead' then ['bdwp.gif', 'blackdead whitescore']
+    when 'whitedead' then ['wdbp.gif', 'whitedead blackscore']
+    when 'blackscore' then ['bp.gif', 'blackscore nostone']
+    when 'whitescore' then ['wp.gif', 'whitescore nostone']
   setImage $td, filename
   setStoneClass $td, stoneclass
 
@@ -108,13 +112,19 @@ setupScoring = ->
       continue if ($td.hasClass 'blackstone') or ($td.hasClass 'whitestone')
       boundary = go_rules.boundingColor col, row, state
       continue if boundary is 'neither'
-      class_ = switch boundary
+      scoreColor = switch boundary
         when 'black' then 'blackscore'
         when 'white' then 'whitescore'
       # TODO: either make groupPoints public, or move this functionality into
       # go_rules
       for [x, y] in go_rules._groupPoints col, row, state
-        $td.addClass class_
+        $td0 = $pointAt(x, y)
+        if $td0.hasClass('blackdead')
+          setPointColor $td0, 'blackdead'
+        else if $td0.hasClass('whitedead')
+          setPointColor $td0, 'whitedead'
+        else
+          setPointColor $td0, scoreColor
   return
 
 clearScores = (state) ->

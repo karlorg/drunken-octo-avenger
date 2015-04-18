@@ -549,11 +549,11 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 12;
+    PassAndScoringTest.prototype.numTests = 13;
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, originalImageSrc22, p, ref;
-      BLACK_EMAIL = 'black@schwarz.de';
+      BLACK_EMAIL = 'black@mockmyid.com';
       WHITE_EMAIL = 'white@wit.nl';
       ref = [BLACK_EMAIL, WHITE_EMAIL];
       for (i = 0, len = ref.length; i < len; i++) {

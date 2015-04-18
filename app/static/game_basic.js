@@ -27,7 +27,7 @@
   };
 
   setStoneClass = function($td, stoneclass) {
-    return $td.removeClass('blackstone whitestone nostone blackdead').addClass(stoneclass);
+    return $td.removeClass('blackstone whitestone nostone blackdead whitedead blackscore whitescore').addClass(stoneclass);
   };
 
   setPointColor = function($td, color) {
@@ -41,7 +41,13 @@
         case 'white':
           return ['w.gif', 'whitestone'];
         case 'blackdead':
-          return ['bdwp.gif', 'blackdead'];
+          return ['bdwp.gif', 'blackdead whitescore'];
+        case 'whitedead':
+          return ['wdbp.gif', 'whitedead blackscore'];
+        case 'blackscore':
+          return ['bp.gif', 'blackscore nostone'];
+        case 'whitescore':
+          return ['wp.gif', 'whitescore nostone'];
       }
     })(), filename = ref[0], stoneclass = ref[1];
     setImage($td, filename);
@@ -164,7 +170,7 @@
   };
 
   setupScoring = function() {
-    var $td, boundary, class_, col, color, i, len, ref, ref1, row, rowArray, state, x, y;
+    var $td, $td0, boundary, col, color, i, len, ref, ref1, row, rowArray, scoreColor, state, x, y;
     state = readBoardState();
     clearScores(state);
     for (row in state) {
@@ -187,7 +193,7 @@
         if (boundary === 'neither') {
           continue;
         }
-        class_ = (function() {
+        scoreColor = (function() {
           switch (boundary) {
             case 'black':
               return 'blackscore';
@@ -198,7 +204,14 @@
         ref = go_rules._groupPoints(col, row, state);
         for (i = 0, len = ref.length; i < len; i++) {
           ref1 = ref[i], x = ref1[0], y = ref1[1];
-          $td.addClass(class_);
+          $td0 = $pointAt(x, y);
+          if ($td0.hasClass('blackdead')) {
+            setPointColor($td0, 'blackdead');
+          } else if ($td0.hasClass('whitedead')) {
+            setPointColor($td0, 'whitedead');
+          } else {
+            setPointColor($td0, scoreColor);
+          }
         }
       }
     }

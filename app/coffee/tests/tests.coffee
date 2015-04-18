@@ -9,6 +9,12 @@ isPointBlack = ($point) ->
   (imageSrc($point).indexOf('b.gif') > -1) and ($point.hasClass('blackstone'))
 isPointWhite = ($point) ->
   (imageSrc($point).indexOf('w.gif') > -1) and ($point.hasClass('whitestone'))
+isPointBlackScore = ($point) ->
+  (imageSrc($point).indexOf('bp.gif') > -1) and
+    ($point.hasClass('blackscore'))
+isPointWhiteScore = ($point) ->
+  (imageSrc($point).indexOf('wp.gif') > -1) and
+    ($point.hasClass('whitescore'))
 
 
 # ============================================================================
@@ -159,15 +165,6 @@ module 'Game page with marking interface',
                                  id: 'with_scoring'
                                  class: 'with_scoring')
 
-test "presence of score class", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
-    '.b'
-    'bb'
-  ]
-  tesuji_charm.game_basic.initialize()
-  assert.ok $pointAt(0, 0).hasClass('blackscore'),
-    "encircled point has score class"
-
 test "presence of score class depends on '.with_scoring' element", (assert) ->
   $('.with_scoring').remove()
   $('#with_scoring').remove()
@@ -176,14 +173,14 @@ test "presence of score class depends on '.with_scoring' element", (assert) ->
     'bb'
   ]
   tesuji_charm.game_basic.initialize()
-  assert.notOk $pointAt(0, 0).hasClass('blackscore'),
+  assert.notOk isPointBlackScore($pointAt(0, 0)),
     "encircled point has no score class"
 
 test "clicking empty points in marking mode does nothing", (assert) ->
-  $point = $('.row-1.col-1')
-  assert.notOk $point.hasClass('blackstone'), "centre point starts empty"
+  $point = $pointAt(1, 1)
+  assert.ok isPointEmpty($point), "centre point starts empty"
   $point.click()
-  assert.notOk $point.hasClass('blackstone'), "still empty after click"
+  assert.ok isPointEmpty($point), "still empty after click"
 
 test "clicking live stones makes them dead", (assert) ->
   tesuji_charm.game_basic._updateBoardChars [
@@ -192,14 +189,14 @@ test "clicking live stones makes them dead", (assert) ->
     'www'
   ]
   tesuji_charm.game_basic.initialize()
-  $('.row-1.col-1').click()
-  assert.notOk $('.row-0.col-0').hasClass('blackscore'),
+  $pointAt(1, 1).click()
+  assert.notOk isPointBlackScore($pointAt(0, 0)),
     "black scoring point no longer counts for black with black stones dead"
-  assert.ok $('.row-0.col-0').hasClass('whitescore'),
+  assert.ok isPointWhiteScore($pointAt(0, 0)),
     "black scoring point becomes white with black stones dead"
-  assert.ok $('.row-0.col-1').hasClass('whitescore'),
+  assert.ok isPointWhiteScore($pointAt(1, 0)),
     "dead black stone has white score class"
-  assert.ok $('.row-0.col-1').hasClass('blackdead'),
+  assert.ok $pointAt(1, 0).hasClass('blackdead'),
     "dead black stone has dead black stone class"
 
 test "mixed scoring board", (assert) ->
@@ -209,24 +206,24 @@ test "mixed scoring board", (assert) ->
     '.w.'
   ]
   tesuji_charm.game_basic.initialize()
-  assert.ok $pointAt(0, 0).hasClass('blackscore'), "(0,0) black"
-  assert.notOk $pointAt(0, 0).hasClass('whitescore'), "(0,0) white"
-  assert.notOk $pointAt(0, 1).hasClass('blackscore'), "(0,1) black"
-  assert.notOk $pointAt(0, 1).hasClass('whitescore'), "(0,1) white"
-  assert.notOk $pointAt(0, 2).hasClass('blackscore'), "(0,2) black"
-  assert.notOk $pointAt(0, 2).hasClass('whitescore'), "(0,2) white"
-  assert.notOk $pointAt(1, 0).hasClass('blackscore'), "(1,0) black"
-  assert.notOk $pointAt(1, 0).hasClass('whitescore'), "(1,0) white"
-  assert.notOk $pointAt(1, 1).hasClass('blackscore'), "(1,1) black"
-  assert.notOk $pointAt(1, 1).hasClass('whitescore'), "(1,1) white"
-  assert.notOk $pointAt(1, 2).hasClass('blackscore'), "(1,2) black"
-  assert.notOk $pointAt(1, 2).hasClass('whitescore'), "(1,2) white"
-  assert.notOk $pointAt(2, 0).hasClass('blackscore'), "(2,0) black"
-  assert.notOk $pointAt(2, 0).hasClass('whitescore'), "(2,0) white"
-  assert.notOk $pointAt(2, 1).hasClass('blackscore'), "(2,1) black"
-  assert.notOk $pointAt(2, 1).hasClass('whitescore'), "(2,1) white"
-  assert.notOk $pointAt(2, 2).hasClass('blackscore'), "(2,2) black"
-  assert.ok $pointAt(2, 2).hasClass('whitescore'), "(2,2) white"
+  assert.ok isPointBlackScore($pointAt(0, 0)), "(0,0) black"
+  assert.notOk isPointWhiteScore($pointAt(0, 0)), "(0,0) white"
+  assert.notOk isPointBlackScore($pointAt(0, 1)), "(0,1) black"
+  assert.notOk isPointWhiteScore($pointAt(0, 1)), "(0,1) white"
+  assert.notOk isPointBlackScore($pointAt(0, 2)), "(0,2) black"
+  assert.notOk isPointWhiteScore($pointAt(0, 2)), "(0,2) white"
+  assert.notOk isPointBlackScore($pointAt(1, 0)), "(1,0) black"
+  assert.notOk isPointWhiteScore($pointAt(1, 0)), "(1,0) white"
+  assert.notOk isPointBlackScore($pointAt(1, 1)), "(1,1) black"
+  assert.notOk isPointWhiteScore($pointAt(1, 1)), "(1,1) white"
+  assert.notOk isPointBlackScore($pointAt(1, 2)), "(1,2) black"
+  assert.notOk isPointWhiteScore($pointAt(1, 2)), "(1,2) white"
+  assert.notOk isPointBlackScore($pointAt(2, 0)), "(2,0) black"
+  assert.notOk isPointWhiteScore($pointAt(2, 0)), "(2,0) white"
+  assert.notOk isPointBlackScore($pointAt(2, 1)), "(2,1) black"
+  assert.notOk isPointWhiteScore($pointAt(2, 1)), "(2,1) white"
+  assert.notOk isPointBlackScore($pointAt(2, 2)), "(2,2) black"
+  assert.ok isPointWhiteScore($pointAt(2, 2)), "(2,2) white"
 
 
 # ============================================================================
