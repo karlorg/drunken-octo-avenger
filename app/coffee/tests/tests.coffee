@@ -62,6 +62,42 @@ test 'init function sets request and logout callbacks', ->
 # ============================================================================
 
 
+module "common game page functions"
+
+
+test "helper function readBoardState", (assert) ->
+  tesuji_charm.game_common._updateBoardChars [
+    'wb'
+    '..'
+  ]
+  expected = [
+    ['white', 'black', 'empty']
+    ['empty', 'empty', 'empty']
+    ['empty', 'empty', 'empty']
+  ]
+  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+
+test "helper function updateBoardChars", (assert) ->
+  tesuji_charm.game_common._updateBoardChars [
+    '.b.'
+    'bw.'
+    '.b.'
+  ]
+  assert.ok isPointBlack($pointAt(1, 0))
+  assert.ok isPointWhite($pointAt(1, 1))
+  assert.ok isPointEmpty($pointAt(2, 1))
+  tesuji_charm.game_common._updateBoardChars [
+    '...'
+    '...'
+    '...'
+  ]
+  assert.ok isPointEmpty($pointAt(1, 0))
+  assert.ok isPointEmpty($pointAt(1, 1))
+
+
+# ============================================================================
+
+
 module 'Basic game page',
   setup: ->
     $('input#move_no').val "0"
@@ -104,7 +140,7 @@ test 'Confirm button disabled until stone placed', ->
 
 test "clicking a pre-existing stone does nothing", (assert) ->
   $point = $pointAt 1, 1
-  tesuji_charm.game_basic._updateBoardChars [
+  tesuji_charm.game_common._updateBoardChars [
     '..'
     '.w'
   ]
@@ -116,7 +152,7 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   assert.notEqual $('input#column').val(), "1", "column not set"
 
 test "captured stones are removed from the board", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
+  tesuji_charm.game_common._updateBoardChars [
     'wb'
     '..'
   ]
@@ -125,35 +161,6 @@ test "captured stones are removed from the board", (assert) ->
   $pointAt(0, 1).click()
   # corner should be blank now
   assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
-
-test "helper function readBoardState", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
-    'wb'
-    '..'
-  ]
-  expected = [
-    ['white', 'black', 'empty']
-    ['empty', 'empty', 'empty']
-    ['empty', 'empty', 'empty']
-  ]
-  assert.deepEqual tesuji_charm.game_basic._readBoardState(), expected
-
-test "helper function updateBoard", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
-    '.b.'
-    'bw.'
-    '.b.'
-  ]
-  assert.ok isPointBlack($pointAt(1, 0))
-  assert.ok isPointWhite($pointAt(1, 1))
-  assert.ok isPointEmpty($pointAt(2, 1))
-  tesuji_charm.game_basic._updateBoardChars [
-    '...'
-    '...'
-    '...'
-  ]
-  assert.ok isPointEmpty($pointAt(1, 0))
-  assert.ok isPointEmpty($pointAt(1, 1))
 
 
 # ============================================================================
@@ -165,17 +172,6 @@ module 'Game page with marking interface',
                                  id: 'with_scoring'
                                  class: 'with_scoring')
 
-test "presence of score class depends on '.with_scoring' element", (assert) ->
-  $('.with_scoring').remove()
-  $('#with_scoring').remove()
-  tesuji_charm.game_basic._updateBoardChars [
-    '.b'
-    'bb'
-  ]
-  tesuji_charm.game_basic.initialize()
-  assert.notOk isPointBlackScore($pointAt(0, 0)),
-    "encircled point has no score class"
-
 test "clicking empty points in marking mode does nothing", (assert) ->
   $point = $pointAt(1, 1)
   assert.ok isPointEmpty($point), "centre point starts empty"
@@ -183,12 +179,12 @@ test "clicking empty points in marking mode does nothing", (assert) ->
   assert.ok isPointEmpty($point), "still empty after click"
 
 test "clicking live stones makes them dead", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
+  tesuji_charm.game_common._updateBoardChars [
     '.bw'
     'bbw'
     'www'
   ]
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game_marking.initialize()
   $pointAt(1, 1).click()
   assert.notOk isPointBlackScore($pointAt(0, 0)),
     "black scoring point no longer counts for black with black stones dead"
@@ -200,12 +196,12 @@ test "clicking live stones makes them dead", (assert) ->
     "dead black stone has dead black stone class"
 
 test "mixed scoring board", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
+  tesuji_charm.game_common._updateBoardChars [
     '.b.'
     'bww'
     '.w.'
   ]
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game_marking.initialize()
   assert.ok isPointBlackScore($pointAt(0, 0)), "(0,0) black"
   assert.notOk isPointWhiteScore($pointAt(0, 0)), "(0,0) white"
   assert.notOk isPointBlackScore($pointAt(0, 1)), "(0,1) black"

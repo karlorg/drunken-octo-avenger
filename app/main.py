@@ -75,7 +75,6 @@ def game(game_no):
 def playstone():
     return play_pass_or_move("move")
 
-
 @app.route('/playpass', methods=['POST'])
 def playpass():
     return play_pass_or_move("pass")

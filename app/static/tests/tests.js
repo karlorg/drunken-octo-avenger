@@ -71,6 +71,25 @@
     return equal(logoutCalled, true, 'logout callback called correctly');
   });
 
+  module("common game page functions");
+
+  test("helper function readBoardState", function(assert) {
+    var expected;
+    tesuji_charm.game_common._updateBoardChars(['wb', '..']);
+    expected = [['white', 'black', 'empty'], ['empty', 'empty', 'empty'], ['empty', 'empty', 'empty']];
+    return assert.deepEqual(tesuji_charm.game_common.readBoardState(), expected);
+  });
+
+  test("helper function updateBoardChars", function(assert) {
+    tesuji_charm.game_common._updateBoardChars(['.b.', 'bw.', '.b.']);
+    assert.ok(isPointBlack($pointAt(1, 0)));
+    assert.ok(isPointWhite($pointAt(1, 1)));
+    assert.ok(isPointEmpty($pointAt(2, 1)));
+    tesuji_charm.game_common._updateBoardChars(['...', '...', '...']);
+    assert.ok(isPointEmpty($pointAt(1, 0)));
+    return assert.ok(isPointEmpty($pointAt(1, 1)));
+  });
+
   module('Basic game page', {
     setup: function() {
       $('input#move_no').val("0");
@@ -118,7 +137,7 @@
   test("clicking a pre-existing stone does nothing", function(assert) {
     var $point;
     $point = $pointAt(1, 1);
-    tesuji_charm.game_basic._updateBoardChars(['..', '.w']);
+    tesuji_charm.game_common._updateBoardChars(['..', '.w']);
     tesuji_charm.game_basic._reloadBoard();
     $point.click();
     assert.notOk(isPointBlack($point), "point has not become black");
@@ -127,27 +146,10 @@
   });
 
   test("captured stones are removed from the board", function(assert) {
-    tesuji_charm.game_basic._updateBoardChars(['wb', '..']);
+    tesuji_charm.game_common._updateBoardChars(['wb', '..']);
     tesuji_charm.game_basic._reloadBoard();
     $pointAt(0, 1).click();
     return assert.ok(isPointEmpty($pointAt(0, 0)), "corner point is now empty");
-  });
-
-  test("helper function readBoardState", function(assert) {
-    var expected;
-    tesuji_charm.game_basic._updateBoardChars(['wb', '..']);
-    expected = [['white', 'black', 'empty'], ['empty', 'empty', 'empty'], ['empty', 'empty', 'empty']];
-    return assert.deepEqual(tesuji_charm.game_basic._readBoardState(), expected);
-  });
-
-  test("helper function updateBoard", function(assert) {
-    tesuji_charm.game_basic._updateBoardChars(['.b.', 'bw.', '.b.']);
-    assert.ok(isPointBlack($pointAt(1, 0)));
-    assert.ok(isPointWhite($pointAt(1, 1)));
-    assert.ok(isPointEmpty($pointAt(2, 1)));
-    tesuji_charm.game_basic._updateBoardChars(['...', '...', '...']);
-    assert.ok(isPointEmpty($pointAt(1, 0)));
-    return assert.ok(isPointEmpty($pointAt(1, 1)));
   });
 
   module('Game page with marking interface', {
@@ -159,14 +161,6 @@
     }
   });
 
-  test("presence of score class depends on '.with_scoring' element", function(assert) {
-    $('.with_scoring').remove();
-    $('#with_scoring').remove();
-    tesuji_charm.game_basic._updateBoardChars(['.b', 'bb']);
-    tesuji_charm.game_basic.initialize();
-    return assert.notOk(isPointBlackScore($pointAt(0, 0)), "encircled point has no score class");
-  });
-
   test("clicking empty points in marking mode does nothing", function(assert) {
     var $point;
     $point = $pointAt(1, 1);
@@ -176,8 +170,8 @@
   });
 
   test("clicking live stones makes them dead", function(assert) {
-    tesuji_charm.game_basic._updateBoardChars(['.bw', 'bbw', 'www']);
-    tesuji_charm.game_basic.initialize();
+    tesuji_charm.game_common._updateBoardChars(['.bw', 'bbw', 'www']);
+    tesuji_charm.game_marking.initialize();
     $pointAt(1, 1).click();
     assert.notOk(isPointBlackScore($pointAt(0, 0)), "black scoring point no longer counts for black with black stones dead");
     assert.ok(isPointWhiteScore($pointAt(0, 0)), "black scoring point becomes white with black stones dead");
@@ -186,8 +180,8 @@
   });
 
   test("mixed scoring board", function(assert) {
-    tesuji_charm.game_basic._updateBoardChars(['.b.', 'bww', '.w.']);
-    tesuji_charm.game_basic.initialize();
+    tesuji_charm.game_common._updateBoardChars(['.b.', 'bww', '.w.']);
+    tesuji_charm.game_marking.initialize();
     assert.ok(isPointBlackScore($pointAt(0, 0)), "(0,0) black");
     assert.notOk(isPointWhiteScore($pointAt(0, 0)), "(0,0) white");
     assert.notOk(isPointBlackScore($pointAt(0, 1)), "(0,1) black");

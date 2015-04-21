@@ -553,7 +553,7 @@
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, originalImageSrc22, p, ref;
-      BLACK_EMAIL = 'black@mockmyid.com';
+      BLACK_EMAIL = 'black@schwarz.de';
       WHITE_EMAIL = 'white@wit.nl';
       ref = [BLACK_EMAIL, WHITE_EMAIL];
       for (i = 0, len = ref.length; i < len; i++) {
