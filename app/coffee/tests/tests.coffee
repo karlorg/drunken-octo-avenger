@@ -348,7 +348,7 @@ test "_countLiberties: regression test: shared liberties not
   assert.equal go_rules._countLiberties(1, 0, board), 3,
     "centre liberty counts only once, for total of 3"
 
-test "_groupPoints: identifies groups correctly", (assert) ->
+test "groupPoints: identifies groups correctly", (assert) ->
   board = [
     ['black', 'black', 'empty']
     ['black', 'white', 'white']
@@ -356,7 +356,7 @@ test "_groupPoints: identifies groups correctly", (assert) ->
   ]
   blackGroup = [ [1,0], [0,0], [0,1] ]
   whiteGroup = [ [1,1], [2,1] ]
-  assert.deepEqual go_rules._groupPoints(1, 0, board), blackGroup,
+  assert.deepEqual go_rules.groupPoints(1, 0, board), blackGroup,
     "black group"
-  assert.deepEqual go_rules._groupPoints(1, 1, board), whiteGroup,
+  assert.deepEqual go_rules.groupPoints(1, 1, board), whiteGroup,
     "white group"

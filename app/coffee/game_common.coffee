@@ -5,15 +5,9 @@ tesuji_charm.game_common ?= {}
 game_common = tesuji_charm.game_common
 
 
-setImage = ($td, filename) ->
-  $td.find('img').attr 'src', "/static/images/goban/#{filename}"
+game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 
-setStoneClass = ($td, stoneclass) ->
-  $td.removeClass('blackstone whitestone nostone
-                   blackdead whitedead blackscore whitescore'
-  ).addClass(stoneclass)
-
-setPointColor = ($td, color) ->
+game_common.setPointColor = setPointColor = ($td, color) ->
   [filename, stoneclass] = switch color
     when 'empty' then ['e.gif', 'nostone']
     when 'black' then ['b.gif', 'blackstone']
@@ -25,67 +19,58 @@ setPointColor = ($td, color) ->
   setImage $td, filename
   setStoneClass $td, stoneclass
 
-game_common.setPointColor = setPointColor
+setImage = ($td, filename) ->
+  $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
-$pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
-game_common.$pointAt = $pointAt
-
+setStoneClass = ($td, stoneclass) ->
+  $td.removeClass('blackstone whitestone nostone
+                   blackdead whitedead blackscore whitescore'
+  ).addClass(stoneclass)
 
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/
 
-hasCoordClass = ($obj) ->
+game_common.hasCoordClass = hasCoordClass = ($obj) ->
   classStr = $obj.attr "class"
   return rowRe.test(classStr) and colRe.test(classStr)
 
-game_common.hasCoordClass = hasCoordClass
-
-parseCoordClass = ($obj) ->
+game_common.parseCoordClass = parseCoordClass = ($obj) ->
   classStr = $obj.attr "class"
-  [_, rowStr] = rowRe.exec $obj.attr("class")
-  [_, colStr] = colRe.exec $obj.attr("class")
+  [_, rowStr] = rowRe.exec classStr
+  [_, colStr] = colRe.exec classStr
   return [parseInt(rowStr, 10), parseInt(colStr, 10)]
 
-game_common.parseCoordClass = parseCoordClass
-
-getStoneClass = ($obj) ->
-  classStr = $obj.attr "class"
-  return 'blackstone' if classStr.indexOf('blackstone') > -1
-  return 'whitestone' if classStr.indexOf('whitestone') > -1
-  return ''
-
-readBoardState = ->
-  # generate a board state object based on the loaded page contents
+game_common.readBoardState = readBoardState = ->
+  "generate a board state object based on the loaded page contents"
   result = []
-  $('.goban td').each (index) ->
-    [row, col] = parseCoordClass $(this)
+  $('.goban td').each ->
+    $this = $(this)
+    [row, col] = parseCoordClass $this
     result[row] ?= []
-    result[row][col] = switch (getStoneClass $(this))
-      when 'blackstone' then 'black'
-      when 'whitestone' then 'white'
-      else 'empty'
+    result[row][col] = getStoneColor $this
   return result
 
-# export to enable testing
-game_common.readBoardState = readBoardState
+getStoneColor = ($point) ->
+  return 'black' if $point.hasClass 'blackstone'
+  return 'white' if $point.hasClass 'whitestone'
+  return 'empty'
 
-updateBoard = (state) ->
-  for row, rowArray of state
-    for col, data of rowArray
-      $td = $pointAt col, row
-      setPointColor $td, data
-
-game_common.updateBoard = updateBoard
+game_common.updateBoard = updateBoard = (state) ->
+  "set the images and classes of the DOM board to match the given state"
+  for rowArray, row in state
+    for color, col in rowArray
+      setPointColor ($pointAt col, row), color
+  return
 
 updateBoardChars = (charArray) ->
-  for row, rowString of charArray
-    for col, char of rowString
+  for rowString, row in charArray
+    for char, col in rowString
       color = switch char
         when "b" then "black"
         when "w" then "white"
         when "." then "empty"
-      $td = $pointAt col, row
-      setPointColor $td, color
+      setPointColor ($pointAt col, row), color
+  return
 
 # export for use by tests
 game_common._updateBoardChars = updateBoardChars

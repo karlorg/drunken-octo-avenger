@@ -8,20 +8,16 @@ tesuji_charm = window.tesuji_charm
 tesuji_charm.game_basic ?= {}
 game_basic = tesuji_charm.game_basic
 
-game_common = tesuji_charm.game_common
+# 'imports'
 
+game_common = tesuji_charm.game_common
 go_rules = tesuji_charm.go_rules
 
+
+# module variables
+
 initialBoardState = null
-
-$newStone = null
 newStoneColor = null
-
-
-# to facilitate testing, export a function to reload our internal state from
-# the page
-game_basic._reloadBoard = ->
-  initialBoardState = game_common.readBoardState()
 
 game_basic.initialize = ->
 
@@ -52,3 +48,7 @@ game_basic.initialize = ->
     $('input#column').val col.toString()
     $('button.confirm_button').prop 'disabled', false
 
+# to facilitate testing, export a function to reload our internal state from
+# the page
+game_basic._reloadBoard = ->
+  initialBoardState = game_common.readBoardState()

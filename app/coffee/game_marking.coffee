@@ -12,13 +12,25 @@ $pointAt = game_common.$pointAt
 go_rules = tesuji_charm.go_rules
 
 
-clearScores = ->
-  "remove score classes from board in the DOM"
-  $('.goban td').removeClass('blackscore whitescore')
+game_marking.initialize = ->
+  setupScoring()
+
+  $('table.goban td').click ->
+    return unless game_common.hasCoordClass $(this)
+    [row, col] = game_common.parseCoordClass $(this)
+    $point = $pointAt col, row
+    if $point.hasClass('blackstone')
+      newColor = 'blackdead'
+    else if $point.hasClass('whitestone')
+      newColor = 'whitedead'
+    else
+      return
+    for [x, y] in go_rules.groupPoints col, row, game_common.readBoardState()
+      game_common.setPointColor $pointAt(x, y), newColor
+    setupScoring()
 
 setupScoring = ->
   state = game_common.readBoardState()
-  clearScores()
   for region in getEmptyRegions state
     [col, row] = region[0]
     boundary = go_rules.boundingColor col, row, state
@@ -33,14 +45,11 @@ getEmptyRegions = (state) ->
   height = state.length
   width = state[0].length
   done = ((false for i in [0..width]) for j in [0..height])
-  for row, rowArray of state
-    row = parseInt row, 10
-    for col, color of rowArray
-      col = parseInt col, 10
+  for rowArray, row in state
+    for color, col in rowArray
       continue if done[row][col]
       if state[row][col] == 'empty'
-        # TODO: make _groupPoints public or change this
-        region = go_rules._groupPoints col, row, state
+        region = go_rules.groupPoints col, row, state
         for [x, y] in region
           done[y][x] = true
         regions.push region
@@ -49,29 +58,6 @@ getEmptyRegions = (state) ->
 setRegionScores = (region, scoreColor) ->
   for [x, y] in region
     $point = $pointAt x, y
-    if $point.hasClass 'blackdead'
-      newColor = 'blackdead'
-    else if $point.hasClass 'whitedead'
-      newColor = 'whitedead'
-    else
-      newColor = scoreColor
-    game_common.setPointColor $point, newColor
+    if $point.hasClass 'nostone'
+      game_common.setPointColor $point, scoreColor
   return
-
-game_marking.initialize = ->
-  setupScoring()
-
-  $('table.goban td').click ->
-    return unless game_common.hasCoordClass $(this)
-    [row, col] = game_common.parseCoordClass $(this)
-    $point = $pointAt col, row
-    if $point.hasClass('blackstone')
-      newColor = 'blackdead'
-    else if $point.hasClass('whitestone')
-      newColor = 'whitedead'
-    else
-      return
-    # TODO: make _groupPoints public or change this
-    for [x, y] in go_rules._groupPoints col, row, game_common.readBoardState()
-      game_common.setPointColor $pointAt(x, y), newColor
-    setupScoring()
