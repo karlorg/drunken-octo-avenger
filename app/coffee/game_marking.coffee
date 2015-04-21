@@ -12,41 +12,51 @@ $pointAt = game_common.$pointAt
 go_rules = tesuji_charm.go_rules
 
 
+clearScores = ->
+  "remove score classes from board in the DOM"
+  $('.goban td').removeClass('blackscore whitescore')
+
 setupScoring = ->
   state = game_common.readBoardState()
-  clearScores state
+  clearScores()
+  for region in getEmptyRegions state
+    [col, row] = region[0]
+    boundary = go_rules.boundingColor col, row, state
+    if boundary != 'neither'
+      setRegionScores region, switch boundary
+        when 'black' then 'blackscore'
+        when 'white' then 'whitescore'
+  return  # explicit return so Coffee won't accumulate results of the `for`
+
+getEmptyRegions = (state) ->
+  regions = []
+  height = state.length
+  width = state[0].length
+  done = ((false for i in [0..width]) for j in [0..height])
   for row, rowArray of state
     row = parseInt row, 10
     for col, color of rowArray
       col = parseInt col, 10
-      $td = $pointAt col, row
-      continue if $td.hasClass 'blackscore'
-      continue if $td.hasClass 'whitescore'
-      continue if ($td.hasClass 'blackstone') or ($td.hasClass 'whitestone')
-      boundary = go_rules.boundingColor col, row, state
-      continue if boundary is 'neither'
-      scoreColor = switch boundary
-        when 'black' then 'blackscore'
-        when 'white' then 'whitescore'
-      # TODO: either make groupPoints public, or move this functionality into
-      # go_rules
-      for [x, y] in go_rules._groupPoints col, row, state
-        $td0 = $pointAt(x, y)
-        if $td0.hasClass('blackdead')
-          game_common.setPointColor $td0, 'blackdead'
-        else if $td0.hasClass('whitedead')
-          game_common.setPointColor $td0, 'whitedead'
-        else
-          game_common.setPointColor $td0, scoreColor
-  return  # explicit return so Coffee won't accumulate results of the `for`
+      continue if done[row][col]
+      if state[row][col] == 'empty'
+        # TODO: make _groupPoints public or change this
+        region = go_rules._groupPoints col, row, state
+        for [x, y] in region
+          done[y][x] = true
+        regions.push region
+  return regions
 
-clearScores = (state) ->
-  "remove score classes from board with dimensions taken from `state`"
-  for row, rowArray of state
-    for col, _ of rowArray
-      $td = $pointAt col, row
-      $td.removeClass 'blackscore'
-      $td.removeClass 'whitescore'
+setRegionScores = (region, scoreColor) ->
+  for [x, y] in region
+    $point = $pointAt x, y
+    if $point.hasClass 'blackdead'
+      newColor = 'blackdead'
+    else if $point.hasClass 'whitedead'
+      newColor = 'whitedead'
+    else
+      newColor = scoreColor
+    game_common.setPointColor $point, newColor
+  return
 
 game_marking.initialize = ->
   setupScoring()
@@ -61,6 +71,7 @@ game_marking.initialize = ->
       newColor = 'whitedead'
     else
       return
+    # TODO: make _groupPoints public or change this
     for [x, y] in go_rules._groupPoints col, row, game_common.readBoardState()
       game_common.setPointColor $pointAt(x, y), newColor
     setupScoring()
