@@ -21,8 +21,12 @@ game_marking.initialize = ->
     $point = $pointAt col, row
     if $point.hasClass('blackstone')
       newColor = 'blackdead'
+    else if $point.hasClass('blackdead')
+      newColor = 'black'
     else if $point.hasClass('whitestone')
       newColor = 'whitedead'
+    else if $point.hasClass('whitedead')
+      newColor = 'white'
     else
       return
     for [x, y] in go_rules.groupPoints col, row, game_common.readBoardState()
@@ -33,23 +37,24 @@ setupScoring = ->
   state = game_common.readBoardState()
   for region in getEmptyRegions state
     [col, row] = region[0]
-    boundary = go_rules.boundingColor col, row, state
-    if boundary != 'neither'
-      setRegionScores region, switch boundary
-        when 'black' then 'blackscore'
-        when 'white' then 'whitescore'
+    boundary = go_rules.boundingColor region, state
+    setRegionScores region, switch boundary
+      when 'black' then 'blackscore'
+      when 'white' then 'whitescore'
+      when 'neither' then 'empty'
   return  # explicit return so Coffee won't accumulate results of the `for`
 
 getEmptyRegions = (state) ->
   regions = []
+  emptyColors = ['empty', 'blackdead', 'whitedead']
   height = state.length
   width = state[0].length
   done = ((false for i in [0..width]) for j in [0..height])
   for rowArray, row in state
     for color, col in rowArray
       continue if done[row][col]
-      if state[row][col] == 'empty'
-        region = go_rules.groupPoints col, row, state
+      if state[row][col] in emptyColors
+        region = go_rules.groupPoints col, row, state, emptyColors
         for [x, y] in region
           done[y][x] = true
         regions.push region

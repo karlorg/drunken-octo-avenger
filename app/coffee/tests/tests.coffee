@@ -178,23 +178,6 @@ test "clicking empty points in marking mode does nothing", (assert) ->
   $point.click()
   assert.ok isPointEmpty($point), "still empty after click"
 
-test "clicking live stones makes them dead", (assert) ->
-  tesuji_charm.game_common._updateBoardChars [
-    '.bw'
-    'bbw'
-    'www'
-  ]
-  tesuji_charm.game_marking.initialize()
-  $pointAt(1, 1).click()
-  assert.notOk isPointBlackScore($pointAt(0, 0)),
-    "black scoring point no longer counts for black with black stones dead"
-  assert.ok isPointWhiteScore($pointAt(0, 0)),
-    "black scoring point becomes white with black stones dead"
-  assert.ok isPointWhiteScore($pointAt(1, 0)),
-    "dead black stone has white score class"
-  assert.ok $pointAt(1, 0).hasClass('blackdead'),
-    "dead black stone has dead black stone class"
-
 test "mixed scoring board", (assert) ->
   tesuji_charm.game_common._updateBoardChars [
     '.b.'
@@ -220,6 +203,40 @@ test "mixed scoring board", (assert) ->
   assert.notOk isPointWhiteScore($pointAt(2, 1)), "(2,1) white"
   assert.notOk isPointBlackScore($pointAt(2, 2)), "(2,2) black"
   assert.ok isPointWhiteScore($pointAt(2, 2)), "(2,2) white"
+
+test "clicking live stones makes them dead, " + \
+     "clicking again brings them back", (assert) ->
+  tesuji_charm.game_common._updateBoardChars [
+    '.bw'
+    'bb.'
+    'www'
+  ]
+  tesuji_charm.game_marking.initialize()
+  $pointAt(1, 1).click()
+  assert.notOk isPointBlackScore($pointAt(0, 0)),
+    "(0, 0) no longer counts for black with black stones dead"
+  assert.ok isPointWhiteScore($pointAt(0, 0)),
+    "(0, 0) becomes white with black stones dead"
+  assert.notOk isPointBlackScore($pointAt(2, 1)),
+    "(2, 1) no longer counts for black with black stones dead"
+  assert.ok isPointWhiteScore($pointAt(2, 1)),
+    "(2, 1) becomes white with black stones dead"
+  assert.ok isPointWhiteScore($pointAt(1, 0)),
+    "dead black stone has white score class"
+  assert.ok $pointAt(1, 0).hasClass('blackdead'),
+    "dead black stone has dead black stone class"
+
+  $pointAt(1, 1).click()
+  assert.ok isPointBlackScore($pointAt(0, 0)),
+    "(0, 0) counts for black again with black stones restored"
+  assert.notOk isPointWhiteScore($pointAt(0, 0)),
+    "(0, 0) no longer white with black stones restored"
+  assert.notOk isPointWhiteScore($pointAt(2, 1)),
+    "(2, 1) no longer white with black stones restored"
+  assert.notOk isPointWhiteScore($pointAt(1, 0)),
+    "restored black stone no longer has white score class"
+  assert.notOk $pointAt(1, 0).hasClass('blackdead'),
+    "restored black stone no longer has dead black stone class"
 
 
 # ============================================================================
@@ -360,3 +377,13 @@ test "groupPoints: identifies groups correctly", (assert) ->
     "black group"
   assert.deepEqual go_rules.groupPoints(1, 1, board), whiteGroup,
     "white group"
+
+test "groupPoints: optional argument 'colors' works", (assert) ->
+  board = [
+    ['blackdead', 'blackdead', 'empty']
+    ['black',     'empty',     'white']
+    ['empty',     'black',     'white']
+  ]
+  expected = [ [0,0], [1,0], [1,1], [2,0] ]
+  actual = go_rules.groupPoints(0, 0, board, ['empty', 'blackdead'])
+  assert.deepEqual actual, expected

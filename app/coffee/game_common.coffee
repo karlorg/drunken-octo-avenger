@@ -53,6 +53,8 @@ game_common.readBoardState = readBoardState = ->
 getStoneColor = ($point) ->
   return 'black' if $point.hasClass 'blackstone'
   return 'white' if $point.hasClass 'whitestone'
+  return 'blackdead' if $point.hasClass 'blackdead'
+  return 'whitedead' if $point.hasClass 'whitedead'
   return 'empty'
 
 game_common.updateBoard = updateBoard = (state) ->

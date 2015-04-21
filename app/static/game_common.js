@@ -91,6 +91,12 @@
     if ($point.hasClass('whitestone')) {
       return 'white';
     }
+    if ($point.hasClass('blackdead')) {
+      return 'blackdead';
+    }
+    if ($point.hasClass('whitedead')) {
+      return 'whitedead';
+    }
     return 'empty';
   };
 
