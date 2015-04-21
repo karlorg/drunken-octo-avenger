@@ -117,6 +117,12 @@
       return casper.evaluate(evaluate_fun, this.lastGameSelector(your_turn));
     };
 
+    BrowserTest.prototype.imageSrc = function(x, y) {
+      return casper.evaluate((function(x, y) {
+        return $(".row-" + y + ".col-" + x + " img").attr('src');
+      }), x, y);
+    };
+
     BrowserTest.prototype.assertEmptyBoard = function(test) {
       return this.assertStonePointCounts(test, 19 * 19, 0, 0);
     };
@@ -136,12 +142,14 @@
     BrowserTest.prototype.countStonesAndPoints = function() {
       var counts;
       counts = casper.evaluate(function() {
-        var blackScore, blackStones, emptyStones, noScore, whiteScore, whiteStones;
+        var blackDead, blackScore, blackStones, emptyStones, noScore, whiteDead, whiteScore, whiteStones;
         emptyStones = $('.goban .nostone').length;
         blackStones = $('.goban .blackstone').length;
         whiteStones = $('.goban .whitestone').length;
         blackScore = $('.goban .blackscore').length;
         whiteScore = $('.goban .whitescore').length;
+        blackDead = $('.goban .blackdead').length;
+        whiteDead = $('.goban .whitedead').length;
         noScore = $('.goban td').length - blackScore - whiteScore;
         counts = {
           'empty': emptyStones,
@@ -149,6 +157,8 @@
           'white': whiteStones,
           'blackscore': blackScore,
           'whitescore': whiteScore,
+          'blackdead': blackDead,
+          'whitedead': whiteDead,
           'noscore': noScore
         };
         return counts;
@@ -539,10 +549,10 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 5;
+    PassAndScoringTest.prototype.numTests = 13;
 
     PassAndScoringTest.prototype.testBody = function(test) {
-      var BLACK_EMAIL, WHITE_EMAIL, i, len, p, ref;
+      var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, originalImageSrc22, p, ref;
       BLACK_EMAIL = 'black@schwarz.de';
       WHITE_EMAIL = 'white@wit.nl';
       ref = [BLACK_EMAIL, WHITE_EMAIL];
@@ -565,14 +575,43 @@
       casper.thenClick('.pass_button');
       createLoginSession(BLACK_EMAIL);
       casper.thenOpen(serverUrl);
-      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
+      originalImageSrc11 = null;
+      originalImageSrc22 = null;
+      casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban');
+          originalImageSrc11 = _this.imageSrc(1, 1);
+          originalImageSrc22 = _this.imageSrc(2, 2);
           return _this.assertGeneralPointCounts(test, {
             label: "initial marking layout",
             noscore: 3 + 5 + 7 + 9,
             blackscore: 19 * 19 - 25 + 1,
             whitescore: 0
+          });
+        };
+      })(this));
+      casper.thenClick(pointSelector(0, 0), (function(_this) {
+        return function() {
+          return _this.assertGeneralPointCounts(test, {
+            label: "after clicking empty point",
+            empty: 19 * 19 - 3 - 7 - 9
+          });
+        };
+      })(this));
+      return casper.thenClick(pointSelector(1, 0), (function(_this) {
+        return function() {
+          var imageSrc11, imageSrc22;
+          imageSrc11 = _this.imageSrc(1, 1);
+          test.assertNotEquals(imageSrc11, originalImageSrc11, "black stone image source is not still " + originalImageSrc11);
+          imageSrc22 = _this.imageSrc(2, 2);
+          test.assertNotEquals(imageSrc22, originalImageSrc22, "empty point image source is not still " + originalImageSrc22);
+          return _this.assertGeneralPointCounts(test, {
+            label: "black stones marked dead",
+            noscore: 7 + 9,
+            blackscore: 19 * 19 - 25,
+            whitescore: 9,
+            blackdead: 3,
+            black: 9
           });
         };
       })(this));

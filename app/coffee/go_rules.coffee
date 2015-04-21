@@ -96,5 +96,4 @@ groupPoints = (x, y, state) ->
         new_.push [xn, yn]
         doneState[yn][xn] = 'new'
 
-# export for testing
-go_rules._groupPoints = groupPoints
+go_rules.groupPoints = groupPoints

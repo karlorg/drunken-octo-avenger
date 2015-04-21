@@ -9,6 +9,12 @@ isPointBlack = ($point) ->
   (imageSrc($point).indexOf('b.gif') > -1) and ($point.hasClass('blackstone'))
 isPointWhite = ($point) ->
   (imageSrc($point).indexOf('w.gif') > -1) and ($point.hasClass('whitestone'))
+isPointBlackScore = ($point) ->
+  (imageSrc($point).indexOf('bp.gif') > -1) and
+    ($point.hasClass('blackscore'))
+isPointWhiteScore = ($point) ->
+  (imageSrc($point).indexOf('wp.gif') > -1) and
+    ($point.hasClass('whitescore'))
 
 
 # ============================================================================
@@ -56,6 +62,42 @@ test 'init function sets request and logout callbacks', ->
 # ============================================================================
 
 
+module "common game page functions"
+
+
+test "helper function readBoardState", (assert) ->
+  tesuji_charm.game_common._updateBoardChars [
+    'wb'
+    '..'
+  ]
+  expected = [
+    ['white', 'black', 'empty']
+    ['empty', 'empty', 'empty']
+    ['empty', 'empty', 'empty']
+  ]
+  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+
+test "helper function updateBoardChars", (assert) ->
+  tesuji_charm.game_common._updateBoardChars [
+    '.b.'
+    'bw.'
+    '.b.'
+  ]
+  assert.ok isPointBlack($pointAt(1, 0))
+  assert.ok isPointWhite($pointAt(1, 1))
+  assert.ok isPointEmpty($pointAt(2, 1))
+  tesuji_charm.game_common._updateBoardChars [
+    '...'
+    '...'
+    '...'
+  ]
+  assert.ok isPointEmpty($pointAt(1, 0))
+  assert.ok isPointEmpty($pointAt(1, 1))
+
+
+# ============================================================================
+
+
 module 'Basic game page',
   setup: ->
     $('input#move_no').val "0"
@@ -98,7 +140,7 @@ test 'Confirm button disabled until stone placed', ->
 
 test "clicking a pre-existing stone does nothing", (assert) ->
   $point = $pointAt 1, 1
-  tesuji_charm.game_basic._updateBoardChars [
+  tesuji_charm.game_common._updateBoardChars [
     '..'
     '.w'
   ]
@@ -110,7 +152,7 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   assert.notEqual $('input#column').val(), "1", "column not set"
 
 test "captured stones are removed from the board", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
+  tesuji_charm.game_common._updateBoardChars [
     'wb'
     '..'
   ]
@@ -119,35 +161,6 @@ test "captured stones are removed from the board", (assert) ->
   $pointAt(0, 1).click()
   # corner should be blank now
   assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
-
-test "helper function readBoardState", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
-    'wb'
-    '..'
-  ]
-  expected = [
-    ['white', 'black', 'empty']
-    ['empty', 'empty', 'empty']
-    ['empty', 'empty', 'empty']
-  ]
-  assert.deepEqual tesuji_charm.game_basic._readBoardState(), expected
-
-test "helper function updateBoard", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
-    '.b.'
-    'bw.'
-    '.b.'
-  ]
-  assert.ok isPointBlack($pointAt(1, 0))
-  assert.ok isPointWhite($pointAt(1, 1))
-  assert.ok isPointEmpty($pointAt(2, 1))
-  tesuji_charm.game_basic._updateBoardChars [
-    '...'
-    '...'
-    '...'
-  ]
-  assert.ok isPointEmpty($pointAt(1, 0))
-  assert.ok isPointEmpty($pointAt(1, 1))
 
 
 # ============================================================================
@@ -159,51 +172,54 @@ module 'Game page with marking interface',
                                  id: 'with_scoring'
                                  class: 'with_scoring')
 
-test "presence of score class", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
-    '.b'
-    'bb'
-  ]
-  tesuji_charm.game_basic.initialize()
-  assert.ok $pointAt(0, 0).hasClass('blackscore'),
-    "encircled point has score class"
+test "clicking empty points in marking mode does nothing", (assert) ->
+  $point = $pointAt(1, 1)
+  assert.ok isPointEmpty($point), "centre point starts empty"
+  $point.click()
+  assert.ok isPointEmpty($point), "still empty after click"
 
-test "presence of score class depends on '.with_scoring' element", (assert) ->
-  $('.with_scoring').remove()
-  $('#with_scoring').remove()
-  tesuji_charm.game_basic._updateBoardChars [
-    '.b'
-    'bb'
+test "clicking live stones makes them dead", (assert) ->
+  tesuji_charm.game_common._updateBoardChars [
+    '.bw'
+    'bbw'
+    'www'
   ]
-  tesuji_charm.game_basic.initialize()
-  assert.notOk $pointAt(0, 0).hasClass('blackscore'),
-    "encircled point has no score class"
+  tesuji_charm.game_marking.initialize()
+  $pointAt(1, 1).click()
+  assert.notOk isPointBlackScore($pointAt(0, 0)),
+    "black scoring point no longer counts for black with black stones dead"
+  assert.ok isPointWhiteScore($pointAt(0, 0)),
+    "black scoring point becomes white with black stones dead"
+  assert.ok isPointWhiteScore($pointAt(1, 0)),
+    "dead black stone has white score class"
+  assert.ok $pointAt(1, 0).hasClass('blackdead'),
+    "dead black stone has dead black stone class"
 
 test "mixed scoring board", (assert) ->
-  tesuji_charm.game_basic._updateBoardChars [
+  tesuji_charm.game_common._updateBoardChars [
     '.b.'
     'bww'
     '.w.'
   ]
-  tesuji_charm.game_basic.initialize()
-  assert.ok $pointAt(0, 0).hasClass('blackscore'), "(0,0) black"
-  assert.notOk $pointAt(0, 0).hasClass('whitescore'), "(0,0) white"
-  assert.notOk $pointAt(0, 1).hasClass('blackscore'), "(0,1) black"
-  assert.notOk $pointAt(0, 1).hasClass('whitescore'), "(0,1) white"
-  assert.notOk $pointAt(0, 2).hasClass('blackscore'), "(0,2) black"
-  assert.notOk $pointAt(0, 2).hasClass('whitescore'), "(0,2) white"
-  assert.notOk $pointAt(1, 0).hasClass('blackscore'), "(1,0) black"
-  assert.notOk $pointAt(1, 0).hasClass('whitescore'), "(1,0) white"
-  assert.notOk $pointAt(1, 1).hasClass('blackscore'), "(1,1) black"
-  assert.notOk $pointAt(1, 1).hasClass('whitescore'), "(1,1) white"
-  assert.notOk $pointAt(1, 2).hasClass('blackscore'), "(1,2) black"
-  assert.notOk $pointAt(1, 2).hasClass('whitescore'), "(1,2) white"
-  assert.notOk $pointAt(2, 0).hasClass('blackscore'), "(2,0) black"
-  assert.notOk $pointAt(2, 0).hasClass('whitescore'), "(2,0) white"
-  assert.notOk $pointAt(2, 1).hasClass('blackscore'), "(2,1) black"
-  assert.notOk $pointAt(2, 1).hasClass('whitescore'), "(2,1) white"
-  assert.notOk $pointAt(2, 2).hasClass('blackscore'), "(2,2) black"
-  assert.ok $pointAt(2, 2).hasClass('whitescore'), "(2,2) white"
+  tesuji_charm.game_marking.initialize()
+  assert.ok isPointBlackScore($pointAt(0, 0)), "(0,0) black"
+  assert.notOk isPointWhiteScore($pointAt(0, 0)), "(0,0) white"
+  assert.notOk isPointBlackScore($pointAt(0, 1)), "(0,1) black"
+  assert.notOk isPointWhiteScore($pointAt(0, 1)), "(0,1) white"
+  assert.notOk isPointBlackScore($pointAt(0, 2)), "(0,2) black"
+  assert.notOk isPointWhiteScore($pointAt(0, 2)), "(0,2) white"
+  assert.notOk isPointBlackScore($pointAt(1, 0)), "(1,0) black"
+  assert.notOk isPointWhiteScore($pointAt(1, 0)), "(1,0) white"
+  assert.notOk isPointBlackScore($pointAt(1, 1)), "(1,1) black"
+  assert.notOk isPointWhiteScore($pointAt(1, 1)), "(1,1) white"
+  assert.notOk isPointBlackScore($pointAt(1, 2)), "(1,2) black"
+  assert.notOk isPointWhiteScore($pointAt(1, 2)), "(1,2) white"
+  assert.notOk isPointBlackScore($pointAt(2, 0)), "(2,0) black"
+  assert.notOk isPointWhiteScore($pointAt(2, 0)), "(2,0) white"
+  assert.notOk isPointBlackScore($pointAt(2, 1)), "(2,1) black"
+  assert.notOk isPointWhiteScore($pointAt(2, 1)), "(2,1) white"
+  assert.notOk isPointBlackScore($pointAt(2, 2)), "(2,2) black"
+  assert.ok isPointWhiteScore($pointAt(2, 2)), "(2,2) white"
 
 
 # ============================================================================
@@ -332,7 +348,7 @@ test "_countLiberties: regression test: shared liberties not
   assert.equal go_rules._countLiberties(1, 0, board), 3,
     "centre liberty counts only once, for total of 3"
 
-test "_groupPoints: identifies groups correctly", (assert) ->
+test "groupPoints: identifies groups correctly", (assert) ->
   board = [
     ['black', 'black', 'empty']
     ['black', 'white', 'white']
@@ -340,7 +356,7 @@ test "_groupPoints: identifies groups correctly", (assert) ->
   ]
   blackGroup = [ [1,0], [0,0], [0,1] ]
   whiteGroup = [ [1,1], [2,1] ]
-  assert.deepEqual go_rules._groupPoints(1, 0, board), blackGroup,
+  assert.deepEqual go_rules.groupPoints(1, 0, board), blackGroup,
     "black group"
-  assert.deepEqual go_rules._groupPoints(1, 1, board), whiteGroup,
+  assert.deepEqual go_rules.groupPoints(1, 1, board), whiteGroup,
     "white group"

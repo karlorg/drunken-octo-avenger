@@ -166,6 +166,6 @@
     }
   };
 
-  go_rules._groupPoints = groupPoints;
+  go_rules.groupPoints = groupPoints;
 
 }).call(this);

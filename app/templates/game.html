@@ -36,8 +36,16 @@
 
 {% block page_scripts %}
 <script src="/static/go_rules.js"></script>
+<script src="/static/game_common.js"></script>
+{% if with_scoring %}
+<script src="/static/game_marking.js"></script>
+<script>
+window.tesuji_charm.game_marking.initialize();
+</script>
+{% else %}
 <script src="/static/game_basic.js"></script>
 <script>
 window.tesuji_charm.game_basic.initialize();
 </script>
+{% endif %}
 {% endblock %}
