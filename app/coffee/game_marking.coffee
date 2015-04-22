@@ -24,6 +24,8 @@ game_marking.initialize = ->
 # setupScoring and its helpers
 
 setupScoring = ->
+  "set/remove scoring classes on the DOM based on current live/dead state of
+  all stones"
   state = game_common.readBoardState()
   for region in getEmptyRegions state
     [col, row] = region[0]
@@ -37,6 +39,7 @@ setupScoring = ->
 
 getEmptyRegions = (state) ->
   regions = []
+  # which colors count as empty when detecting regions:
   emptyColors = ['empty', 'blackdead', 'whitedead']
   height = state.length
   width = state[0].length
@@ -54,7 +57,7 @@ getEmptyRegions = (state) ->
 setRegionScores = (region, scoreColor) ->
   for [x, y] in region
     $point = $pointAt x, y
-    if $point.hasClass 'nostone'
+    if game_common.colorFromDom($point) == 'empty'
       game_common.setPointColor $point, scoreColor
   return
 
@@ -70,7 +73,9 @@ markStonesAround = (x, y) ->
   state = game_common.readBoardState()
   # we're assuming here that the region never contains both live and dead
   # stones of the same color, as the interface should not allow this to happen
-  region = go_rules.groupPoints x, y, state, ['empty', color]
+  region = go_rules.groupPoints(
+    x, y, state,
+    ['empty', color])  # list of colors to include in 'group'
   toggleRegion region
   return
 

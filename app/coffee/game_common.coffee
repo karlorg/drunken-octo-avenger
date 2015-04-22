@@ -7,6 +7,8 @@ game_common = tesuji_charm.game_common
 
 game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 
+# setPointColor and helpers
+
 game_common.setPointColor = setPointColor = ($td, color) ->
   [filename, stoneclass] = switch color
     when 'empty' then ['e.gif', 'nostone']
@@ -19,14 +21,6 @@ game_common.setPointColor = setPointColor = ($td, color) ->
   setImage $td, filename
   setStoneClass $td, stoneclass
 
-game_common.colorFromDom = colorFromDom = ($point) ->
-  "return the color of the given point based on the DOM status"
-  if $point.hasClass 'blackstone' then return 'black'
-  if $point.hasClass 'whitestone' then return 'white'
-  if $point.hasClass 'blackdead' then return 'blackdead'
-  if $point.hasClass 'whitedead' then return 'whitedead'
-  return 'empty'
-
 setImage = ($td, filename) ->
   $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
@@ -34,6 +28,16 @@ setStoneClass = ($td, stoneclass) ->
   $td.removeClass('blackstone whitestone nostone
                    blackdead whitedead blackscore whitescore'
   ).addClass(stoneclass)
+
+# end of setPointColor helpers
+
+game_common.colorFromDom = colorFromDom = ($point) ->
+  "return the color of the given point based on the DOM status"
+  if $point.hasClass 'blackstone' then return 'black'
+  if $point.hasClass 'whitestone' then return 'white'
+  if $point.hasClass 'blackdead' then return 'blackdead'
+  if $point.hasClass 'whitedead' then return 'whitedead'
+  return 'empty'
 
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/
@@ -55,15 +59,8 @@ game_common.readBoardState = readBoardState = ->
     $this = $(this)
     [row, col] = parseCoordClass $this
     result[row] ?= []
-    result[row][col] = getStoneColor $this
+    result[row][col] = colorFromDom $this
   return result
-
-getStoneColor = ($point) ->
-  return 'black' if $point.hasClass 'blackstone'
-  return 'white' if $point.hasClass 'whitestone'
-  return 'blackdead' if $point.hasClass 'blackdead'
-  return 'whitedead' if $point.hasClass 'whitedead'
-  return 'empty'
 
 game_common.updateBoard = updateBoard = (state) ->
   "set the images and classes of the DOM board to match the given state"

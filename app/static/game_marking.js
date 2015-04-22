@@ -35,6 +35,7 @@
   };
 
   setupScoring = function() {
+    "set/remove scoring classes on the DOM based on current live/dead state of all stones";
     var boundary, col, k, len, ref, ref1, region, row, state;
     state = game_common.readBoardState();
     ref = getEmptyRegions(state);
@@ -103,7 +104,7 @@
     for (k = 0, len = region.length; k < len; k++) {
       ref = region[k], x = ref[0], y = ref[1];
       $point = $pointAt(x, y);
-      if ($point.hasClass('nostone')) {
+      if (game_common.colorFromDom($point) === 'empty') {
         game_common.setPointColor($point, scoreColor);
       }
     }
