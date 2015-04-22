@@ -41,18 +41,17 @@
     return newState;
   };
 
-  go_rules.boundingColor = function(x, y, state) {
-    "Return the color surrounding the empty area around (x, y), or 'neither' if boundary is mixed.";
-    var area, i, j, len, len1, point, ref, ref1, ref2, seen, x0, y0;
-    area = groupPoints(x, y, state);
+  go_rules.boundingColor = function(region, state) {
+    "Return the color surrounding the empty region, or 'neither' if boundary is mixed.";
+    var i, j, len, len1, point, ref, ref1, ref2, seen, x, x0, y, y0;
     seen = 'none';
-    for (i = 0, len = area.length; i < len; i++) {
-      ref = area[i], x = ref[0], y = ref[1];
+    for (i = 0, len = region.length; i < len; i++) {
+      ref = region[i], x = ref[0], y = ref[1];
       ref1 = neighboringPoints(x, y, state);
       for (j = 0, len1 = ref1.length; j < len1; j++) {
         ref2 = ref1[j], x0 = ref2[0], y0 = ref2[1];
         point = state[y0][x0];
-        if (point === 'empty') {
+        if (point === 'empty' || point === 'blackdead' || point === 'whitedead') {
           continue;
         } else if (seen === 'none') {
           seen = point;
@@ -126,10 +125,15 @@
 
   go_rules._countLiberties = countLiberties;
 
-  groupPoints = function(x, y, state) {
+  groupPoints = function(x, y, state, colors) {
+    var done, doneState, h, i, len, new_, ref, ref1, ref2, ref3, w, x0, xn, y0, yn;
+    if (colors == null) {
+      colors = null;
+    }
     "Return a list of points in the group around (x, y) from `state`, whether black, white, or empty.";
-    var color, done, doneState, h, i, len, new_, ref, ref1, ref2, w, x0, xn, y0, yn;
-    color = state[y][x];
+    if (colors === null) {
+      colors = [state[y][x]];
+    }
     done = [];
     doneState = (function() {
       var i, ref, results;
@@ -158,7 +162,7 @@
       ref1 = neighboringPoints(x0, y0, state);
       for (i = 0, len = ref1.length; i < len; i++) {
         ref2 = ref1[i], xn = ref2[0], yn = ref2[1];
-        if (state[yn][xn] === color && doneState[yn][xn] === 'none') {
+        if ((ref3 = state[yn][xn], indexOf.call(colors, ref3) >= 0) && doneState[yn][xn] === 'none') {
           new_.push([xn, yn]);
           doneState[yn][xn] = 'new';
         }

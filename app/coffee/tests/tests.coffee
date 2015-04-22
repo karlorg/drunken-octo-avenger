@@ -11,10 +11,18 @@ isPointWhite = ($point) ->
   (imageSrc($point).indexOf('w.gif') > -1) and ($point.hasClass('whitestone'))
 isPointBlackScore = ($point) ->
   (imageSrc($point).indexOf('bp.gif') > -1) and
-    ($point.hasClass('blackscore'))
+    ($point.hasClass('blackscore')) and
+    (not $point.hasClass('whitescore'))
 isPointWhiteScore = ($point) ->
   (imageSrc($point).indexOf('wp.gif') > -1) and
-    ($point.hasClass('whitescore'))
+    ($point.hasClass('whitescore')) and
+    (not $point.hasClass('blackscore'))
+isPointBlackDead = ($point) ->
+  (imageSrc($point).indexOf('bdwp.gif') > -1) and
+    ($point.hasClass('blackdead'))
+isPointWhiteDead = ($point) ->
+  (imageSrc($point).indexOf('wdbp.gif') > -1) and
+    ($point.hasClass('whitedead'))
 
 
 # ============================================================================
@@ -59,6 +67,23 @@ test 'init function sets request and logout callbacks', ->
   equal logoutCalled, true, 'logout callback called correctly'
 
 
+
+# ============================================================================
+
+# helper for game board tests
+
+updateBoardChars = (charArray) ->
+  for rowString, row in charArray
+    for char, col in rowString
+      color = switch char
+        when "b" then "black"
+        when "w" then "white"
+        when "." then "empty"
+        else throw new Error "unknown board char: #{char}"
+      tesuji_charm.game_common.setPointColor(
+        (tesuji_charm.game_common.$pointAt col, row), color)
+  return
+
 # ============================================================================
 
 
@@ -66,7 +91,7 @@ module "common game page functions"
 
 
 test "helper function readBoardState", (assert) ->
-  tesuji_charm.game_common._updateBoardChars [
+  updateBoardChars [
     'wb'
     '..'
   ]
@@ -78,7 +103,7 @@ test "helper function readBoardState", (assert) ->
   assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
 
 test "helper function updateBoardChars", (assert) ->
-  tesuji_charm.game_common._updateBoardChars [
+  updateBoardChars [
     '.b.'
     'bw.'
     '.b.'
@@ -86,7 +111,7 @@ test "helper function updateBoardChars", (assert) ->
   assert.ok isPointBlack($pointAt(1, 0))
   assert.ok isPointWhite($pointAt(1, 1))
   assert.ok isPointEmpty($pointAt(2, 1))
-  tesuji_charm.game_common._updateBoardChars [
+  updateBoardChars [
     '...'
     '...'
     '...'
@@ -140,7 +165,7 @@ test 'Confirm button disabled until stone placed', ->
 
 test "clicking a pre-existing stone does nothing", (assert) ->
   $point = $pointAt 1, 1
-  tesuji_charm.game_common._updateBoardChars [
+  updateBoardChars [
     '..'
     '.w'
   ]
@@ -152,7 +177,7 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   assert.notEqual $('input#column').val(), "1", "column not set"
 
 test "captured stones are removed from the board", (assert) ->
-  tesuji_charm.game_common._updateBoardChars [
+  updateBoardChars [
     'wb'
     '..'
   ]
@@ -178,25 +203,8 @@ test "clicking empty points in marking mode does nothing", (assert) ->
   $point.click()
   assert.ok isPointEmpty($point), "still empty after click"
 
-test "clicking live stones makes them dead", (assert) ->
-  tesuji_charm.game_common._updateBoardChars [
-    '.bw'
-    'bbw'
-    'www'
-  ]
-  tesuji_charm.game_marking.initialize()
-  $pointAt(1, 1).click()
-  assert.notOk isPointBlackScore($pointAt(0, 0)),
-    "black scoring point no longer counts for black with black stones dead"
-  assert.ok isPointWhiteScore($pointAt(0, 0)),
-    "black scoring point becomes white with black stones dead"
-  assert.ok isPointWhiteScore($pointAt(1, 0)),
-    "dead black stone has white score class"
-  assert.ok $pointAt(1, 0).hasClass('blackdead'),
-    "dead black stone has dead black stone class"
-
 test "mixed scoring board", (assert) ->
-  tesuji_charm.game_common._updateBoardChars [
+  updateBoardChars [
     '.b.'
     'bww'
     '.w.'
@@ -220,6 +228,39 @@ test "mixed scoring board", (assert) ->
   assert.notOk isPointWhiteScore($pointAt(2, 1)), "(2,1) white"
   assert.notOk isPointBlackScore($pointAt(2, 2)), "(2,2) black"
   assert.ok isPointWhiteScore($pointAt(2, 2)), "(2,2) white"
+
+test "clicking live stones makes them dead, " + \
+     "clicking again brings them back", (assert) ->
+  updateBoardChars [
+    'b.w'
+    '.b.'
+    'bbw'
+  ]
+  tesuji_charm.game_marking.initialize()
+
+  $pointAt(1, 1).click()
+  assert.ok isPointBlackDead($pointAt(1, 1)),
+    "clicked stone (1, 1) is marked dead"
+  assert.ok isPointWhiteScore($pointAt(1, 1)),
+    "dead black stone (1, 1) has white score class"
+  assert.ok isPointBlackDead($pointAt(0, 0)),
+    "other black stone (0, 0) in the region is also dead"
+  assert.ok isPointWhiteScore($pointAt(0, 1)),
+    "(0, 1) becomes white score with black stones dead"
+  assert.ok isPointWhiteScore($pointAt(2, 1)),
+    "(2, 1) becomes white score with black stones dead"
+
+  $pointAt(1, 1).click()
+  assert.ok isPointBlack($pointAt(1, 1)),
+    "clicked stone (1, 1) is live again"
+  assert.notOk isPointWhiteScore($pointAt(1, 1)),
+    "revived stone (1, 1) no longer counts as white score"
+  assert.ok isPointBlack($pointAt(0, 0)),
+    "other dead stone (0, 0) is live again"
+  assert.ok isPointBlackScore($pointAt(0, 1)),
+    "(0, 1) counts for black again with black stones restored"
+  assert.notOk isPointWhiteScore($pointAt(2, 1)),
+    "(2, 1) is neutral again with black stones restored"
 
 
 # ============================================================================
@@ -360,3 +401,13 @@ test "groupPoints: identifies groups correctly", (assert) ->
     "black group"
   assert.deepEqual go_rules.groupPoints(1, 1, board), whiteGroup,
     "white group"
+
+test "groupPoints: optional argument 'colors' works", (assert) ->
+  board = [
+    ['blackdead', 'blackdead', 'empty']
+    ['black',     'empty',     'white']
+    ['empty',     'black',     'white']
+  ]
+  expected = [ [0,0], [1,0], [1,1], [2,0] ]
+  actual = go_rules.groupPoints(0, 0, board, ['empty', 'blackdead'])
+  assert.deepEqual actual, expected

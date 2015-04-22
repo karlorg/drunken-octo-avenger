@@ -22,15 +22,14 @@ go_rules.getNewState = (color, x, y, state) ->
     throw Error 'illegal move'
   return newState
 
-go_rules.boundingColor = (x, y, state) ->
-  "Return the color surrounding the empty area around (x, y), or 'neither' if
-  boundary is mixed."
-  area = groupPoints x, y, state
+go_rules.boundingColor = (region, state) ->
+  "Return the color surrounding the empty region, or 'neither' if boundary is
+  mixed."
   seen = 'none'
-  for [x, y] in area
+  for [x, y] in region
     for [x0, y0] in neighboringPoints x, y, state
       point = state[y0][x0]
-      if point is 'empty'
+      if point in ['empty', 'blackdead', 'whitedead']
         continue
       else if seen is 'none'
         seen = point
@@ -75,10 +74,11 @@ countLiberties = (x, y, state) ->
 # export for testing
 go_rules._countLiberties = countLiberties
 
-groupPoints = (x, y, state) ->
+groupPoints = (x, y, state, colors=null) ->
   "Return a list of points in the group around (x, y) from `state`, whether
   black, white, or empty."
-  color = state[y][x]
+  if colors == null
+    colors = [state[y][x]]
   done = []
   doneState = (('none' for w in [0..state[0].length]) \
                for h in [0..state.length])
@@ -91,7 +91,7 @@ groupPoints = (x, y, state) ->
     done.push [x0, y0]
     doneState[y0][x0] = 'done'
     for [xn, yn] in neighboringPoints(x0, y0, state)
-      if state[yn][xn] is color and
+      if state[yn][xn] in colors and
          doneState[yn][xn] is 'none'
         new_.push [xn, yn]
         doneState[yn][xn] = 'new'
