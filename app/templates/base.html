@@ -7,6 +7,27 @@
 <title>Go</title>
 </head>
 <body>
+
+<style>
+.alpha-alert {
+    height:50px;
+    background:#d9542b;
+    display:block;
+    padding: 5px;
+    border:5px solid #CCC;
+    width:960px;
+    margin:0 auto;
+}
+</style>
+
+<div class="alpha-alert">
+Caution: the site you are viewing is very much a site in the initial stages of
+development. The goal is to eventually have a web site suitable for turn-based
+Go games. We are not there yet, and things will likely change. You can start a
+game against a friend, but there is a chance that your game will simply be
+dropped at some point. This is very much, use with no expectations.
+</div>
+
 {% if current_user_email %}
 <div class="logged_in_user">Logged in as: {{ current_user_email }}</div>
 <a href="#" id="logout">Log out</a>
