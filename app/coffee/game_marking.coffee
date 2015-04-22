@@ -18,20 +18,10 @@ game_marking.initialize = ->
   $('table.goban td').click ->
     return unless game_common.hasCoordClass $(this)
     [row, col] = game_common.parseCoordClass $(this)
-    $point = $pointAt col, row
-    if $point.hasClass('blackstone')
-      newColor = 'blackdead'
-    else if $point.hasClass('blackdead')
-      newColor = 'black'
-    else if $point.hasClass('whitestone')
-      newColor = 'whitedead'
-    else if $point.hasClass('whitedead')
-      newColor = 'white'
-    else
-      return
-    for [x, y] in go_rules.groupPoints col, row, game_common.readBoardState()
-      game_common.setPointColor $pointAt(x, y), newColor
+    markStonesAround col, row
     setupScoring()
+
+# setupScoring and its helpers
 
 setupScoring = ->
   state = game_common.readBoardState()
@@ -42,6 +32,7 @@ setupScoring = ->
       when 'black' then 'blackscore'
       when 'white' then 'whitescore'
       when 'neither' then 'empty'
+      else throw new Error "invalid boundary color: '#{boundary}'"
   return  # explicit return so Coffee won't accumulate results of the `for`
 
 getEmptyRegions = (state) ->
@@ -65,4 +56,36 @@ setRegionScores = (region, scoreColor) ->
     $point = $pointAt x, y
     if $point.hasClass 'nostone'
       game_common.setPointColor $point, scoreColor
+  return
+
+# markStonesAround and its helpers
+
+markStonesAround = (x, y) ->
+  "Toggle the life/death status of the given point and all friendly stones in
+  the region (ie. the area bounded by unfriendly stones).
+
+  We don't trigger scoring recalculation here, that's for the caller to do."
+  color = game_common.colorFromDom $pointAt(x, y)
+  return if color == 'empty'
+  state = game_common.readBoardState()
+  # we're assuming here that the region never contains both live and dead
+  # stones of the same color, as the interface should not allow this to happen
+  region = go_rules.groupPoints x, y, state, ['empty', color]
+  toggleRegion region
+  return
+
+toggleRegion = (region) ->
+  "In the given region, mark live stones as dead and dead stones as alive."
+  for [x, y] in region
+    $point = $pointAt x, y
+    color = game_common.colorFromDom $point
+    continue if color == 'empty'
+    newColor = switch color
+      when 'black' then 'blackdead'
+      when 'white' then 'whitedead'
+      when 'blackdead' then 'black'
+      when 'whitedead' then 'white'
+      else null
+    if newColor
+      game_common.setPointColor $point, newColor
   return

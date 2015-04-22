@@ -19,6 +19,14 @@ game_common.setPointColor = setPointColor = ($td, color) ->
   setImage $td, filename
   setStoneClass $td, stoneclass
 
+game_common.colorFromDom = colorFromDom = ($point) ->
+  "return the color of the given point based on the DOM status"
+  if $point.hasClass 'blackstone' then return 'black'
+  if $point.hasClass 'whitestone' then return 'white'
+  if $point.hasClass 'blackdead' then return 'blackdead'
+  if $point.hasClass 'whitedead' then return 'whitedead'
+  return 'empty'
+
 setImage = ($td, filename) ->
   $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
