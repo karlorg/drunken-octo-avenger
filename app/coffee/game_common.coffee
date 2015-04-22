@@ -63,16 +63,3 @@ game_common.updateBoard = updateBoard = (state) ->
     for color, col in rowArray
       setPointColor ($pointAt col, row), color
   return
-
-updateBoardChars = (charArray) ->
-  for rowString, row in charArray
-    for char, col in rowString
-      color = switch char
-        when "b" then "black"
-        when "w" then "white"
-        when "." then "empty"
-      setPointColor ($pointAt col, row), color
-  return
-
-# export for use by tests
-game_common._updateBoardChars = updateBoardChars
