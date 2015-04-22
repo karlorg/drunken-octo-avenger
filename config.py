@@ -7,7 +7,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-DOMAIN = 'localhost'
+DOMAIN = 'http://allanderek.pythonanywhere.com'
 
 DEBUG = True
 
