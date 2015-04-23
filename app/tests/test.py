@@ -151,12 +151,15 @@ class TestLogoutIntegrated(TestWithTestingApp):
 
     def test_removes_email_and_persona_email_from_session(self):
         with main.app.test_client() as test_client:
-            with test_client.session_transaction() as transaction:
-                transaction['email'] = 'olduser@remove.me'
-                transaction['persona_email'] = 'olduser@remove.me'
+            with test_client.session_transaction() as session:
+                session['email'] = 'olduser@remove.me'
+                session['persona_email'] = 'olduser@remove.me'
+
             test_client.post('/logout')
-            assert 'email' not in session
-            assert 'persona_email' not in session
+
+            with test_client.session_transaction() as session:
+                self.assertNotIn('email', session)
+                self.assertNotIn('persona_email', session)
 
     def test_no_error_when_email_not_set(self):
         with main.app.test_client() as test_client:
