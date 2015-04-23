@@ -18,6 +18,7 @@ from flask_wtf import Form
 import jinja2
 import json
 import requests
+from sqlalchemy import or_
 from wtforms import IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
@@ -392,18 +393,14 @@ def get_status_lists(player_email):
                            if g.to_move() != player_email]
     return (your_turn_games, not_your_turn_games)
 
-def get_player_games(player_email, games=None):
+def get_player_games(player_email):
     """Returns the list of games in which `player_email` is involved.
 
-    If `games` is passed this acts as a pure function, otherwise it reads the
-    list of all games from the database.
+    Accesses database.
     """
-    if games is None:
-        games = Game.query.all()
-
-    def involved_in_game(game):
-        return (player_email == game.black or player_email == game.white)
-    return list(filter(involved_in_game, games))
+    games = Game.query.filter(or_(Game.black == player_email,
+                                  Game.white == player_email)).all()
+    return games
 
 def check_two_passes(moves, passes):
     """True if last two actions are both passes, false otherwise."""
@@ -420,20 +417,15 @@ def check_two_passes(moves, passes):
     except IndexError:
         return False
 
-def is_players_turn_in_game(game, email=None):
-    """Test if it's `email`'s turn to move in `game` given `moves`.
+def is_players_turn_in_game(game):
+    """Test if it's the logged-in player's turn to move in `game`.
 
-    If `email` is passed, this acts as a pure function; otherwise, it reads
-    email from the session.
-
-    `moves` and `passes` should list moves and passes associated with `game`,
-    since this function won't access the database itself.
+    Reads email from the session.
     """
-    if email is None:
-        try:
-            email = session['email']
-        except KeyError:
-            return False
+    try:
+        email = session['email']
+    except KeyError:
+        return False
     return game.to_move() == email
 
 def add_stones_from_text_map_to_game(text_map, game):

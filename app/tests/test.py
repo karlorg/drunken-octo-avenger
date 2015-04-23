@@ -80,9 +80,7 @@ class TestFrontPageIntegrated(TestWithTestingApp):
                 str(response.get_data())) is not None
 
     def test_with_login_redirects_to_status(self):
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                session['email'] = 'test@mockmyid.com'
+        with self.set_email('test@mockmyid.com') as test_client:
             response = test_client.get('/')
         self.assert_redirects(response, url_for('status'))
 
@@ -101,20 +99,24 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
         }
         return mock_post
 
+    def post_simple_assertion(self, test_client=None, mock_post=None):
+        if test_client is None:
+            test_client = self.test_client
+        if mock_post is None:
+            mock_post = self.make_mock_post()
+        with patch('app.main.requests.post', mock_post):
+            response = test_client.post('/persona/login',
+                                        data={'assertion': 'test'})
+        return (response, mock_post)
+
+
     def test_aborts_on_no_assertion(self):
-        response = self.test_client.post(
-                '/persona/login',
-                data={}
-        )
-        assert response.status_code == 400
+        response = self.test_client.post('/persona/login',
+                                         data={})
+        self.assertEqual(response.status_code, 400)
 
     def test_posts_assertion_to_mozilla(self):
-        mock_post = self.make_mock_post()
-        with patch('app.main.requests.post', mock_post):
-            self.test_client.post(
-                    '/persona/login',
-                    data={'assertion': 'test'}
-            )
+        _, mock_post = self.post_simple_assertion()
         mock_post.assert_called_once_with(
                 'https://verifier.login.persona.org/verify',
                 data={
@@ -125,26 +127,30 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
         )
 
     def test_good_response_sets_session_email_and_persona_email(self):
-        mock_post = self.make_mock_post()
         with main.app.test_client() as test_client:
-            with patch('app.main.requests.post', mock_post):
-                test_client.post(
-                        '/persona/login',
-                        data={'assertion': 'test'}
-                )
-            assert session['email'] == self.TEST_EMAIL
-            assert session['persona_email'] == self.TEST_EMAIL
 
-    def test_bad_response_aborts(self):
+            self.post_simple_assertion(test_client)
+
+            self.assertEqual(session['email'], self.TEST_EMAIL)
+            self.assertEqual(session['persona_email'], self.TEST_EMAIL)
+
+    def test_bad_response_status_aborts(self):
         mock_post = self.make_mock_post(status='no no NO')
         with main.app.test_client() as test_client:
-            with patch('app.main.requests.post', mock_post):
-                response = test_client.post(
-                        '/persona/login',
-                        data={'assertion': 'test'}
-                )
-            assert 'email' not in session
-            assert response.status_code != 200
+
+            response, _ = self.post_simple_assertion(test_client, mock_post)
+
+            self.assertNotIn('email', session)
+            self.assertNotEqual(response.status_code, 200)
+
+    def test_bad_response_ok_aborts(self):
+        mock_post = self.make_mock_post(ok=False)
+        with main.app.test_client() as test_client:
+
+            response, _ = self.post_simple_assertion(test_client, mock_post)
+
+            self.assertNotIn('email', session)
+            self.assertNotEqual(response.status_code, 200)
 
 
 class TestLogoutIntegrated(TestWithTestingApp):
@@ -163,32 +169,11 @@ class TestLogoutIntegrated(TestWithTestingApp):
 
     def test_no_error_when_email_not_set(self):
         with main.app.test_client() as test_client:
-            test_client.post('/logout')
-
-
-class TestProcessPersonaResponse(unittest.TestCase):
-
-    def test_checks_response_ok(self):
-        response = Mock()
-        response.ok = False
-        assert main.process_persona_response(response).do is False
-
-    def test_checks_status_okay(self):
-        response = Mock()
-        response.ok = True
-        response.json.return_value = {'status': 'very very bad'}
-        assert main.process_persona_response(response).do is False
-
-    def test_returns_good_for_good_response(self):
-        response = Mock()
-        response.ok = True
-        response.json.return_value = {
-                'status': 'okay',
-                'email': 'bob@testcase.python',
-        }
-        result = main.process_persona_response(response)
-        assert result.do is True
-        assert result.email == 'bob@testcase.python'
+            try:
+                test_client.post('/logout')
+            except Exception as e:
+                self.fail("exception {} raised for logout "
+                          "with no email set".format(repr(e)))
 
 
 class TestChallengeIntegrated(TestWithDb):
@@ -198,9 +183,10 @@ class TestChallengeIntegrated(TestWithDb):
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as session:
                 session['email'] = 'player1@gofan.com'
+
             test_client.post('/challenge', data=dict(
-                opponent_email='player2@gofan.com'
-            ))
+                opponent_email='player2@gofan.com'))
+
         games = Game.query.all()
         assert len(games) == 1
         game = games[0]
@@ -251,7 +237,9 @@ class TestStatusIntegrated(TestWithDb):
         game1, game2, game3, game4, game5 = self.setup_test_games()
         with self.set_email() as test_client:
             with self.patch_render_template() as mock_render:
+
                 test_client.get(url_for('status'))
+
                 args, kwargs = mock_render.call_args
         self.assertEqual(args[0], "status.html")
         your_turn_games = kwargs['your_turn_games']
@@ -276,7 +264,9 @@ class TestStatusIntegrated(TestWithDb):
             db.session.add(Game(black='some@two.com', white='some@one.com'))
         with self.set_email('some@one.com') as test_client:
             with self.patch_render_template() as mock_render:
+
                 test_client.get(url_for('status'))
+
                 args, kwargs = mock_render.call_args
         your_turn_games = kwargs['your_turn_games']
         not_your_turn_games = kwargs['not_your_turn_games']
@@ -290,76 +280,6 @@ class TestStatusIntegrated(TestWithDb):
                 not_your_turn_games,
                 sorted(not_your_turn_games, key=game_key))
 
-
-class TestGetPlayerGames(unittest.TestCase):
-
-    def test_filters_correctly(self):
-        TEST_EMAIL = 'our_guy@our_guy.com'
-        OTHER_EMAIL_1 = 'other@other.com'
-        OTHER_EMAIL_2 = 'other2@other2.com'
-        game_not_involved = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
-        game_black = Game(black=TEST_EMAIL, white=OTHER_EMAIL_1)
-        game_white = Game(black=OTHER_EMAIL_1, white=TEST_EMAIL)
-        games = [game_not_involved, game_black, game_white]
-
-        result = main.get_player_games(TEST_EMAIL, games=games)
-        assert game_not_involved not in result
-        assert game_black in result
-        assert game_white in result
-
-
-class TestIsPlayersTurnInGame(unittest.TestCase):
-
-    def setUp(self):
-        self.TEST_EMAIL = 'us@we.com'
-        self.OTHER_EMAIL = 'other@other.com'
-        self.black_game = Game(black=self.TEST_EMAIL, white=self.OTHER_EMAIL)
-        self.white_game = Game(black=self.OTHER_EMAIL, white=self.TEST_EMAIL)
-
-    def test_first_move(self):
-        self.assertTrue(main.is_players_turn_in_game(
-            self.black_game, self.TEST_EMAIL))
-        self.assertFalse(main.is_players_turn_in_game(
-            self.white_game, self.TEST_EMAIL))
-
-    def test_black_second_move(self):
-        self.black_game.moves = [Move(
-            game_no=self.black_game.id, move_no=0,
-            row=9, column=9, color=Move.Color.black)]
-        self.assertFalse(main.is_players_turn_in_game(
-            self.black_game, self.TEST_EMAIL))
-
-    def test_white_second_move(self):
-        self.white_game.moves = [Move(
-            game_no=self.white_game.id, move_no=0,
-            row=9, column=9, color=Move.Color.black)]
-        self.assertTrue(main.is_players_turn_in_game(
-            self.white_game, self.TEST_EMAIL))
-
-    def test_pass_only(self):
-        self.black_game.passes = [Pass(
-            game_no=self.black_game.id, move_no=0, color=Move.Color.black)]
-        self.assertFalse(
-                main.is_players_turn_in_game(
-                    self.black_game, self.TEST_EMAIL),
-                "not Black's turn after Black passes"
-        )
-        self.assertTrue(main.is_players_turn_in_game(
-            self.black_game, self.OTHER_EMAIL))
-
-    def test_move_and_pass(self):
-        self.black_game.moves = [Move(
-            game_no=self.black_game.id, move_no=0,
-            row=9, column=9, color=Move.Color.black)]
-        self.black_game.passes = [Pass(
-            game_no=self.black_game.id, move_no=1, color=Move.Color.white)]
-        self.assertTrue(
-                main.is_players_turn_in_game(
-                    self.black_game, self.TEST_EMAIL),
-                "back to Black's turn after White passes"
-        )
-        self.assertFalse(main.is_players_turn_in_game(
-            self.black_game, self.OTHER_EMAIL))
 
 class TestGameIntegrated(TestWithDb):
 
