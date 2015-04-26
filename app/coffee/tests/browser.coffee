@@ -403,7 +403,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 13
+  numTests: 18
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -453,6 +453,7 @@ class PassAndScoringTest extends BrowserTest
       @assertGeneralPointCounts test,
         label: "after clicking empty point"
         empty: 19*19 - 3 - 7 - 9
+
     # we click the top left black group; the stones change appearance to show
     # they are considered dead, and the scores change
     casper.thenClick (pointSelector 1, 0), =>
@@ -469,6 +470,17 @@ class PassAndScoringTest extends BrowserTest
         whitescore: 9
         blackdead: 3
         black: 9
+
+    # we click the white group; the neighbouring dead black stones are restored
+    # automatically
+    casper.thenClick (pointSelector 3, 3), =>
+      @assertGeneralPointCounts test,
+        label: "white stones marked dead"
+        black: 12
+        blackdead: 0
+        noscore: 12
+        blackscore: 19*19 - 12
+        whitescore: 0
 
 registerTest new PassAndScoringTest
 

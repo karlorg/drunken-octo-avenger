@@ -41,91 +41,7 @@
     return newState;
   };
 
-  go_rules.boundingColor = function(region, state) {
-    "Return the color surrounding the empty region, or 'neither' if boundary is mixed.";
-    var i, j, len, len1, point, ref, ref1, ref2, seen, x, x0, y, y0;
-    seen = 'none';
-    for (i = 0, len = region.length; i < len; i++) {
-      ref = region[i], x = ref[0], y = ref[1];
-      ref1 = neighboringPoints(x, y, state);
-      for (j = 0, len1 = ref1.length; j < len1; j++) {
-        ref2 = ref1[j], x0 = ref2[0], y0 = ref2[1];
-        point = state[y0][x0];
-        if (point === 'empty' || point === 'blackdead' || point === 'whitedead') {
-          continue;
-        } else if (seen === 'none') {
-          seen = point;
-          continue;
-        } else if (seen !== point) {
-          return 'neither';
-        }
-      }
-    }
-    if (seen === 'none') {
-      seen = 'neither';
-    }
-    return seen;
-  };
-
-  neighboringPoints = function(x, y, state) {
-    var i, len, ref, ref1, results, x0, y0;
-    ref = [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]];
-    results = [];
-    for (i = 0, len = ref.length; i < len; i++) {
-      ref1 = ref[i], x0 = ref1[0], y0 = ref1[1];
-      if (state[y0] !== void 0 && state[y0][x0] !== void 0) {
-        results.push([x0, y0]);
-      }
-    }
-    return results;
-  };
-
-  go_rules._neighbouringPoints = neighboringPoints;
-
-  enemyColor = function(color) {
-    switch (color) {
-      case 'black':
-        return 'white';
-      case 'white':
-        return 'black';
-      default:
-        throw Error(color + " has no enemy color");
-    }
-  };
-
-  countLiberties = function(x, y, state) {
-    var i, j, len, len1, liberties, libertiesOfPoint, liberty, ref, ref1, ref2, xg, yg;
-    libertiesOfPoint = function(x, y, state) {
-      var color, i, len, ref, ref1, result, xn, yn;
-      color = state[y][x];
-      result = [];
-      ref = neighboringPoints(x, y, state);
-      for (i = 0, len = ref.length; i < len; i++) {
-        ref1 = ref[i], xn = ref1[0], yn = ref1[1];
-        if (state[yn][xn] === 'empty') {
-          result.push(xn + " " + yn);
-        }
-      }
-      return result;
-    };
-    liberties = [];
-    ref = groupPoints(x, y, state);
-    for (i = 0, len = ref.length; i < len; i++) {
-      ref1 = ref[i], xg = ref1[0], yg = ref1[1];
-      ref2 = libertiesOfPoint(xg, yg, state);
-      for (j = 0, len1 = ref2.length; j < len1; j++) {
-        liberty = ref2[j];
-        if (indexOf.call(liberties, liberty) < 0) {
-          liberties.push(liberty);
-        }
-      }
-    }
-    return liberties.length;
-  };
-
-  go_rules._countLiberties = countLiberties;
-
-  groupPoints = function(x, y, state, colors) {
+  go_rules.groupPoints = groupPoints = function(x, y, state, colors) {
     var done, doneState, h, i, len, new_, ref, ref1, ref2, ref3, w, x0, xn, y0, yn;
     if (colors == null) {
       colors = null;
@@ -170,6 +86,86 @@
     }
   };
 
-  go_rules.groupPoints = groupPoints;
+  go_rules.boundingColor = function(region, state) {
+    "Return the color surrounding the empty region, or 'neither' if boundary is mixed.";
+    var i, j, len, len1, point, ref, ref1, ref2, seen, x, x0, y, y0;
+    seen = 'none';
+    for (i = 0, len = region.length; i < len; i++) {
+      ref = region[i], x = ref[0], y = ref[1];
+      ref1 = neighboringPoints(x, y, state);
+      for (j = 0, len1 = ref1.length; j < len1; j++) {
+        ref2 = ref1[j], x0 = ref2[0], y0 = ref2[1];
+        point = state[y0][x0];
+        if (point === 'empty' || point === 'blackdead' || point === 'whitedead') {
+          continue;
+        } else if (seen === 'none') {
+          seen = point;
+          continue;
+        } else if (seen !== point) {
+          return 'neither';
+        }
+      }
+    }
+    if (seen === 'none') {
+      seen = 'neither';
+    }
+    return seen;
+  };
+
+  go_rules.neighboringPoints = neighboringPoints = function(x, y, state) {
+    var i, len, ref, ref1, results, x0, y0;
+    ref = [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]];
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      ref1 = ref[i], x0 = ref1[0], y0 = ref1[1];
+      if (state[y0] !== void 0 && state[y0][x0] !== void 0) {
+        results.push([x0, y0]);
+      }
+    }
+    return results;
+  };
+
+  enemyColor = function(color) {
+    switch (color) {
+      case 'black':
+        return 'white';
+      case 'white':
+        return 'black';
+      default:
+        throw Error(color + " has no enemy color");
+    }
+  };
+
+  countLiberties = function(x, y, state) {
+    var i, j, len, len1, liberties, libertiesOfPoint, liberty, ref, ref1, ref2, xg, yg;
+    libertiesOfPoint = function(x, y, state) {
+      var color, i, len, ref, ref1, result, xn, yn;
+      color = state[y][x];
+      result = [];
+      ref = neighboringPoints(x, y, state);
+      for (i = 0, len = ref.length; i < len; i++) {
+        ref1 = ref[i], xn = ref1[0], yn = ref1[1];
+        if (state[yn][xn] === 'empty') {
+          result.push(xn + " " + yn);
+        }
+      }
+      return result;
+    };
+    liberties = [];
+    ref = groupPoints(x, y, state);
+    for (i = 0, len = ref.length; i < len; i++) {
+      ref1 = ref[i], xg = ref1[0], yg = ref1[1];
+      ref2 = libertiesOfPoint(xg, yg, state);
+      for (j = 0, len1 = ref2.length; j < len1; j++) {
+        liberty = ref2[j];
+        if (indexOf.call(liberties, liberty) < 0) {
+          liberties.push(liberty);
+        }
+      }
+    }
+    return liberties.length;
+  };
+
+  go_rules._countLiberties = countLiberties;
 
 }).call(this);

@@ -549,7 +549,7 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 13;
+    PassAndScoringTest.prototype.numTests = 18;
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, originalImageSrc22, p, ref;
@@ -598,7 +598,7 @@
           });
         };
       })(this));
-      return casper.thenClick(pointSelector(1, 0), (function(_this) {
+      casper.thenClick(pointSelector(1, 0), (function(_this) {
         return function() {
           var imageSrc11, imageSrc22;
           imageSrc11 = _this.imageSrc(1, 1);
@@ -612,6 +612,18 @@
             whitescore: 9,
             blackdead: 3,
             black: 9
+          });
+        };
+      })(this));
+      return casper.thenClick(pointSelector(3, 3), (function(_this) {
+        return function() {
+          return _this.assertGeneralPointCounts(test, {
+            label: "white stones marked dead",
+            black: 12,
+            blackdead: 0,
+            noscore: 12,
+            blackscore: 19 * 19 - 12,
+            whitescore: 0
           });
         };
       })(this));

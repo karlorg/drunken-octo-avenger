@@ -65,23 +65,50 @@ setRegionScores = (region, scoreColor) ->
 
 markStonesAround = (x, y) ->
   "Toggle the life/death status of the given point and all friendly stones in
-  the region (ie. the area bounded by unfriendly stones).
+  the region (ie. the area bounded by unfriendly stones).  If killing stones,
+  also revive surrounding enemy stones.
 
   We don't trigger scoring recalculation here, that's for the caller to do."
   color = game_common.colorFromDom $pointAt(x, y)
   return if color == 'empty'
+  isKilling = color in ['black', 'white']
   state = game_common.readBoardState()
   # we're assuming here that the region never contains both live and dead
   # stones of the same color, as the interface should not allow this to happen
   region = go_rules.groupPoints(
     x, y, state,
     ['empty', color])  # list of colors to include in 'group'
-  toggleRegion region
+  togglePoints region
+  if isKilling
+    reviveAroundRegion region, state
   return
 
-toggleRegion = (region) ->
-  "In the given region, mark live stones as dead and dead stones as alive."
+reviveAroundRegion = (region, state) ->
+  "Revive all dead groups touching, but not in, the given region; together with
+  friendly stones in their own regions."
+  height = state.length
+  width = state[0].length
+  ignore = ((false for i in [0..width]) for j in [0..height])
   for [x, y] in region
+    ignore[y][x] = true
+
+  for [x, y] in region
+    for [xn, yn] in go_rules.neighboringPoints x, y, state
+      continue if ignore[yn][xn]
+      ignore[yn][xn] = true
+      neighborColor = state[yn][xn]
+      if neighborColor in ['blackdead', 'whitedead']
+        neighborRegion = go_rules.groupPoints(
+          xn, yn, state,
+          ['empty', neighborColor])  # colors to include in 'group'
+        togglePoints neighborRegion
+        for [xg, yg] in neighborRegion
+          ignore[yg][xg] = true
+  return
+
+togglePoints = (points) ->
+  "Among the given points, mark live stones as dead and dead stones as alive."
+  for [x, y] in points
     $point = $pointAt x, y
     color = game_common.colorFromDom $point
     continue if color == 'empty'

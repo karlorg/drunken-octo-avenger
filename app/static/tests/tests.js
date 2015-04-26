@@ -240,6 +240,15 @@
     return assert.notOk(isPointWhiteScore($pointAt(2, 1)), "(2, 1) is neutral again with black stones restored");
   });
 
+  test("killing stones revives neighbouring enemy groups " + "automatically", function(assert) {
+    updateBoardChars(['b.b', '.b.', 'bbw']);
+    tesuji_charm.game_marking.initialize();
+    $pointAt(1, 1).click();
+    $pointAt(2, 2).click();
+    assert.notOk(isPointBlackDead($pointAt(1, 1)), "first clicked stone (1, 1) is no longer dead");
+    return assert.notOk(isPointBlackDead($pointAt(0, 0)), "neighboring black group (0, 0) is no longer dead");
+  });
+
   module('Go rules');
 
   go_rules = tesuji_charm.go_rules;
@@ -321,9 +330,9 @@
   test("helper function neighboringPoints", function(assert) {
     var board;
     board = [['empty', 'empty', 'empty'], ['empty', 'empty', 'empty'], ['empty', 'empty', 'empty']];
-    assert.equal(go_rules._neighbouringPoints(0, 0, board).length, 2);
-    assert.equal(go_rules._neighbouringPoints(1, 0, board).length, 3);
-    return assert.equal(go_rules._neighbouringPoints(1, 1, board).length, 4);
+    assert.equal(go_rules.neighboringPoints(0, 0, board).length, 2);
+    assert.equal(go_rules.neighboringPoints(1, 0, board).length, 3);
+    return assert.equal(go_rules.neighboringPoints(1, 1, board).length, 4);
   });
 
   test("_countLiberties: single stones", function(assert) {
