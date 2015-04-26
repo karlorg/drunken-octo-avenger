@@ -8,7 +8,8 @@ import os
 
 from flask.ext.script import Manager
 
-from app.main import app, db
+from app import main
+from app.main import Move, Pass, app, db
 import config
 
 manager = Manager(app)
@@ -115,6 +116,35 @@ def run_test_server():
     app.config['TESTING'] = True
     port = config.LIVESERVER_PORT
     app.run(port=port, use_reloader=False)
+
+@manager.command
+def setup_finished_game(black_email, white_email):
+    """Create a game in the marking dead stones phase, for manual testing. """
+    stones = ['.....bww.wbb.......',
+              '.bb...bw.wwbb......',
+              '.wwbbb.bw.wbwwb..b.',
+              'b.www..b.w.b.bbb.b.',
+              '.w.w..bww.wwbbwwww.',
+              '.bwwb.bw.w.wwbbbbbb',
+              '.bbbbbbw.bbbbwwwwwb',
+              '...bwwwbbbwbwww..ww',
+              '....bbwwb.wwbbbww..',
+              '.bbbbww.ww.ww..wb..',
+              'bbwbw.....wbw..wb..',
+              'bwww.w...wbbw......',
+              'w.......w...w..w.ww',
+              'w.w.....wbbbw...wwb',
+              'bw...www.b.bbww.wbb',
+              'bbwwwwbwbbwww.wwbb.',
+              '.bbbwbbbwbbbwwbwb..',
+              '...bbw.bwb..bbbb...',
+              '...................']
+    game = main.create_game_internal(black_email, white_email, stones=stones)
+    db.session.add(Pass(game_no=game.id, move_no=0,
+                        color=Move.Color.black))
+    db.session.add(Pass(game_no=game.id, move_no=1,
+                        color=Move.Color.white))
+    db.session.commit()
 
 if __name__ == "__main__":
     manager.run()

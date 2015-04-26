@@ -260,6 +260,7 @@ def create_game_internal(black_email, white_email, stones=None):
     db.session.commit()
     if stones is not None:
         add_stones_from_text_map_to_game(stones, game)
+    return game
 
 @app.test_only_route('/testing_clear_games_for_player', methods=['POST'])
 def testing_clear_games_for_player():
