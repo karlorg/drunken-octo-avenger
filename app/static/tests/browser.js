@@ -615,7 +615,7 @@
           });
         };
       })(this));
-      return casper.thenClick(pointSelector(3, 3), (function(_this) {
+      casper.thenClick(pointSelector(3, 3), (function(_this) {
         return function() {
           return _this.assertGeneralPointCounts(test, {
             label: "white stones marked dead",
@@ -627,6 +627,7 @@
           });
         };
       })(this));
+      return casper.thenClick('.confirm_button');
     };
 
     return PassAndScoringTest;

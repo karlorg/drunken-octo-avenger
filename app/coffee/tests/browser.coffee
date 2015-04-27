@@ -481,6 +481,20 @@ class PassAndScoringTest extends BrowserTest
         noscore: 12
         blackscore: 19*19 - 12
         whitescore: 0
+    # Black confirms this pleasing result
+    casper.thenClick '.confirm_button'
+#
+#    # White then logs in and opens the game
+#    createLoginSession WHITE_EMAIL
+#    casper.thenOpen serverUrl
+#    casper.thenClick (@lastGameSelector true), =>  # our turn
+#      # we are in marking mode and the white stones are already marked dead
+#      @assertGeneralPointCounts test,
+#        label: "White views Black's proposal"
+#        black: 12
+#        white: 0
+#        whitedead: 7
+#        blackscore: 19*19 - 12
 
 registerTest new PassAndScoringTest
 
