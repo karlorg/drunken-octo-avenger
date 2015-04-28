@@ -94,6 +94,17 @@ def play_general_move(which):
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
 
+    if which == "markdead":
+        # need to validate JSON before any changes are made
+        try:
+            coords_as_lists = json.loads(arguments['dead_stones'])
+            dead_stones = []
+            for [column, row] in coords_as_lists:
+                dead_stones.append(DeadStone(game_no, row=row, column=column))
+        except ValueError as e:
+            flash("Invalid JSON: {}".format(e.args[0]))
+            return redirect(url_for('game', game_no=game_no))
+
     try:
         validate_turn_and_record(which, logged_in_email(), game, arguments)
     except go_rules.IllegalMoveException as e:
@@ -103,9 +114,8 @@ def play_general_move(which):
     if which == 'markdead':
         DeadStone.query.filter(DeadStone.game_no == game_no).delete()
         db.session.commit()
-        coords_as_lists = json.loads(arguments['dead_stones'])
-        for [column, row] in coords_as_lists:
-            db.session.add(DeadStone(game_no, row=row, column=column))
+        for dead_stone in dead_stones:
+            db.session.add(dead_stone)
         db.session.commit()
 
     return redirect(url_for('status'))

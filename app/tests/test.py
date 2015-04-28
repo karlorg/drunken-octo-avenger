@@ -11,7 +11,7 @@ import re
 import unittest
 import time
 
-from flask import render_template, session, url_for
+from flask import flash, render_template, session, url_for
 import flask.ext.testing
 import requests
 from werkzeug.datastructures import MultiDict
@@ -51,6 +51,22 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
         mock_render.return_value = ''
         with patch('app.main.render_template', mock_render):
             yield mock_render
+
+    @contextmanager
+    def assert_flashes(self, snippet, message=None):
+        """Assert that the following code creates a Flask flash message.
+
+        The message must contain the given snippet to pass."""
+        if message is None:
+            message = "'{}' not found in any flash message".format(snippet)
+        mock_flash = Mock(spec=flash)
+        with patch('app.main.flash', mock_flash):
+            yield mock_flash
+        for call_args in mock_flash.call_args_list:
+            args, _ = call_args
+            if snippet.lower() in args[0].lower():
+                return
+        self.fail(message)
 
 
 class TestWithDb(TestWithTestingApp):
@@ -462,23 +478,23 @@ class TestPlayStoneIntegrated(TestWithDb):
         game = self.add_game()
         assert Move.query.all() == []
         with self.set_email('white@white.com') as test_client:
-            response = test_client.post('/playstone', data=dict(
-                game_no=game.id, move_no=0, row=16, column=15
-            ), follow_redirects=True)
+            with self.assert_flashes('not your turn'):
+                test_client.post('/playstone', data=dict(
+                    game_no=game.id, move_no=0, row=16, column=15
+                ))
         moves = Move.query.all()
         assert len(moves) == 0
-        assert 'not your turn' in str(response.get_data())
 
     def test_rejects_missing_args(self):
         game = self.add_game()
         assert Move.query.all() == []
         with self.set_email('black@black.com') as test_client:
-            response = test_client.post('/playstone', data=dict(
-                game_no=game.id
-            ), follow_redirects=True)
+            with self.assert_flashes('invalid'):
+                test_client.post('/playstone', data=dict(
+                    game_no=game.id
+                ), follow_redirects=True)
         moves = Move.query.all()
         assert len(moves) == 0
-        assert 'Invalid' in str(response.get_data())
 
     def test_handles_missing_game_no(self):
         with self.set_email('white@white.com') as test_client:
@@ -547,7 +563,8 @@ class TestPlayStoneIntegrated(TestWithDb):
 
 class TestMarkDeadIntegrated(TestWithDb):
 
-    def add_game(self):
+    def setUp(self):
+        super().setUp()
         game = main.create_game_internal(
                 'black@black.com', 'white@white.com',
                 ['.b.w',
@@ -560,7 +577,11 @@ class TestMarkDeadIntegrated(TestWithDb):
                             color=Move.Color.white))
         db.session.commit()
         self.game = game
-        return game
+
+    def coord_set(self):
+        db_objs = DeadStone.query.filter(
+                DeadStone.game_no == self.game.id).all()
+        return set(map(lambda dead: (dead.column, dead.row,), db_objs))
 
     def do_post(self, stones_json, move_no=None):
         game = self.game
@@ -574,36 +595,22 @@ class TestMarkDeadIntegrated(TestWithDb):
                                        'dead_stones': stones_json})
 
     def test_advances_turn(self):
-        game = self.add_game()
-        original_turn = game.to_move()
+        original_turn = self.game.to_move()
         self.do_post('[]')
-        self.assertNotEqual(original_turn, game.to_move())
-
-    def test_bad_move_no_does_nothing(self):
-        game = self.add_game()
-        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-
-        self.do_post(dead_stones_json, move_no=42)
-
-        recorded = DeadStone.query.filter(DeadStone.game_no == game.id).all()
-        coords = set(map(lambda dead: (dead.column, dead.row,), recorded))
-        self.assertNotIn((1, 0), coords)
+        self.assertNotEqual(original_turn, self.game.to_move())
 
     def test_records_dead_stones_in_db(self):
-        game = self.add_game()
         dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
 
         self.do_post(dead_stones_json)
 
-        recorded = DeadStone.query.filter(DeadStone.game_no == game.id).all()
-        coords = set(map(lambda dead: (dead.column, dead.row,), recorded))
+        coords = self.coord_set()
         self.assertIn((1, 0), coords)
         self.assertIn((1, 1), coords)
         self.assertIn((1, 2), coords)
         self.assertIn((0, 2), coords)
 
     def test_new_proposal_erases_old(self):
-        game = self.add_game()
         first_dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
         second_dead_stones_json = ("[[3,0],[3,1],[3,2],[3,3],"
                                    " [2,3],[1,3],[0,3]]")
@@ -611,10 +618,46 @@ class TestMarkDeadIntegrated(TestWithDb):
         self.do_post(first_dead_stones_json)
         self.do_post(second_dead_stones_json)
 
-        recorded = DeadStone.query.filter(DeadStone.game_no == game.id).all()
-        coords = set(map(lambda dead: (dead.column, dead.row,), recorded))
+        coords = self.coord_set()
         self.assertNotIn((1, 0), coords)
         self.assertIn((3, 3), coords)
+
+    def test_bad_move_no_does_nothing(self):
+        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+        self.do_post(dead_stones_json, move_no=42)
+        self.assertNotIn((1, 0), self.coord_set())
+
+    def test_malformed_json_gives_helpful_error(self):
+        bad_json = "[[,]]"
+        with self.assert_flashes('json'):
+            self.do_post(bad_json)
+
+    def test_bad_structure_gives_helpful_error(self):
+        bad_structure_json = "[[1]]"
+        with self.assert_flashes('json'):
+            self.do_post(bad_structure_json)
+
+    def test_malformed_json_does_nothing(self):
+        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+        bad_json = "[[,]]"
+        self.do_post(dead_stones_json)
+        original_turn = self.game.to_move()
+
+        self.do_post(bad_json)
+
+        self.assertEqual(original_turn, self.game.to_move())
+        self.assertIn((1, 0), self.coord_set())
+
+    def test_bad_structure_does_nothing(self):
+        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+        bad_structure_json = "[[1]]"
+        self.do_post(dead_stones_json)
+        original_turn = self.game.to_move()
+
+        self.do_post(bad_structure_json)
+
+        self.assertEqual(original_turn, self.game.to_move())
+        self.assertIn((1, 0), self.coord_set())
 
 
 # I'm skipping this test because I have removed the method that it tests.
