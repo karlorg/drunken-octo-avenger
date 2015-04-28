@@ -94,42 +94,27 @@ def play_general_move(which):
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
 
-    if which == "markdead":
-        # need to validate JSON before any changes are made
-        try:
-            coords_as_lists = json.loads(arguments['dead_stones'])
-            dead_stones = []
-            for [column, row] in coords_as_lists:
-                dead_stones.append(DeadStone(game_no, row=row, column=column))
-        except ValueError as e:
-            flash("Invalid JSON: {}".format(e.args[0]))
-            return redirect(url_for('game', game_no=game_no))
-
     try:
         validate_turn_and_record(which, logged_in_email(), game, arguments)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
 
-    if which == 'markdead':
-        DeadStone.query.filter(DeadStone.game_no == game_no).delete()
-        db.session.commit()
-        for dead_stone in dead_stones:
-            db.session.add(dead_stone)
-        db.session.commit()
-
     return redirect(url_for('status'))
 
-def validate_turn_and_record(pass_or_move, player, game, arguments):
+def validate_turn_and_record(which, player, game, arguments):
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
     move_no = get_and_validate_move_no(arguments, game)
 
     color = game.to_move_color()
-    if pass_or_move == "pass" or pass_or_move == "markdead":
+    if which == "pass":
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
-    elif pass_or_move == "move":
+    elif which == "move":
         turn_object = create_and_validate_move(move_no, color, game, arguments)
+    elif which == "markdead":
+        record_dead_stones_from_json(game, arguments)
+        turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
 
     db.session.add(turn_object)
     db.session.commit()
@@ -161,6 +146,21 @@ def create_and_validate_move(move_no, color, game, arguments):
     board.update_with_move(move)
     # But if no exception is raised then we return the move
     return move
+
+def record_dead_stones_from_json(game, arguments):
+    try:
+        coords_as_lists = json.loads(arguments['dead_stones'])
+        dead_stones = []
+        for [column, row] in coords_as_lists:
+            dead_stones.append(DeadStone(game.id, row=row, column=column))
+    except ValueError as e:
+        raise go_rules.IllegalMoveException(
+                "Invalid JSON: {}".format(e.args[0]))
+    DeadStone.query.filter(DeadStone.game_no == game.id).delete()
+    db.session.commit()
+    for dead_stone in dead_stones:
+        db.session.add(dead_stone)
+    db.session.commit()
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
