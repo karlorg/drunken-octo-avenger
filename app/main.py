@@ -19,7 +19,7 @@ import jinja2
 import json
 import requests
 from sqlalchemy import or_
-from wtforms import IntegerField, StringField
+from wtforms import HiddenField, IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
@@ -59,14 +59,15 @@ def game(game_no):
         return redirect('/')
     moves = game.moves
     passes = game.passes
-    is_passed_twice = check_two_passes(moves, passes)
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
     goban = get_goban_from_moves(moves, setup_stones)
-    form = PlayStoneForm(data=dict(
-        game_no=game.id,
-        move_no=game.move_no
-    ))
+    is_passed_twice = check_two_passes(moves, passes)
+    if not is_passed_twice:
+        form = PlayStoneForm(data={'game_no': game.id,
+                                   'move_no': game.move_no})
+    else:
+        form = MarkDeadForm(data={'game_no': game.id})
     return render_template_with_email(
             "game.html",
             form=form, goban=goban,
@@ -74,13 +75,17 @@ def game(game_no):
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
-    return play_pass_or_move("move")
+    return play_general_move("move")
 
 @app.route('/playpass', methods=['POST'])
 def playpass():
-    return play_pass_or_move("pass")
+    return play_general_move("pass")
 
-def play_pass_or_move(which):
+@app.route('/markdead', methods=['POST'])
+def markdead():
+    return play_general_move("markdead")
+
+def play_general_move(which):
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
@@ -88,38 +93,41 @@ def play_pass_or_move(which):
         flash("Invalid game number")
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
-    players_email = session['email']
 
     try:
-        validate_turn_and_record(which, players_email, game, arguments)
+        validate_turn_and_record(which, logged_in_email(), game, arguments)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
 
     return redirect(url_for('status'))
 
-def validate_turn_and_record(pass_or_move, player, game, arguments):
-    # First of all validate the turn
+def validate_turn_and_record(which, player, game, arguments):
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
-    try:
-        move_no = int(arguments['move_no'])
-    except (KeyError, ValueError):
-        raise go_rules.IllegalMoveException("Invalid request made.")
-
-    if move_no != game.move_no:
-        message = "Move number supplied not sequential"
-        raise go_rules.IllegalMoveException(message)
+    move_no = get_and_validate_move_no(arguments, game)
 
     color = game.to_move_color()
-    if pass_or_move == "pass":
+    if which == "pass":
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
-    elif pass_or_move == "move":
+    elif which == "move":
         turn_object = create_and_validate_move(move_no, color, game, arguments)
+    elif which == "markdead":
+        record_dead_stones_from_json(game, arguments)
+        turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
 
     db.session.add(turn_object)
     db.session.commit()
 
+def get_and_validate_move_no(arguments, game):
+    try:
+        move_no = int(arguments['move_no'])
+    except (KeyError, ValueError):
+        raise go_rules.IllegalMoveException("Invalid request received")
+    if move_no != game.move_no:
+        raise go_rules.IllegalMoveException(
+                "Move number supplied not sequential")
+    return move_no
 
 def create_and_validate_move(move_no, color, game, arguments):
     try:
@@ -139,13 +147,28 @@ def create_and_validate_move(move_no, color, game, arguments):
     # But if no exception is raised then we return the move
     return move
 
+def record_dead_stones_from_json(game, arguments):
+    try:
+        coords_as_lists = json.loads(arguments['dead_stones'])
+        dead_stones = []
+        for [column, row] in coords_as_lists:
+            dead_stones.append(DeadStone(game.id, row=row, column=column))
+    except ValueError as e:
+        raise go_rules.IllegalMoveException(
+                "Invalid JSON: {}".format(e.args[0]))
+    DeadStone.query.filter(DeadStone.game_no == game.id).delete()
+    db.session.commit()
+    for dead_stone in dead_stones:
+        db.session.add(dead_stone)
+    db.session.commit()
+
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
     form = ChallengeForm()
     if form.validate_on_submit():
         game = Game()
         game.black = form.opponent_email.data
-        game.white = session['email']
+        game.white = logged_in_email()
         db.session.add(game)
         db.session.commit()
         return redirect(url_for('status'))
@@ -155,8 +178,7 @@ def challenge():
 def status():
     if 'email' not in session:
         return redirect('/')
-    logged_in_email = session['email']
-    your_turn_games, not_your_turn_games = get_status_lists(logged_in_email)
+    your_turn_games, not_your_turn_games = get_status_lists(logged_in_email())
     return render_template_with_email(
             "status.html",
             your_turn_games=your_turn_games,
@@ -418,16 +440,28 @@ def check_two_passes(moves, passes):
     except IndexError:
         return False
 
+class NoLoggedInPlayerException(Exception):
+    pass
+
+def logged_in_email():
+    """Return email of logged in player, or raise NoLoggedInPlayerException.
+
+    Accesses the session.
+    """
+    try:
+        return session['email']
+    except KeyError:
+        raise NoLoggedInPlayerException()
+
 def is_players_turn_in_game(game):
     """Test if it's the logged-in player's turn to move in `game`.
 
     Reads email from the session.
     """
     try:
-        email = session['email']
-    except KeyError:
+        return game.to_move() == logged_in_email()
+    except NoLoggedInPlayerException:
         return False
-    return game.to_move() == email
 
 def add_stones_from_text_map_to_game(text_map, game):
     """Given a list of strings, add setup stones to the given game.
@@ -469,8 +503,8 @@ def render_template_with_email(template_name_or_list, **context):
     Depends on the session object.
     """
     try:
-        email = session['email']
-    except KeyError:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
         email = ''
     try:
         persona_email = session['persona_email']
@@ -482,6 +516,56 @@ def render_template_with_email(template_name_or_list, **context):
             current_persona_email=persona_email,
             **context)
 
+# Server player
+
+class ServerPlayer(object):
+    """ A class used to represent server players. The hope is that to create a
+        new server player, one need only override the `act` method. It should
+        be then possible to create a daemon which runs all registered server
+        players at convenient times.
+    """
+    def __init__(self, player_email, rest_interval=3600):
+        """ Specify the player-email and the rest-interval in seconds. This can
+            be specified as a floating point number for more accuracy than
+            seconds if need be.
+        """
+        self.player_email = player_email
+        self.rest_interval = rest_interval
+
+    def _daemon(self):
+        while True:
+            self.act()
+            time.sleep(self.rest_interval)
+
+    def start_daemon(self):
+        self._daemon_process = multiprocessing.Process(target=self._daemon)
+        self._daemon_process.daemon = True
+        self._daemon_process.start()
+
+    def terminate_daemon(self):
+        if self._daemon_process is not None:
+            db.session.commit()
+            db.session.close()
+            self._daemon_process.terminate()
+
+    def act(self):
+        """ The base `act` method of the `ServerPlayer` is so simple that it
+            plays a pass on every waiting game.
+        """
+        waiting_games, _not_waiting_games = get_status_lists(self.player_email)
+        for game in waiting_games:
+            # A request would normally include the 'move number' to make sure
+            # we are not replaying a previous move. But we're directly
+            # accessing the db here, so we get the move number from the db
+            # itself. Note that this still prevents replaying a move in the
+            # case in which (presumably, accidentally) we have two daemons
+            # running the same computer player.
+            arguments = {'move_no': game.move_no}
+            validate_turn_and_record(
+                    "pass", self.player_email, game, arguments)
+
+
+# models
 
 class Game(db.Model):
     __tablename__ = 'games'
@@ -543,6 +627,22 @@ class Pass(db.Model):
         return '<Pass {0}: {1}>'.format(
                 self.move_no, Move.Color(self.color).name)
 
+class DeadStone(db.Model):
+    __tablename__ = 'deadstones'
+    id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
+    row = db.Column(db.Integer)
+    column = db.Column(db.Integer)
+
+    def __init__(self, game_no, row, column):
+        self.game_no = game_no
+        self.row = row
+        self.column = column
+
+    def __repr__(self):
+        return '<DeadStone (Game {0}): ({1}, {2})>'.format(
+                self.game_no, self.column, self.row)
+
 class SetupStone(db.Model):
     __tablename__ = 'setupstones'
     id = db.Column(db.Integer, primary_key=True)
@@ -565,6 +665,8 @@ class SetupStone(db.Model):
                 self.column, self.row)
 
 
+# forms
+
 class ChallengeForm(Form):
     opponent_email = StringField(
             "Opponent's email", validators=[DataRequired(), Email()])
@@ -578,49 +680,6 @@ class PlayStoneForm(Form):
     row = HiddenInteger("row", validators=[DataRequired()])
     column = HiddenInteger("column", validators=[DataRequired()])
 
-
-class ServerPlayer(object):
-    """ A class used to represent server players. The hope is that to create a
-        new server player, one need only override the `act` method. It should
-        be then possible to create a daemon which runs all registered server
-        players at convenient times.
-    """
-    def __init__(self, player_email, rest_interval=3600):
-        """ Specify the player-email and the rest-interval in seconds. This can
-            be specified as a floating point number for more accuracy than
-            seconds if need be.
-        """
-        self.player_email = player_email
-        self.rest_interval = rest_interval
-
-    def _daemon(self):
-        while True:
-            self.act()
-            time.sleep(self.rest_interval)
-
-    def start_daemon(self):
-        self._daemon_process = multiprocessing.Process(target=self._daemon)
-        self._daemon_process.daemon = True
-        self._daemon_process.start()
-
-    def terminate_daemon(self):
-        if self._daemon_process is not None:
-            db.session.commit()
-            db.session.close()
-            self._daemon_process.terminate()
-
-    def act(self):
-        """ The base `act` method of the `ServerPlayer` is so simple that it
-            plays a pass on every waiting game.
-        """
-        waiting_games, _not_waiting_games = get_status_lists(self.player_email)
-        for game in waiting_games:
-            # A request would normally include the 'move number' to make sure
-            # we are not replaying a previous move. But we're directly
-            # accessing the db here, so we get the move number from the db
-            # itself. Note that this still prevents replaying a move in the
-            # case in which (presumably, accidentally) we have two daemons
-            # running the same computer player.
-            arguments = {'move_no': game.move_no}
-            validate_turn_and_record(
-                    "pass", self.player_email, game, arguments)
+class MarkDeadForm(Form):
+    game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    dead_stones = HiddenField("dead_stones", validators=[DataRequired()])
