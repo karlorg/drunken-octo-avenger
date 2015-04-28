@@ -627,20 +627,7 @@
           });
         };
       })(this));
-      casper.thenClick('.confirm_button');
-      createLoginSession(WHITE_EMAIL);
-      casper.thenOpen(serverUrl);
-      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
-        return function() {
-          return _this.assertGeneralPointCounts(test, {
-            label: "White views Black's proposal",
-            black: 12,
-            white: 0,
-            whitedead: 7,
-            blackscore: 19 * 19 - 12
-          });
-        };
-      })(this));
+      return casper.thenClick('.confirm_button');
     };
 
     return PassAndScoringTest;
