@@ -562,13 +562,15 @@ class TestMarkDeadIntegrated(TestWithDb):
         self.game = game
         return game
 
-    def do_post(self, stones_json):
+    def do_post(self, stones_json, move_no=None):
         game = self.game
+        if move_no is None:
+            move_no = game.move_no
         with self.set_email(game.to_move()) as test_client:
             with self.patch_render_template():
                 test_client.post(url_for('markdead'),
                                  data={'game_no': game.id,
-                                       'move_no': game.move_no,
+                                       'move_no': move_no,
                                        'dead_stones': stones_json})
 
     def test_advances_turn(self):
@@ -576,6 +578,16 @@ class TestMarkDeadIntegrated(TestWithDb):
         original_turn = game.to_move()
         self.do_post('[]')
         self.assertNotEqual(original_turn, game.to_move())
+
+    def test_bad_move_no_does_nothing(self):
+        game = self.add_game()
+        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+
+        self.do_post(dead_stones_json, move_no=42)
+
+        recorded = DeadStone.query.filter(DeadStone.game_no == game.id).all()
+        coords = set(map(lambda dead: (dead.column, dead.row,), recorded))
+        self.assertNotIn((1, 0), coords)
 
     def test_records_dead_stones_in_db(self):
         game = self.add_game()

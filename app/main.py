@@ -83,19 +83,29 @@ def playpass():
 
 @app.route('/markdead', methods=['POST'])
 def markdead():
+    # validation
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
     except (KeyError, ValueError):
-        flash("Invalid game number")
+        flash("Invalid request received")
         return redirect('/')
+    game = Game.query.filter(Game.id == game_no).first()
+    try:
+        turn_object = validate_turn_and_get_db_object(
+                "pass", logged_in_email(), game, arguments)
+    except go_rules.IllegalMoveException as e:
+        flash(e.args[0])
+        return redirect(url_for('game', game_no=game_no))
+    # payload
     DeadStone.query.filter(DeadStone.game_no == game_no).delete()
     db.session.commit()
     coords_as_lists = json.loads(arguments['dead_stones'])
     for [column, row] in coords_as_lists:
         db.session.add(DeadStone(game_no, row=row, column=column))
+    db.session.add(turn_object)
     db.session.commit()
-    return play_pass_or_move("pass")
+    return redirect(url_for('status'))
 
 def play_pass_or_move(which):
     arguments = request.form.to_dict()
@@ -105,10 +115,9 @@ def play_pass_or_move(which):
         flash("Invalid game number")
         return redirect('/')
     game = Game.query.filter(Game.id == game_no).first()
-    players_email = session['email']
 
     try:
-        validate_turn_and_record(which, players_email, game, arguments)
+        validate_turn_and_record(which, logged_in_email(), game, arguments)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
@@ -116,27 +125,33 @@ def play_pass_or_move(which):
     return redirect(url_for('status'))
 
 def validate_turn_and_record(pass_or_move, player, game, arguments):
-    # First of all validate the turn
+    turn_object = validate_turn_and_get_db_object(
+            pass_or_move, player, game, arguments)
+
+    db.session.add(turn_object)
+    db.session.commit()
+
+def validate_turn_and_get_db_object(pass_or_move, player, game, arguments):
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
-    try:
-        move_no = int(arguments['move_no'])
-    except (KeyError, ValueError):
-        raise go_rules.IllegalMoveException("Invalid request made.")
-
-    if move_no != game.move_no:
-        message = "Move number supplied not sequential"
-        raise go_rules.IllegalMoveException(message)
+    move_no = get_and_validate_move_no(arguments, game)
 
     color = game.to_move_color()
     if pass_or_move == "pass":
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif pass_or_move == "move":
         turn_object = create_and_validate_move(move_no, color, game, arguments)
+    return turn_object
 
-    db.session.add(turn_object)
-    db.session.commit()
-
+def get_and_validate_move_no(arguments, game):
+    try:
+        move_no = int(arguments['move_no'])
+    except (KeyError, ValueError):
+        raise go_rules.IllegalMoveException("Invalid request received")
+    if move_no != game.move_no:
+        raise go_rules.IllegalMoveException(
+                "Move number supplied not sequential")
+    return move_no
 
 def create_and_validate_move(move_no, color, game, arguments):
     try:
@@ -162,7 +177,7 @@ def challenge():
     if form.validate_on_submit():
         game = Game()
         game.black = form.opponent_email.data
-        game.white = session['email']
+        game.white = logged_in_email()
         db.session.add(game)
         db.session.commit()
         return redirect(url_for('status'))
@@ -172,8 +187,7 @@ def challenge():
 def status():
     if 'email' not in session:
         return redirect('/')
-    logged_in_email = session['email']
-    your_turn_games, not_your_turn_games = get_status_lists(logged_in_email)
+    your_turn_games, not_your_turn_games = get_status_lists(logged_in_email())
     return render_template_with_email(
             "status.html",
             your_turn_games=your_turn_games,
@@ -435,16 +449,28 @@ def check_two_passes(moves, passes):
     except IndexError:
         return False
 
+class NoLoggedInPlayerException(Exception):
+    pass
+
+def logged_in_email():
+    """Return email of logged in player, or raise NoLoggedInPlayerException.
+
+    Accesses the session.
+    """
+    try:
+        return session['email']
+    except KeyError:
+        raise NoLoggedInPlayerException()
+
 def is_players_turn_in_game(game):
     """Test if it's the logged-in player's turn to move in `game`.
 
     Reads email from the session.
     """
     try:
-        email = session['email']
-    except KeyError:
+        return game.to_move() == logged_in_email()
+    except NoLoggedInPlayerException:
         return False
-    return game.to_move() == email
 
 def add_stones_from_text_map_to_game(text_map, game):
     """Given a list of strings, add setup stones to the given game.
@@ -486,8 +512,8 @@ def render_template_with_email(template_name_or_list, **context):
     Depends on the session object.
     """
     try:
-        email = session['email']
-    except KeyError:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
         email = ''
     try:
         persona_email = session['persona_email']
