@@ -75,39 +75,17 @@ def game(game_no):
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
-    return play_pass_or_move("move")
+    return play_general_move("move")
 
 @app.route('/playpass', methods=['POST'])
 def playpass():
-    return play_pass_or_move("pass")
+    return play_general_move("pass")
 
 @app.route('/markdead', methods=['POST'])
 def markdead():
-    # validation
-    arguments = request.form.to_dict()
-    try:
-        game_no = int(arguments['game_no'])
-    except (KeyError, ValueError):
-        flash("Invalid request received")
-        return redirect('/')
-    game = Game.query.filter(Game.id == game_no).first()
-    try:
-        turn_object = validate_turn_and_get_db_object(
-                "pass", logged_in_email(), game, arguments)
-    except go_rules.IllegalMoveException as e:
-        flash(e.args[0])
-        return redirect(url_for('game', game_no=game_no))
-    # payload
-    DeadStone.query.filter(DeadStone.game_no == game_no).delete()
-    db.session.commit()
-    coords_as_lists = json.loads(arguments['dead_stones'])
-    for [column, row] in coords_as_lists:
-        db.session.add(DeadStone(game_no, row=row, column=column))
-    db.session.add(turn_object)
-    db.session.commit()
-    return redirect(url_for('status'))
+    return play_general_move("markdead")
 
-def play_pass_or_move(which):
+def play_general_move(which):
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
@@ -122,26 +100,29 @@ def play_pass_or_move(which):
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
 
+    if which == 'markdead':
+        DeadStone.query.filter(DeadStone.game_no == game_no).delete()
+        db.session.commit()
+        coords_as_lists = json.loads(arguments['dead_stones'])
+        for [column, row] in coords_as_lists:
+            db.session.add(DeadStone(game_no, row=row, column=column))
+        db.session.commit()
+
     return redirect(url_for('status'))
 
 def validate_turn_and_record(pass_or_move, player, game, arguments):
-    turn_object = validate_turn_and_get_db_object(
-            pass_or_move, player, game, arguments)
-
-    db.session.add(turn_object)
-    db.session.commit()
-
-def validate_turn_and_get_db_object(pass_or_move, player, game, arguments):
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
     move_no = get_and_validate_move_no(arguments, game)
 
     color = game.to_move_color()
-    if pass_or_move == "pass":
+    if pass_or_move == "pass" or pass_or_move == "markdead":
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif pass_or_move == "move":
         turn_object = create_and_validate_move(move_no, color, game, arguments)
-    return turn_object
+
+    db.session.add(turn_object)
+    db.session.commit()
 
 def get_and_validate_move_no(arguments, game):
     try:
