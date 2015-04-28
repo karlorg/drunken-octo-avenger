@@ -83,6 +83,18 @@ def playpass():
 
 @app.route('/markdead', methods=['POST'])
 def markdead():
+    arguments = request.form.to_dict()
+    try:
+        game_no = int(arguments['game_no'])
+    except (KeyError, ValueError):
+        flash("Invalid game number")
+        return redirect('/')
+    DeadStone.query.filter(DeadStone.game_no == game_no).delete()
+    db.session.commit()
+    coords_as_lists = json.loads(arguments['dead_stones'])
+    for [column, row] in coords_as_lists:
+        db.session.add(DeadStone(game_no, row=row, column=column))
+    db.session.commit()
     return play_pass_or_move("pass")
 
 def play_pass_or_move(which):
@@ -597,6 +609,22 @@ class Pass(db.Model):
     def __repr__(self):
         return '<Pass {0}: {1}>'.format(
                 self.move_no, Move.Color(self.color).name)
+
+class DeadStone(db.Model):
+    __tablename__ = 'deadstones'
+    id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
+    row = db.Column(db.Integer)
+    column = db.Column(db.Integer)
+
+    def __init__(self, game_no, row, column):
+        self.game_no = game_no
+        self.row = row
+        self.column = column
+
+    def __repr__(self):
+        return '<DeadStone (Game {0}): ({1}, {2})>'.format(
+                self.game_no, self.column, self.row)
 
 class SetupStone(db.Model):
     __tablename__ = 'setupstones'

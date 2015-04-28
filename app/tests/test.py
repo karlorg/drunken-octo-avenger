@@ -18,7 +18,7 @@ from werkzeug.datastructures import MultiDict
 
 from .. import go_rules
 from .. import main
-from ..main import Game, Move, Pass, db
+from ..main import DeadStone, Game, Move, Pass, db
 
 
 class TestWithTestingApp(flask.ext.testing.TestCase):
@@ -550,27 +550,59 @@ class TestMarkDeadIntegrated(TestWithDb):
     def add_game(self):
         game = main.create_game_internal(
                 'black@black.com', 'white@white.com',
-                ['.b.wb',
-                 'bb.wb',
-                 '...wb',
-                 'wwwwb',
-                 'bbbbb'])
+                ['.b.w',
+                 '.b.w',
+                 'bb.w',
+                 'wwww'])
         db.session.add(Pass(game_no=game.id, move_no=0,
                             color=Move.Color.black))
         db.session.add(Pass(game_no=game.id, move_no=1,
                             color=Move.Color.white))
         db.session.commit()
+        self.game = game
         return game
+
+    def do_post(self, stones_json):
+        game = self.game
+        with self.set_email(game.to_move()) as test_client:
+            with self.patch_render_template():
+                test_client.post(url_for('markdead'),
+                                 data={'game_no': game.id,
+                                       'move_no': game.move_no,
+                                       'dead_stones': stones_json})
 
     def test_advances_turn(self):
         game = self.add_game()
         original_turn = game.to_move()
-        with self.set_email('black@black.com') as test_client:
-            with self.patch_render_template():
-                test_client.post(url_for('markdead'),
-                                 data={'game_no': game.id,
-                                       'move_no': 2})
+        self.do_post('[]')
         self.assertNotEqual(original_turn, game.to_move())
+
+    def test_records_dead_stones_in_db(self):
+        game = self.add_game()
+        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+
+        self.do_post(dead_stones_json)
+
+        recorded = DeadStone.query.filter(DeadStone.game_no == game.id).all()
+        coords = set(map(lambda dead: (dead.column, dead.row,), recorded))
+        self.assertIn((1, 0), coords)
+        self.assertIn((1, 1), coords)
+        self.assertIn((1, 2), coords)
+        self.assertIn((0, 2), coords)
+
+    def test_new_proposal_erases_old(self):
+        game = self.add_game()
+        first_dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+        second_dead_stones_json = ("[[3,0],[3,1],[3,2],[3,3],"
+                                   " [2,3],[1,3],[0,3]]")
+
+        self.do_post(first_dead_stones_json)
+        self.do_post(second_dead_stones_json)
+
+        recorded = DeadStone.query.filter(DeadStone.game_no == game.id).all()
+        coords = set(map(lambda dead: (dead.column, dead.row,), recorded))
+        self.assertNotIn((1, 0), coords)
+        self.assertIn((3, 3), coords)
 
 
 # I'm skipping this test because I have removed the method that it tests.
