@@ -19,7 +19,7 @@ import jinja2
 import json
 import requests
 from sqlalchemy import or_
-from wtforms import IntegerField, StringField
+from wtforms import HiddenField, IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
@@ -59,14 +59,15 @@ def game(game_no):
         return redirect('/')
     moves = game.moves
     passes = game.passes
-    is_passed_twice = check_two_passes(moves, passes)
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
     goban = get_goban_from_moves(moves, setup_stones)
-    form = PlayStoneForm(data=dict(
-        game_no=game.id,
-        move_no=game.move_no
-    ))
+    is_passed_twice = check_two_passes(moves, passes)
+    if not is_passed_twice:
+        form = PlayStoneForm(data={'game_no': game.id,
+                                   'move_no': game.move_no})
+    else:
+        form = MarkDeadForm(data={'game_no': game.id})
     return render_template_with_email(
             "game.html",
             form=form, goban=goban,
@@ -78,6 +79,10 @@ def playstone():
 
 @app.route('/playpass', methods=['POST'])
 def playpass():
+    return play_pass_or_move("pass")
+
+@app.route('/markdead', methods=['POST'])
+def markdead():
     return play_pass_or_move("pass")
 
 def play_pass_or_move(which):
@@ -482,6 +487,56 @@ def render_template_with_email(template_name_or_list, **context):
             current_persona_email=persona_email,
             **context)
 
+# Server player
+
+class ServerPlayer(object):
+    """ A class used to represent server players. The hope is that to create a
+        new server player, one need only override the `act` method. It should
+        be then possible to create a daemon which runs all registered server
+        players at convenient times.
+    """
+    def __init__(self, player_email, rest_interval=3600):
+        """ Specify the player-email and the rest-interval in seconds. This can
+            be specified as a floating point number for more accuracy than
+            seconds if need be.
+        """
+        self.player_email = player_email
+        self.rest_interval = rest_interval
+
+    def _daemon(self):
+        while True:
+            self.act()
+            time.sleep(self.rest_interval)
+
+    def start_daemon(self):
+        self._daemon_process = multiprocessing.Process(target=self._daemon)
+        self._daemon_process.daemon = True
+        self._daemon_process.start()
+
+    def terminate_daemon(self):
+        if self._daemon_process is not None:
+            db.session.commit()
+            db.session.close()
+            self._daemon_process.terminate()
+
+    def act(self):
+        """ The base `act` method of the `ServerPlayer` is so simple that it
+            plays a pass on every waiting game.
+        """
+        waiting_games, _not_waiting_games = get_status_lists(self.player_email)
+        for game in waiting_games:
+            # A request would normally include the 'move number' to make sure
+            # we are not replaying a previous move. But we're directly
+            # accessing the db here, so we get the move number from the db
+            # itself. Note that this still prevents replaying a move in the
+            # case in which (presumably, accidentally) we have two daemons
+            # running the same computer player.
+            arguments = {'move_no': game.move_no}
+            validate_turn_and_record(
+                    "pass", self.player_email, game, arguments)
+
+
+# models
 
 class Game(db.Model):
     __tablename__ = 'games'
@@ -565,6 +620,8 @@ class SetupStone(db.Model):
                 self.column, self.row)
 
 
+# forms
+
 class ChallengeForm(Form):
     opponent_email = StringField(
             "Opponent's email", validators=[DataRequired(), Email()])
@@ -578,49 +635,6 @@ class PlayStoneForm(Form):
     row = HiddenInteger("row", validators=[DataRequired()])
     column = HiddenInteger("column", validators=[DataRequired()])
 
-
-class ServerPlayer(object):
-    """ A class used to represent server players. The hope is that to create a
-        new server player, one need only override the `act` method. It should
-        be then possible to create a daemon which runs all registered server
-        players at convenient times.
-    """
-    def __init__(self, player_email, rest_interval=3600):
-        """ Specify the player-email and the rest-interval in seconds. This can
-            be specified as a floating point number for more accuracy than
-            seconds if need be.
-        """
-        self.player_email = player_email
-        self.rest_interval = rest_interval
-
-    def _daemon(self):
-        while True:
-            self.act()
-            time.sleep(self.rest_interval)
-
-    def start_daemon(self):
-        self._daemon_process = multiprocessing.Process(target=self._daemon)
-        self._daemon_process.daemon = True
-        self._daemon_process.start()
-
-    def terminate_daemon(self):
-        if self._daemon_process is not None:
-            db.session.commit()
-            db.session.close()
-            self._daemon_process.terminate()
-
-    def act(self):
-        """ The base `act` method of the `ServerPlayer` is so simple that it
-            plays a pass on every waiting game.
-        """
-        waiting_games, _not_waiting_games = get_status_lists(self.player_email)
-        for game in waiting_games:
-            # A request would normally include the 'move number' to make sure
-            # we are not replaying a previous move. But we're directly
-            # accessing the db here, so we get the move number from the db
-            # itself. Note that this still prevents replaying a move in the
-            # case in which (presumably, accidentally) we have two daemons
-            # running the same computer player.
-            arguments = {'move_no': game.move_no}
-            validate_turn_and_record(
-                    "pass", self.player_email, game, arguments)
+class MarkDeadForm(Form):
+    game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    dead_stones = HiddenField("dead_stones", validators=[DataRequired()])

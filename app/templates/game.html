@@ -17,6 +17,15 @@
     </tr>
     {% endfor %}
 </table>
+
+{% if with_scoring %}
+<form method="POST" action="{{ url_for('markdead') }}">
+    {{ form.hidden_tag() }}
+    <button type="submit"
+            class="confirm_button" name='confirm_button'>Confirm</button>
+</form>
+
+{% else %}
 <form method="POST" action="{{ url_for('playstone') }}">
     {{ form.hidden_tag() }}
     <button type="submit"
@@ -29,9 +38,9 @@
             class="pass_button" name='pass_button'>Pass</button>
 </form>
 {% endif %}
-{% if with_scoring %}
-<div id="with_scoring" class="with_scoring" style="display: none;" />
-{% endif %}
+
+{% endif %}  <!-- end not with_scoring -->
+
 {% endblock %}
 
 {% block page_scripts %}

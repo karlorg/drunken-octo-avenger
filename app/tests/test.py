@@ -70,6 +70,14 @@ class TestWithDb(TestWithTestingApp):
         main.db.drop_all()
         super().tearDown()
 
+    def add_game(self):
+        game = Game()
+        game.black = 'black@black.com'
+        game.white = 'white@white.com'
+        main.db.session.add(game)
+        main.db.session.commit()
+        return game
+
 
 class TestFrontPageIntegrated(TestWithTestingApp):
 
@@ -326,6 +334,9 @@ class TestGameIntegrated(TestWithDb):
                 test_client.get(url_for('game', game_no=game.id))
                 args, kwargs = mock_render.call_args
         self.assertEqual(kwargs['with_scoring'], True)
+        # maybe an implementation detail, but should help clarify failures that
+        # would otherwise be hard to track down:
+        self.assertIsInstance(kwargs['form'], main.MarkDeadForm)
 
 
 class TestGetGobanFromMoves(unittest.TestCase):
@@ -414,14 +425,6 @@ class TestGetGobanDataFromRulesBoard(unittest.TestCase):
 
 
 class TestPlayStoneIntegrated(TestWithDb):
-
-    def add_game(self):
-        game = Game()
-        game.black = 'black@black.com'
-        game.white = 'white@white.com'
-        main.db.session.add(game)
-        main.db.session.commit()
-        return game
 
     def test_can_add_stones_and_passes_to_two_games(self):
         game1 = self.add_game()
@@ -540,6 +543,34 @@ class TestPlayStoneIntegrated(TestWithDb):
                     '/game?game_no={game}&move_no=0&row=16&column=15'
                     .format(game=game.id))
         assert 'move_no=' not in str(response.get_data())
+
+
+class TestMarkDeadIntegrated(TestWithDb):
+
+    def add_game(self):
+        game = main.create_game_internal(
+                'black@black.com', 'white@white.com',
+                ['.b.wb',
+                 'bb.wb',
+                 '...wb',
+                 'wwwwb',
+                 'bbbbb'])
+        db.session.add(Pass(game_no=game.id, move_no=0,
+                            color=Move.Color.black))
+        db.session.add(Pass(game_no=game.id, move_no=1,
+                            color=Move.Color.white))
+        db.session.commit()
+        return game
+
+    def test_advances_turn(self):
+        game = self.add_game()
+        original_turn = game.to_move()
+        with self.set_email('black@black.com') as test_client:
+            with self.patch_render_template():
+                test_client.post(url_for('markdead'),
+                                 data={'game_no': game.id,
+                                       'move_no': 2})
+        self.assertNotEqual(original_turn, game.to_move())
 
 
 # I'm skipping this test because I have removed the method that it tests.
