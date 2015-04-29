@@ -166,6 +166,10 @@ def record_dead_stones_from_json(game, arguments):
         db.session.add(dead_stone)
     db.session.commit()
 
+@app.route('/resumegame', methods=('POST'))
+def resumegame():
+    pass
+
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
     form = ChallengeForm()

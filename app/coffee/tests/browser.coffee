@@ -495,6 +495,35 @@ class PassAndScoringTest extends BrowserTest
         white: 0
         whitedead: 7
         blackscore: 19*19 - 12
+    # White prepares a counter-proposal, and sends it back to Black
+    casper.thenClick (pointSelector 1, 1)
+    casper.thenClick '.confirm_button'
+
+    # Black logs in and opens the game
+    createLoginSession BLACK_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector true), =>  # our turn
+      # White's proposed dead stones show correctly
+      @assertGeneralPointCounts test,
+        label: "Black views White's counter-proposal"
+        black: 9
+        white: 7
+        blackdead: 3
+    # Black reverts the proposal and confirms
+    casper.thenClick (pointSelector 3, 1)
+    casper.thenClick '.confirm_button'
+
+    # White opens the game
+    createLoginSession WHITE_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector true)
+    # seeing the reverted proposal, she resumes play
+    casper.thenClick '.resume_button'
+
+    # White being the last to pass, Black has the turn
+    createLoginSession BLACK_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector true), =>  # our turn
 
 registerTest new PassAndScoringTest
 

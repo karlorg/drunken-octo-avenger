@@ -365,6 +365,44 @@ class TestGameIntegrated(TestWithDb):
         self.assertEqual(expected, actual)
 
 
+class TestResumeGameIntegrated(TestWithDb):
+
+    def setUp(self):
+        super().setUp()
+        self.game = self.add_game()
+        db.session.add(Pass(
+            game_no=self.game.id, move_no=0, color=Move.Color.black))
+        db.session.add(Pass(
+            game_no=self.game.id, move_no=1, color=Move.Color.white))
+        db.session.commit()
+
+    # at the moment, the correct player to resume play is defined as the
+    # opponent of the last player to pass.
+
+    def test_correct_turn_simple(self):
+        """Sets turn to correct player in the most simple case."""
+        with self.set_email('black@black.com') as test_client:
+            test_client.post(url_for('resumegame'), data={
+                'game_no': self.game.id, 'move_no': 2})
+        self.assertEqual(self.game.to_move(), 'black@black.com')
+
+    def test_correct_turn_with_mark_stones(self):
+        """Sets turn to correct player when stones have been marked once.
+
+        That is, the opponent of the last player to pass has marked dead stones
+        and submitted that proposal, and the last player to pass wishes to
+        resume."""
+        # we use the actual mark stones view function for this, because its
+        # behaviour needs to match up with ours.
+        with self.set_email('black@black.com') as test_client:
+            test_client.post(url_for('markdead'), data={
+                'game_no': self.game.id, 'move_no': 2, 'dead_stones': '[]'})
+        with self.set_email('white@white.com') as test_client:
+            test_client.post(url_for('resumegame'), data={
+                'game_no': self.game.id, 'move_no': 3})
+        self.assertEqual(self.game.to_move(), 'black@black.com')
+
+
 class TestGetGobanFromMoves(unittest.TestCase):
 
     def assert_point(self, goban, row, col, color):
@@ -574,8 +612,7 @@ class TestMarkDeadIntegrated(TestWithDb):
 
     def setUp(self):
         super().setUp()
-        game = main.create_game_internal(
-                'black@black.com', 'white@white.com',
+        game = self.add_game(
                 ['.b.w',
                  '.b.w',
                  'bb.w',

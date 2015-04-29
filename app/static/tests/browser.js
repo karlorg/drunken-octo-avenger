@@ -630,7 +630,7 @@
       casper.thenClick('.confirm_button');
       createLoginSession(WHITE_EMAIL);
       casper.thenOpen(serverUrl);
-      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
+      casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           return _this.assertGeneralPointCounts(test, {
             label: "White views Black's proposal",
@@ -640,6 +640,31 @@
             blackscore: 19 * 19 - 12
           });
         };
+      })(this));
+      casper.thenClick(pointSelector(1, 1));
+      casper.thenClick('.confirm_button');
+      createLoginSession(BLACK_EMAIL);
+      casper.thenOpen(serverUrl);
+      casper.thenClick(this.lastGameSelector(true), (function(_this) {
+        return function() {
+          return _this.assertGeneralPointCounts(test, {
+            label: "Black views White's counter-proposal",
+            black: 9,
+            white: 7,
+            blackdead: 3
+          });
+        };
+      })(this));
+      casper.thenClick(pointSelector(3, 1));
+      casper.thenClick('.confirm_button');
+      createLoginSession(WHITE_EMAIL);
+      casper.thenOpen(serverUrl);
+      casper.thenClick(this.lastGameSelector(true));
+      casper.thenClick('.resume_button');
+      createLoginSession(BLACK_EMAIL);
+      casper.thenOpen(serverUrl);
+      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
+        return function() {};
       })(this));
     };
 
