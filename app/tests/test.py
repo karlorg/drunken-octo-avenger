@@ -87,13 +87,8 @@ class TestWithDb(TestWithTestingApp):
         super().tearDown()
 
     def add_game(self, stones=None):
-        game = Game()
-        game.black = 'black@black.com'
-        game.white = 'white@white.com'
-        main.db.session.add(game)
-        main.db.session.commit()
-        if stones is not None:
-            main.add_stones_from_text_map_to_game(stones, game)
+        game = main.create_game_internal(
+                'black@black.com', 'white@white.com', stones)
         return game
 
 
@@ -557,12 +552,10 @@ class TestMarkDeadIntegrated(TestWithDb):
 
     def setUp(self):
         super().setUp()
-        game = main.create_game_internal(
-                'black@black.com', 'white@white.com',
-                ['.b.w',
-                 '.b.w',
-                 'bb.w',
-                 'wwww'])
+        game = self.add_game(['.b.w',
+                              '.b.w',
+                              'bb.w',
+                              'wwww'])
         db.session.add(Pass(game_no=game.id, move_no=0,
                             color=Move.Color.black))
         db.session.add(Pass(game_no=game.id, move_no=1,
