@@ -549,7 +549,7 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 18;
+    PassAndScoringTest.prototype.numTests = 22;
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, originalImageSrc22, p, ref;

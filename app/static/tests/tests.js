@@ -185,10 +185,11 @@
 
   module('Game page with marking interface', {
     beforeEach: function() {
-      return $("#qunit-fixture").append($("<div/>", {
+      $("#qunit-fixture").append($("<div/>", {
         id: 'with_scoring',
         "class": 'with_scoring'
       }));
+      return $('input#dead_stones').val('');
     }
   });
 
@@ -242,10 +243,14 @@
     return assert.notOk(isPointBlackDead($pointAt(0, 0)), "neighboring black group (0, 0) is no longer dead");
   });
 
-  test("dead_stones starts containing an empty list", function(assert) {
-    updateBoardChars(['b.b', '.b.', 'bbw']);
+  test("initialization sets initial dead stones from form", function(assert) {
+    updateBoardChars(['b..', '.b.', 'bbw']);
+    $('input#dead_stones').val('[[0,0], [1,1], [0,2], [1,2]]');
     tesuji_charm.game_marking.initialize();
-    return assert.equal($('input#dead_stones').val(), '[]');
+    assert.ok(isPointBlackDead($pointAt(0, 0)), "(0, 0) is dead");
+    assert.ok(isPointBlackDead($pointAt(1, 1)), "(1, 1) is dead");
+    assert.ok(isPointWhiteScore($pointAt(0, 1)), "(0, 1) scores for White");
+    return assert.ok(isPointWhiteScore($pointAt(1, 1)), "(1, 1) scores for White");
   });
 
   test("Form is updated with current dead stones", function(assert) {

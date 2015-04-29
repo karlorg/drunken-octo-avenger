@@ -403,7 +403,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 18
+  numTests: 22
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'

@@ -13,6 +13,7 @@ go_rules = tesuji_charm.go_rules
 
 
 game_marking.initialize = ->
+  setInitialDead()
   setupScoring()
 
   $('table.goban td').click ->
@@ -20,6 +21,22 @@ game_marking.initialize = ->
     [row, col] = game_common.parseCoordClass $(this)
     markStonesAround col, row
     setupScoring()
+
+# setInitialDead
+
+setInitialDead = ->
+  "mark dead stones on the DOM according to the supplied value of the hidden
+  input field dead_stones"
+  try
+    dead_stones = JSON.parse($('input#dead_stones').val())
+  catch e
+    return
+  for [x, y] in dead_stones
+    $point = $pointAt x, y
+    color = game_common.colorFromDom $point
+    if (color != 'whitedead' and color != 'blackdead')
+      markStonesAround x, y
+  return
 
 # setupScoring and its helpers
 

@@ -196,6 +196,7 @@ module 'Game page with marking interface',
     $("#qunit-fixture").append $("<div/>",
                                  id: 'with_scoring'
                                  class: 'with_scoring')
+    $('input#dead_stones').val ''
 
 test "clicking empty points in marking mode does nothing", (assert) ->
   $point = $pointAt(1, 1)
@@ -266,14 +267,18 @@ test "killing stones revives neighbouring enemy groups " + \
   assert.notOk isPointBlackDead($pointAt 0, 0),
     "neighboring black group (0, 0) is no longer dead"
 
-test "dead_stones starts containing an empty list", (assert) ->
+test "initialization sets initial dead stones from form", (assert) ->
   updateBoardChars [
-    'b.b'
+    'b..'
     '.b.'
     'bbw'
   ]
+  $('input#dead_stones').val '[[0,0], [1,1], [0,2], [1,2]]'
   tesuji_charm.game_marking.initialize()
-  assert.equal $('input#dead_stones').val(), '[]'
+  assert.ok isPointBlackDead($pointAt 0, 0), "(0, 0) is dead"
+  assert.ok isPointBlackDead($pointAt 1, 1), "(1, 1) is dead"
+  assert.ok isPointWhiteScore($pointAt 0, 1), "(0, 1) scores for White"
+  assert.ok isPointWhiteScore($pointAt 1, 1), "(1, 1) scores for White"
 
 test "Form is updated with current dead stones", (assert) ->
   updateBoardChars [
