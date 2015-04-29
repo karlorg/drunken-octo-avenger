@@ -212,20 +212,9 @@ test "mixed scoring board", (assert) ->
   tesuji_charm.game_marking.initialize()
   assert.ok isPointBlackScore($pointAt(0, 0)), "(0,0) black"
   assert.notOk isPointWhiteScore($pointAt(0, 0)), "(0,0) white"
-  assert.notOk isPointBlackScore($pointAt(0, 1)), "(0,1) black"
-  assert.notOk isPointWhiteScore($pointAt(0, 1)), "(0,1) white"
-  assert.notOk isPointBlackScore($pointAt(0, 2)), "(0,2) black"
-  assert.notOk isPointWhiteScore($pointAt(0, 2)), "(0,2) white"
-  assert.notOk isPointBlackScore($pointAt(1, 0)), "(1,0) black"
-  assert.notOk isPointWhiteScore($pointAt(1, 0)), "(1,0) white"
-  assert.notOk isPointBlackScore($pointAt(1, 1)), "(1,1) black"
-  assert.notOk isPointWhiteScore($pointAt(1, 1)), "(1,1) white"
-  assert.notOk isPointBlackScore($pointAt(1, 2)), "(1,2) black"
-  assert.notOk isPointWhiteScore($pointAt(1, 2)), "(1,2) white"
-  assert.notOk isPointBlackScore($pointAt(2, 0)), "(2,0) black"
-  assert.notOk isPointWhiteScore($pointAt(2, 0)), "(2,0) white"
-  assert.notOk isPointBlackScore($pointAt(2, 1)), "(2,1) black"
-  assert.notOk isPointWhiteScore($pointAt(2, 1)), "(2,1) white"
+  for [x, y] in [[0,1], [0,2], [1,0], [1,1], [1,2], [2,0], [2,1]]
+    assert.notOk isPointBlackScore($pointAt(x, y)), "(#{x},#{y}) black"
+    assert.notOk isPointWhiteScore($pointAt(x, y)), "(#{x},#{y}) white"
   assert.notOk isPointBlackScore($pointAt(2, 2)), "(2,2) black"
   assert.ok isPointWhiteScore($pointAt(2, 2)), "(2,2) white"
 

@@ -201,24 +201,17 @@
   });
 
   test("mixed scoring board", function(assert) {
+    var i, len, ref, ref1, x, y;
     updateBoardChars(['.b.', 'bww', '.w.']);
     tesuji_charm.game_marking.initialize();
     assert.ok(isPointBlackScore($pointAt(0, 0)), "(0,0) black");
     assert.notOk(isPointWhiteScore($pointAt(0, 0)), "(0,0) white");
-    assert.notOk(isPointBlackScore($pointAt(0, 1)), "(0,1) black");
-    assert.notOk(isPointWhiteScore($pointAt(0, 1)), "(0,1) white");
-    assert.notOk(isPointBlackScore($pointAt(0, 2)), "(0,2) black");
-    assert.notOk(isPointWhiteScore($pointAt(0, 2)), "(0,2) white");
-    assert.notOk(isPointBlackScore($pointAt(1, 0)), "(1,0) black");
-    assert.notOk(isPointWhiteScore($pointAt(1, 0)), "(1,0) white");
-    assert.notOk(isPointBlackScore($pointAt(1, 1)), "(1,1) black");
-    assert.notOk(isPointWhiteScore($pointAt(1, 1)), "(1,1) white");
-    assert.notOk(isPointBlackScore($pointAt(1, 2)), "(1,2) black");
-    assert.notOk(isPointWhiteScore($pointAt(1, 2)), "(1,2) white");
-    assert.notOk(isPointBlackScore($pointAt(2, 0)), "(2,0) black");
-    assert.notOk(isPointWhiteScore($pointAt(2, 0)), "(2,0) white");
-    assert.notOk(isPointBlackScore($pointAt(2, 1)), "(2,1) black");
-    assert.notOk(isPointWhiteScore($pointAt(2, 1)), "(2,1) white");
+    ref = [[0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1]];
+    for (i = 0, len = ref.length; i < len; i++) {
+      ref1 = ref[i], x = ref1[0], y = ref1[1];
+      assert.notOk(isPointBlackScore($pointAt(x, y)), "(" + x + "," + y + ") black");
+      assert.notOk(isPointWhiteScore($pointAt(x, y)), "(" + x + "," + y + ") white");
+    }
     assert.notOk(isPointBlackScore($pointAt(2, 2)), "(2,2) black");
     return assert.ok(isPointWhiteScore($pointAt(2, 2)), "(2,2) white");
   });
