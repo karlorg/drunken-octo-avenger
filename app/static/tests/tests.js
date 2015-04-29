@@ -242,6 +242,22 @@
     return assert.notOk(isPointBlackDead($pointAt(0, 0)), "neighboring black group (0, 0) is no longer dead");
   });
 
+  test("dead_stones starts containing an empty list", function(assert) {
+    updateBoardChars(['b.b', '.b.', 'bbw']);
+    tesuji_charm.game_marking.initialize();
+    return assert.equal($('input#dead_stones').val(), '[]');
+  });
+
+  test("Form is updated with current dead stones", function(assert) {
+    var actual, expected;
+    updateBoardChars(['b.b', '.b.', 'bbw']);
+    tesuji_charm.game_marking.initialize();
+    $pointAt(1, 1).click();
+    expected = [[0, 0], [0, 2], [1, 1], [1, 2], [2, 0]];
+    actual = JSON.parse($('input#dead_stones').val()).sort();
+    return assert.deepEqual(actual, expected, "JSON in dead_stones correct");
+  });
+
   module('Go rules');
 
   go_rules = tesuji_charm.go_rules;

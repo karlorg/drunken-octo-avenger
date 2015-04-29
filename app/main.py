@@ -67,7 +67,8 @@ def game(game_no):
         form = PlayStoneForm(data={'game_no': game.id,
                                    'move_no': game.move_no})
     else:
-        form = MarkDeadForm(data={'game_no': game.id})
+        form = MarkDeadForm(data={'game_no': game.id,
+                                  'move_no': game.move_no})
     return render_template_with_email(
             "game.html",
             form=form, goban=goban,
@@ -682,4 +683,5 @@ class PlayStoneForm(Form):
 
 class MarkDeadForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    move_no = HiddenInteger("move_no", validators=[DataRequired()])
     dead_stones = HiddenField("dead_stones", validators=[DataRequired()])

@@ -35,7 +35,8 @@ setupScoring = ->
       when 'white' then 'whitescore'
       when 'neither' then 'empty'
       else throw new Error "invalid boundary color: '#{boundary}'"
-  return  # explicit return so Coffee won't accumulate results of the `for`
+  updateForm()
+  return
 
 getEmptyRegions = (state) ->
   regions = []
@@ -120,4 +121,18 @@ togglePoints = (points) ->
       else null
     if newColor
       game_common.setPointColor $point, newColor
+  return
+
+# updateForm
+
+updateForm = ->
+  "Update the hidden form that communicates our marks back to the server, based
+  on the current DOM state."
+  dead_stones = []
+  state = game_common.readBoardState()
+  for row, y in state
+    for point, x in row
+      if (point == 'blackdead') or (point == 'whitedead')
+        dead_stones.push [x, y]
+  $('input#dead_stones').val JSON.stringify(dead_stones)
   return

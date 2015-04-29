@@ -266,6 +266,27 @@ test "killing stones revives neighbouring enemy groups " + \
   assert.notOk isPointBlackDead($pointAt 0, 0),
     "neighboring black group (0, 0) is no longer dead"
 
+test "dead_stones starts containing an empty list", (assert) ->
+  updateBoardChars [
+    'b.b'
+    '.b.'
+    'bbw'
+  ]
+  tesuji_charm.game_marking.initialize()
+  assert.equal $('input#dead_stones').val(), '[]'
+
+test "Form is updated with current dead stones", (assert) ->
+  updateBoardChars [
+    'b.b'
+    '.b.'
+    'bbw'
+  ]
+  tesuji_charm.game_marking.initialize()
+  $pointAt(1, 1).click()
+  expected = [[0,0], [0,2], [1,1], [1,2], [2,0]]  # in [].sort() order
+  actual = JSON.parse($('input#dead_stones').val()).sort()
+  assert.deepEqual actual, expected, "JSON in dead_stones correct"
+
 
 # ============================================================================
 
