@@ -7,6 +7,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 from contextlib import contextmanager
 from itertools import chain
 from mock import ANY, Mock, patch
+import json
 import re
 import unittest
 import time
@@ -309,6 +310,13 @@ class TestStatusIntegrated(TestWithDb):
 
 class TestGameIntegrated(TestWithDb):
 
+    def pass_twice(self, game):
+        db.session.add(Pass(
+            game_no=game.id, move_no=0, color=Move.Color.black))
+        db.session.add(Pass(
+            game_no=game.id, move_no=1, color=Move.Color.white))
+        db.session.commit()
+
     def test_404_if_no_game_specified(self):
         response = self.test_client.get('/game')
         self.assert404(response)
@@ -331,21 +339,30 @@ class TestGameIntegrated(TestWithDb):
         assert pos_row0 < pos_row1
         assert pos_col0 < pos_col1
 
-    def test_after_two_passes_activates_scoring_interface(self):
-        game = self.add_game(['.b',
-                              'bb'])
-        main.db.session.add(Pass(
-            game_no=game.id, move_no=0, color=Move.Color.black))
-        main.db.session.add(Pass(
-            game_no=game.id, move_no=1, color=Move.Color.white))
+    def do_mocked_get(self, game):
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template() as mock_render:
                 test_client.get(url_for('game', game_no=game.id))
-                args, kwargs = mock_render.call_args
+                return mock_render.call_args
+
+    def test_after_two_passes_activates_scoring_interface(self):
+        game = self.add_game(['.b', 'bb'])
+        self.pass_twice(game)
+
+        args, kwargs = self.do_mocked_get(game)
+
         self.assertEqual(kwargs['with_scoring'], True)
-        # maybe an implementation detail, but should help clarify failures that
-        # would otherwise be hard to track down:
-        self.assertIsInstance(kwargs['form'], main.MarkDeadForm)
+
+    def test_sends_dead_stones_in_form(self):
+        game = self.add_game(['.b'])
+        self.pass_twice(game)
+        db.session.add(DeadStone(game_no=game.id, row=0, column=1))
+
+        args, kwargs = self.do_mocked_get(game)
+
+        expected = [[1, 0]]
+        actual = json.loads(kwargs['form'].data['dead_stones'])
+        self.assertEqual(expected, actual)
 
 
 class TestGetGobanFromMoves(unittest.TestCase):

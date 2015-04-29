@@ -67,8 +67,11 @@ def game(game_no):
         form = PlayStoneForm(data={'game_no': game.id,
                                    'move_no': game.move_no})
     else:
+        coords = list(map(lambda ds: [ds.column, ds.row], game.dead_stones))
+        dead_stones_json = json.dumps(coords)
         form = MarkDeadForm(data={'game_no': game.id,
-                                  'move_no': game.move_no})
+                                  'move_no': game.move_no,
+                                  'dead_stones': dead_stones_json})
     return render_template_with_email(
             "game.html",
             form=form, goban=goban,
@@ -575,6 +578,7 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     moves = db.relationship('Move', backref='game')
     passes = db.relationship('Pass', backref='game')
+    dead_stones = db.relationship('DeadStone', backref='game')
     setup_stones = db.relationship('SetupStone', backref='game')
 
     @property
