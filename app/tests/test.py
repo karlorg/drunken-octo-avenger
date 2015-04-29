@@ -86,12 +86,14 @@ class TestWithDb(TestWithTestingApp):
         main.db.drop_all()
         super().tearDown()
 
-    def add_game(self):
+    def add_game(self, stones=None):
         game = Game()
         game.black = 'black@black.com'
         game.white = 'white@white.com'
         main.db.session.add(game)
         main.db.session.commit()
+        if stones is not None:
+            main.add_stones_from_text_map_to_game(stones, game)
         return game
 
 
@@ -307,14 +309,6 @@ class TestStatusIntegrated(TestWithDb):
 
 class TestGameIntegrated(TestWithDb):
 
-    def add_game(self):
-        game = Game()
-        game.black = 'black@black.com'
-        game.white = 'white@white.com'
-        main.db.session.add(game)
-        main.db.session.commit()
-        return game
-
     def test_404_if_no_game_specified(self):
         response = self.test_client.get('/game')
         self.assert404(response)
@@ -338,9 +332,8 @@ class TestGameIntegrated(TestWithDb):
         assert pos_col0 < pos_col1
 
     def test_after_two_passes_activates_scoring_interface(self):
-        game = self.add_game()
-        main.add_stones_from_text_map_to_game(['.b',
-                                               'bb'], game)
+        game = self.add_game(['.b',
+                              'bb'])
         main.db.session.add(Pass(
             game_no=game.id, move_no=0, color=Move.Color.black))
         main.db.session.add(Pass(
@@ -525,8 +518,7 @@ class TestPlayStoneIntegrated(TestWithDb):
                 self.assertNotIsInstance(passed_dict, MultiDict)
 
     def test_returns_to_game_on_illegal_move(self):
-        game = self.add_game()
-        main.add_stones_from_text_map_to_game(['.b'], game)
+        game = self.add_game(['.b'])
         with self.patch_render_template():
             with self.set_email('black@black.com') as test_client:
                 response = test_client.post('/playstone', data=dict(
