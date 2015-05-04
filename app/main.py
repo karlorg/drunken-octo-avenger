@@ -85,6 +85,10 @@ def playstone():
 def playpass():
     return play_general_move("pass")
 
+@app.route('/resumegame', methods=['POST'])
+def resumegame():
+    return play_general_move("resume")
+
 @app.route('/markdead', methods=['POST'])
 def markdead():
     return play_general_move("markdead")
@@ -123,6 +127,17 @@ def validate_turn_and_record(which, player, game, arguments):
     elif which == "markdead":
         record_dead_stones_from_json(game, arguments)
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
+    elif which == "resume":
+        if game.first_to_pass() == color:
+            # the current player should be the next to play after resumption;
+            # insert a padding Pass entry to make it so
+            db.session.add(Pass(game_no=game.id, move_no=move_no, color=color))
+            move_no += 1
+            color = {Move.Color.black: Move.Color.white,
+                     Move.Color.white: Move.Color.black}[color]
+        turn_object = Resumption(game_no=game.id, move_no=move_no, color=color)
+    else:
+        raise ValueError("'{}' is not a valid value for `which`".format(which))
 
     db.session.add(turn_object)
     db.session.commit()
@@ -169,10 +184,6 @@ def record_dead_stones_from_json(game, arguments):
     for dead_stone in dead_stones:
         db.session.add(dead_stone)
     db.session.commit()
-
-@app.route('/resumegame', methods=('POST'))
-def resumegame():
-    pass
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
@@ -586,12 +597,13 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     moves = db.relationship('Move', backref='game')
     passes = db.relationship('Pass', backref='game')
+    resumptions = db.relationship('Resumption', backref='game')
     dead_stones = db.relationship('DeadStone', backref='game')
     setup_stones = db.relationship('SetupStone', backref='game')
 
     @property
     def move_no(self):
-        return len(self.moves) + len(self.passes)
+        return len(self.moves) + len(self.passes) + len(self.resumptions)
 
     def to_move(self):
         move_no = self.move_no
@@ -600,6 +612,20 @@ class Game(db.Model):
     def to_move_color(self):
         move_no = self.move_no
         return (Move.Color.black, Move.Color.white)[move_no % 2]
+
+    def first_to_pass(self):
+        """In the latest string of passes, which color passed first?"""
+        passes = self.passes
+        assert passes, "no passes in this game"
+        last = None
+        for move_no in reversed(sorted(map(lambda p: p.move_no, passes))):
+            if last is None:
+                last = move_no
+            elif move_no == last - 1:
+                last = move_no
+            else:
+                break
+        return (Move.Color.black, Move.Color.white)[last % 2]
 
 class Move(db.Model):
     __tablename__ = 'moves'
@@ -638,6 +664,22 @@ class Pass(db.Model):
 
     def __repr__(self):
         return '<Pass {0}: {1}>'.format(
+                self.move_no, Move.Color(self.color).name)
+
+class Resumption(db.Model):
+    __tablename__ = 'resumptions'
+    id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
+    move_no = db.Column(db.Integer)
+    color = db.Column(db.Integer)
+
+    def __init__(self, game_no, move_no, color):
+        self.game_no = game_no
+        self.move_no = move_no
+        self.color = color
+
+    def __repr__(self):
+        return '<Resumption {0}: {1}>'.format(
                 self.move_no, Move.Color(self.color).name)
 
 class DeadStone(db.Model):
