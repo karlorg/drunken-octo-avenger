@@ -522,6 +522,12 @@ class TestPlayStoneIntegrated(TestWithDb):
         self.assertEqual(move.column, 15)
         self.assertEqual(move.color, Move.Color.black)
 
+    def test_redirects_to_home_if_not_logged_in(self):
+        game = self.add_game()
+        response = self.test_client.post(url_for('playpass'), data=dict(
+            game_no=game.id, move_no=0))
+        self.assert_redirects(response, '/')
+
     def test_rejects_new_move_off_turn(self):
         game = self.add_game()
         assert Move.query.all() == []

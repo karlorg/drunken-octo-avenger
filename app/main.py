@@ -90,6 +90,10 @@ def markdead():
     return play_general_move("markdead")
 
 def play_general_move(which):
+    try:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
+        return redirect('/')
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
@@ -99,7 +103,7 @@ def play_general_move(which):
     game = Game.query.filter(Game.id == game_no).first()
 
     try:
-        validate_turn_and_record(which, logged_in_email(), game, arguments)
+        validate_turn_and_record(which, email, game, arguments)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
