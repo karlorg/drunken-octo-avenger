@@ -15,6 +15,7 @@ from flask import (
 )
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
+import itertools
 import jinja2
 import json
 import requests
@@ -58,11 +59,12 @@ def game(game_no):
         flash("Game #{} not found".format(game_no))
         return redirect('/')
     moves = game.moves
+    resumptions = game.resumptions
     passes = game.passes
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
     goban = get_goban_from_moves(moves, setup_stones)
-    is_passed_twice = check_two_passes(moves, passes)
+    is_passed_twice = check_two_passes(moves, passes, resumptions)
     if not is_passed_twice:
         form = PlayStoneForm(data={'game_no': game.id,
                                    'move_no': game.move_no})
@@ -322,11 +324,13 @@ def clear_games_for_player_internal(email):
         delete_game_from_db(game)
 
 def delete_game_from_db(game):
-    moves = Move.query.filter(Move.game == game).all()
-    for move in moves:
+    for move in game.moves:
         db.session.delete(move)
-    setup_stones = SetupStone.query.filter(SetupStone.game == game).all()
-    for setup_stone in setup_stones:
+    for resumption in game.resumptions:
+        db.session.delete(resumption)
+    for pass_ in game.passes:
+        db.session.delete(pass_)
+    for setup_stone in game.setup_stones:
         db.session.delete(setup_stone)
     db.session.delete(game)
     db.session.commit()
@@ -448,9 +452,11 @@ def get_player_games(player_email):
                                   Game.white == player_email)).all()
     return games
 
-def check_two_passes(moves, passes):
+def check_two_passes(moves, passes, resumptions):
     """True if last two actions are both passes, false otherwise."""
-    last_move = max([-1] + [m.move_no for m in moves])
+    move_no_iter = (m.move_no for m in moves)
+    resume_no_iter = (r.move_no for r in resumptions)
+    last_move = max(itertools.chain([-1], move_no_iter, resume_no_iter))
     last_pass = max([-1] + [p.move_no for p in passes])
     if last_move >= last_pass:
         return False

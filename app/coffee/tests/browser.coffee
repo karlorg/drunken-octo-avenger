@@ -415,7 +415,7 @@ class PassAndScoringTest extends BrowserTest
                                           'bbbbb']
 
     # convenience function
-    goToGame = (email, thenFn=(=>)) =>
+    goToGame = (email, thenFn=(->)) =>
       createLoginSession email
       casper.thenOpen serverUrl
       casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
@@ -516,6 +516,20 @@ class PassAndScoringTest extends BrowserTest
 
     # White being the last to pass, Black has the turn
     goToGame BLACK_EMAIL
+    casper.thenClick (pointSelector 2, 1), ->
+      casper.capture '../scrn.png'
+    casper.thenClick '.confirm_button'
+    # White is ready to give this up
+    goToGame WHITE_EMAIL
+    casper.thenClick '.pass_button'
+    goToGame BLACK_EMAIL
+    casper.thenClick '.pass_button'
+    goToGame WHITE_EMAIL, =>
+      # marked stones have been reverted since the game was resumed
+      @assertGeneralPointCounts test,
+        label: "White is first to mark stones after resumption"
+        black: 4 + 9
+        white: 7
 
 registerTest new PassAndScoringTest
 

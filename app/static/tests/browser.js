@@ -552,7 +552,7 @@
     PassAndScoringTest.prototype.numTests = 25;
 
     PassAndScoringTest.prototype.testBody = function(test) {
-      var BLACK_EMAIL, WHITE_EMAIL, i, len, originalImageSrc11, originalImageSrc22, p, ref;
+      var BLACK_EMAIL, WHITE_EMAIL, goToGame, i, len, originalImageSrc11, originalImageSrc22, p, ref;
       BLACK_EMAIL = 'black@schwarz.de';
       WHITE_EMAIL = 'white@wit.nl';
       ref = [BLACK_EMAIL, WHITE_EMAIL];
@@ -561,23 +561,27 @@
         clearGamesForPlayer(p);
       }
       createGame(BLACK_EMAIL, WHITE_EMAIL, ['.b.wb', 'bb.wb', '...wb', 'wwwwb', 'bbbbb']);
-      createLoginSession(BLACK_EMAIL);
-      casper.thenOpen(serverUrl);
-      casper.thenClick(this.lastGameSelector(true));
+      goToGame = (function(_this) {
+        return function(email, thenFn) {
+          if (thenFn == null) {
+            thenFn = (function() {});
+          }
+          createLoginSession(email);
+          casper.thenOpen(serverUrl);
+          return casper.thenClick(_this.lastGameSelector(true), thenFn);
+        };
+      })(this);
+      goToGame(BLACK_EMAIL);
       casper.thenClick('.pass_button');
       casper.thenOpen(serverUrl);
       casper.thenClick(this.lastGameSelector(false), function() {
         return test.assertDoesntExist('.pass_button:enabled');
       });
-      createLoginSession(WHITE_EMAIL);
-      casper.thenOpen(serverUrl);
-      casper.thenClick(this.lastGameSelector(true));
+      goToGame(WHITE_EMAIL);
       casper.thenClick('.pass_button');
-      createLoginSession(BLACK_EMAIL);
-      casper.thenOpen(serverUrl);
       originalImageSrc11 = null;
       originalImageSrc22 = null;
-      casper.thenClick(this.lastGameSelector(true), (function(_this) {
+      goToGame(BLACK_EMAIL, (function(_this) {
         return function() {
           test.assertExists('table.goban');
           originalImageSrc11 = _this.imageSrc(1, 1);
@@ -628,9 +632,7 @@
         };
       })(this));
       casper.thenClick('.confirm_button');
-      createLoginSession(WHITE_EMAIL);
-      casper.thenOpen(serverUrl);
-      casper.thenClick(this.lastGameSelector(true), (function(_this) {
+      goToGame(WHITE_EMAIL, (function(_this) {
         return function() {
           return _this.assertGeneralPointCounts(test, {
             label: "White views Black's proposal",
@@ -643,9 +645,7 @@
       })(this));
       casper.thenClick(pointSelector(1, 1));
       casper.thenClick('.confirm_button');
-      createLoginSession(BLACK_EMAIL);
-      casper.thenOpen(serverUrl);
-      casper.thenClick(this.lastGameSelector(true), (function(_this) {
+      goToGame(BLACK_EMAIL, (function(_this) {
         return function() {
           return _this.assertGeneralPointCounts(test, {
             label: "Black views White's counter-proposal",
@@ -657,14 +657,25 @@
       })(this));
       casper.thenClick(pointSelector(3, 1));
       casper.thenClick('.confirm_button');
-      createLoginSession(WHITE_EMAIL);
-      casper.thenOpen(serverUrl);
-      casper.thenClick(this.lastGameSelector(true));
+      goToGame(WHITE_EMAIL);
       casper.thenClick('.resume_button');
-      createLoginSession(BLACK_EMAIL);
-      casper.thenOpen(serverUrl);
-      return casper.thenClick(this.lastGameSelector(true), (function(_this) {
-        return function() {};
+      goToGame(BLACK_EMAIL);
+      casper.thenClick(pointSelector(2, 1), function() {
+        return casper.capture('../scrn.png');
+      });
+      casper.thenClick('.confirm_button');
+      goToGame(WHITE_EMAIL);
+      casper.thenClick('.pass_button');
+      goToGame(BLACK_EMAIL);
+      casper.thenClick('.pass_button');
+      return goToGame(WHITE_EMAIL, (function(_this) {
+        return function() {
+          return _this.assertGeneralPointCounts(test, {
+            label: "White is first to mark stones after resumption",
+            black: 4 + 9,
+            white: 7
+          });
+        };
       })(this));
     };
 
