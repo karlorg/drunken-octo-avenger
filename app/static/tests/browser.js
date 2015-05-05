@@ -666,7 +666,7 @@
       casper.thenClick('.pass_button');
       goToGame(BLACK_EMAIL);
       casper.thenClick('.pass_button');
-      return goToGame(WHITE_EMAIL, (function(_this) {
+      goToGame(WHITE_EMAIL, (function(_this) {
         return function() {
           return _this.assertGeneralPointCounts(test, {
             label: "White is first to mark stones after resumption",
@@ -675,6 +675,10 @@
           });
         };
       })(this));
+      casper.thenClick(pointSelector(3, 0));
+      casper.thenClick('.confirm_button');
+      goToGame(BLACK_EMAIL);
+      return casper.thenClick('.confirm_button');
     };
 
     return PassAndScoringTest;

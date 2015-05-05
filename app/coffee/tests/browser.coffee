@@ -528,6 +528,13 @@ class PassAndScoringTest extends BrowserTest
         label: "White is first to mark stones after resumption"
         black: 4 + 9
         white: 7
+    casper.thenClick (pointSelector 3, 0)
+    casper.thenClick '.confirm_button'
+    goToGame BLACK_EMAIL
+    # finally, Black accepts White's proposal
+    casper.thenClick '.confirm_button'
+
+    # TODO: add 'finished' state for games
 
 registerTest new PassAndScoringTest
 
