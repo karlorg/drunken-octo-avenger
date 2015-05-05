@@ -13,6 +13,7 @@ go_rules = tesuji_charm.go_rules
 
 
 game_marking.initialize = ->
+  setInitialDead()
   setupScoring()
 
   $('table.goban td').click ->
@@ -20,6 +21,22 @@ game_marking.initialize = ->
     [row, col] = game_common.parseCoordClass $(this)
     markStonesAround col, row
     setupScoring()
+
+# setInitialDead
+
+setInitialDead = ->
+  "mark dead stones on the DOM according to the supplied value of the hidden
+  input field dead_stones"
+  try
+    dead_stones = JSON.parse($('input#dead_stones').val())
+  catch e
+    return
+  for [x, y] in dead_stones
+    $point = $pointAt x, y
+    color = game_common.colorFromDom $point
+    if (color != 'whitedead' and color != 'blackdead')
+      markStonesAround x, y
+  return
 
 # setupScoring and its helpers
 
@@ -35,7 +52,8 @@ setupScoring = ->
       when 'white' then 'whitescore'
       when 'neither' then 'empty'
       else throw new Error "invalid boundary color: '#{boundary}'"
-  return  # explicit return so Coffee won't accumulate results of the `for`
+  updateForm()
+  return
 
 getEmptyRegions = (state) ->
   regions = []
@@ -120,4 +138,18 @@ togglePoints = (points) ->
       else null
     if newColor
       game_common.setPointColor $point, newColor
+  return
+
+# updateForm
+
+updateForm = ->
+  "Update the hidden form that communicates our marks back to the server, based
+  on the current DOM state."
+  dead_stones = []
+  state = game_common.readBoardState()
+  for row, y in state
+    for point, x in row
+      if (point == 'blackdead') or (point == 'whitedead')
+        dead_stones.push [x, y]
+  $('input#dead_stones').val JSON.stringify(dead_stones)
   return

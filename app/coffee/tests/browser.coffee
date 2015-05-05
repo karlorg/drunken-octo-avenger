@@ -403,7 +403,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 18
+  numTests: 27
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -414,12 +414,16 @@ class PassAndScoringTest extends BrowserTest
                                           'wwwwb',
                                           'bbbbb']
 
+    # convenience function
+    goToGame = (email, thenFn=(->)) =>
+      createLoginSession email
+      casper.thenOpen serverUrl
+      casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
+
     # black opens the game and passes
     # (it should be black's turn since there are no actual moves in this game,
     # only setup stones)
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick @lastGameSelector true  # our turn
+    goToGame BLACK_EMAIL
     casper.thenClick '.pass_button'
     # for now we're not defining where the player should end up after passing.
     # navigate back to the game; it should not be our turn and there should no
@@ -429,17 +433,13 @@ class PassAndScoringTest extends BrowserTest
       test.assertDoesntExist '.pass_button:enabled'
 
     # white opens the game and passes
-    createLoginSession WHITE_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick @lastGameSelector true  # our turn
+    goToGame WHITE_EMAIL
     casper.thenClick '.pass_button'
 
     # black opens the game and is invited to mark dead stones
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
     originalImageSrc11 = null
     originalImageSrc22 = null
-    casper.thenClick (@lastGameSelector true), =>  # our turn
+    goToGame BLACK_EMAIL, =>
       test.assertExists 'table.goban'
       originalImageSrc11 = @imageSrc 1, 1
       originalImageSrc22 = @imageSrc 2, 2
@@ -483,18 +483,58 @@ class PassAndScoringTest extends BrowserTest
         whitescore: 0
     # Black confirms this pleasing result
     casper.thenClick '.confirm_button'
-#
-#    # White then logs in and opens the game
-#    createLoginSession WHITE_EMAIL
-#    casper.thenOpen serverUrl
-#    casper.thenClick (@lastGameSelector true), =>  # our turn
-#      # we are in marking mode and the white stones are already marked dead
-#      @assertGeneralPointCounts test,
-#        label: "White views Black's proposal"
-#        black: 12
-#        white: 0
-#        whitedead: 7
-#        blackscore: 19*19 - 12
+
+    # White then logs in and opens the game
+    goToGame WHITE_EMAIL, =>
+      # we are in marking mode and the white stones are already marked dead
+      @assertGeneralPointCounts test,
+        label: "White views Black's proposal"
+        black: 12
+        white: 0
+        whitedead: 7
+        blackscore: 19*19 - 12
+    # White prepares a counter-proposal, and sends it back to Black
+    casper.thenClick (pointSelector 1, 1)
+    casper.thenClick '.confirm_button'
+
+    # Black logs in and opens the game
+    goToGame BLACK_EMAIL, =>
+      # White's proposed dead stones show correctly
+      @assertGeneralPointCounts test,
+        label: "Black views White's counter-proposal"
+        black: 9
+        white: 7
+        blackdead: 3
+    # Black reverts the proposal and confirms
+    casper.thenClick (pointSelector 3, 1)
+    casper.thenClick '.confirm_button'
+
+    # seeing the reverted proposal, White resumes play
+    goToGame WHITE_EMAIL
+    casper.thenClick '.resume_button'
+
+    # White being the last to pass, Black has the turn
+    goToGame BLACK_EMAIL
+    casper.thenClick (pointSelector 2, 1)
+    casper.thenClick '.confirm_button'
+    # White is ready to give this up
+    goToGame WHITE_EMAIL
+    casper.thenClick '.pass_button'
+    goToGame BLACK_EMAIL
+    casper.thenClick '.pass_button'
+    goToGame WHITE_EMAIL, =>
+      # marked stones have been reverted since the game was resumed
+      @assertGeneralPointCounts test,
+        label: "White is first to mark stones after resumption"
+        black: 4 + 9
+        white: 7
+    casper.thenClick (pointSelector 3, 0)
+    casper.thenClick '.confirm_button'
+    goToGame BLACK_EMAIL
+    # finally, Black accepts White's proposal
+    casper.thenClick '.confirm_button'
+
+    # TODO: add 'finished' state for games
 
 registerTest new PassAndScoringTest
 

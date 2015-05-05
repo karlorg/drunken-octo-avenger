@@ -15,6 +15,7 @@ from flask import (
 )
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
+import itertools
 import jinja2
 import json
 import requests
@@ -58,16 +59,21 @@ def game(game_no):
         flash("Game #{} not found".format(game_no))
         return redirect('/')
     moves = game.moves
+    resumptions = game.resumptions
     passes = game.passes
     setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
     goban = get_goban_from_moves(moves, setup_stones)
-    is_passed_twice = check_two_passes(moves, passes)
+    is_passed_twice = check_two_passes(moves, passes, resumptions)
     if not is_passed_twice:
         form = PlayStoneForm(data={'game_no': game.id,
                                    'move_no': game.move_no})
     else:
-        form = MarkDeadForm(data={'game_no': game.id})
+        coords = list(map(lambda ds: [ds.column, ds.row], game.dead_stones))
+        dead_stones_json = json.dumps(coords)
+        form = MarkDeadForm(data={'game_no': game.id,
+                                  'move_no': game.move_no,
+                                  'dead_stones': dead_stones_json})
     return render_template_with_email(
             "game.html",
             form=form, goban=goban,
@@ -81,11 +87,19 @@ def playstone():
 def playpass():
     return play_general_move("pass")
 
+@app.route('/resumegame', methods=['POST'])
+def resumegame():
+    return play_general_move("resume")
+
 @app.route('/markdead', methods=['POST'])
 def markdead():
     return play_general_move("markdead")
 
 def play_general_move(which):
+    try:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
+        return redirect('/')
     arguments = request.form.to_dict()
     try:
         game_no = int(arguments['game_no'])
@@ -95,7 +109,7 @@ def play_general_move(which):
     game = Game.query.filter(Game.id == game_no).first()
 
     try:
-        validate_turn_and_record(which, logged_in_email(), game, arguments)
+        validate_turn_and_record(which, email, game, arguments)
     except go_rules.IllegalMoveException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
@@ -106,8 +120,8 @@ def validate_turn_and_record(which, player, game, arguments):
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
     move_no = get_and_validate_move_no(arguments, game)
-
     color = game.to_move_color()
+
     if which == "pass":
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif which == "move":
@@ -115,6 +129,20 @@ def validate_turn_and_record(which, player, game, arguments):
     elif which == "markdead":
         record_dead_stones_from_json(game, arguments)
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
+    elif which == "resume":
+        for dead_stone in game.dead_stones:
+            db.session.delete(dead_stone)
+        db.session.commit()
+        if game.first_to_pass() == color:
+            # the current player should be the next to play after resumption;
+            # insert a padding Pass entry to make it so
+            db.session.add(Pass(game_no=game.id, move_no=move_no, color=color))
+            move_no += 1
+            color = {Move.Color.black: Move.Color.white,
+                     Move.Color.white: Move.Color.black}[color]
+        turn_object = Resumption(game_no=game.id, move_no=move_no, color=color)
+    else:
+        raise ValueError("'{}' is not a valid value for `which`".format(which))
 
     db.session.add(turn_object)
     db.session.commit()
@@ -299,11 +327,13 @@ def clear_games_for_player_internal(email):
         delete_game_from_db(game)
 
 def delete_game_from_db(game):
-    moves = Move.query.filter(Move.game == game).all()
-    for move in moves:
+    for move in game.moves:
         db.session.delete(move)
-    setup_stones = SetupStone.query.filter(SetupStone.game == game).all()
-    for setup_stone in setup_stones:
+    for resumption in game.resumptions:
+        db.session.delete(resumption)
+    for pass_ in game.passes:
+        db.session.delete(pass_)
+    for setup_stone in game.setup_stones:
         db.session.delete(setup_stone)
     db.session.delete(game)
     db.session.commit()
@@ -351,12 +381,17 @@ def get_rules_board_from_db_objects(moves, setup_stones):
         for stone in filter(lambda s: s.before_move == n, setup_stones):
             board[stone.row, stone.column] = stone.color
 
+    moves_by_no = {m.move_no: m for m in moves}
+    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
     board = go_rules.Board()
-    for move in sorted(moves, key=lambda m: m.move_no):
-        place_stones_for_move(move.move_no)
-        board.update_with_move(move)
-    max_move_no = max([-1] + [m.move_no for m in moves])
-    place_stones_for_move(max_move_no + 1)
+    for move_no in range(max_move_no+2):
+        # max_move_no +1 to include setup stones on move 0 with no move played,
+        # +1 again since `range` excludes the stop value
+        place_stones_for_move(move_no)
+        try:
+            board.update_with_move(moves_by_no[move_no])
+        except KeyError:
+            pass
     return board
 
 def get_goban_data_from_rules_board(rules_board, with_scoring=False):
@@ -425,9 +460,11 @@ def get_player_games(player_email):
                                   Game.white == player_email)).all()
     return games
 
-def check_two_passes(moves, passes):
+def check_two_passes(moves, passes, resumptions):
     """True if last two actions are both passes, false otherwise."""
-    last_move = max([-1] + [m.move_no for m in moves])
+    move_no_iter = (m.move_no for m in moves)
+    resume_no_iter = (r.move_no for r in resumptions)
+    last_move = max(itertools.chain([-1], move_no_iter, resume_no_iter))
     last_pass = max([-1] + [p.move_no for p in passes])
     if last_move >= last_pass:
         return False
@@ -574,11 +611,13 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     moves = db.relationship('Move', backref='game')
     passes = db.relationship('Pass', backref='game')
+    resumptions = db.relationship('Resumption', backref='game')
+    dead_stones = db.relationship('DeadStone', backref='game')
     setup_stones = db.relationship('SetupStone', backref='game')
 
     @property
     def move_no(self):
-        return len(self.moves) + len(self.passes)
+        return len(self.moves) + len(self.passes) + len(self.resumptions)
 
     def to_move(self):
         move_no = self.move_no
@@ -587,6 +626,20 @@ class Game(db.Model):
     def to_move_color(self):
         move_no = self.move_no
         return (Move.Color.black, Move.Color.white)[move_no % 2]
+
+    def first_to_pass(self):
+        """In the latest string of passes, which color passed first?"""
+        passes = self.passes
+        assert passes, "no passes in this game"
+        last = None
+        for move_no in reversed(sorted(map(lambda p: p.move_no, passes))):
+            if last is None:
+                last = move_no
+            elif move_no == last - 1:
+                last = move_no
+            else:
+                break
+        return (Move.Color.black, Move.Color.white)[last % 2]
 
 class Move(db.Model):
     __tablename__ = 'moves'
@@ -625,6 +678,22 @@ class Pass(db.Model):
 
     def __repr__(self):
         return '<Pass {0}: {1}>'.format(
+                self.move_no, Move.Color(self.color).name)
+
+class Resumption(db.Model):
+    __tablename__ = 'resumptions'
+    id = db.Column(db.Integer, primary_key=True)
+    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
+    move_no = db.Column(db.Integer)
+    color = db.Column(db.Integer)
+
+    def __init__(self, game_no, move_no, color):
+        self.game_no = game_no
+        self.move_no = move_no
+        self.color = color
+
+    def __repr__(self):
+        return '<Resumption {0}: {1}>'.format(
                 self.move_no, Move.Color(self.color).name)
 
 class DeadStone(db.Model):
@@ -682,4 +751,5 @@ class PlayStoneForm(Form):
 
 class MarkDeadForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    move_no = HiddenInteger("move_no", validators=[DataRequired()])
     dead_stones = HiddenField("dead_stones", validators=[DataRequired()])

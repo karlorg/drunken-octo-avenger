@@ -185,10 +185,11 @@
 
   module('Game page with marking interface', {
     beforeEach: function() {
-      return $("#qunit-fixture").append($("<div/>", {
+      $("#qunit-fixture").append($("<div/>", {
         id: 'with_scoring',
         "class": 'with_scoring'
       }));
+      return $('input#dead_stones').val('');
     }
   });
 
@@ -201,24 +202,17 @@
   });
 
   test("mixed scoring board", function(assert) {
+    var i, len, ref, ref1, x, y;
     updateBoardChars(['.b.', 'bww', '.w.']);
     tesuji_charm.game_marking.initialize();
     assert.ok(isPointBlackScore($pointAt(0, 0)), "(0,0) black");
     assert.notOk(isPointWhiteScore($pointAt(0, 0)), "(0,0) white");
-    assert.notOk(isPointBlackScore($pointAt(0, 1)), "(0,1) black");
-    assert.notOk(isPointWhiteScore($pointAt(0, 1)), "(0,1) white");
-    assert.notOk(isPointBlackScore($pointAt(0, 2)), "(0,2) black");
-    assert.notOk(isPointWhiteScore($pointAt(0, 2)), "(0,2) white");
-    assert.notOk(isPointBlackScore($pointAt(1, 0)), "(1,0) black");
-    assert.notOk(isPointWhiteScore($pointAt(1, 0)), "(1,0) white");
-    assert.notOk(isPointBlackScore($pointAt(1, 1)), "(1,1) black");
-    assert.notOk(isPointWhiteScore($pointAt(1, 1)), "(1,1) white");
-    assert.notOk(isPointBlackScore($pointAt(1, 2)), "(1,2) black");
-    assert.notOk(isPointWhiteScore($pointAt(1, 2)), "(1,2) white");
-    assert.notOk(isPointBlackScore($pointAt(2, 0)), "(2,0) black");
-    assert.notOk(isPointWhiteScore($pointAt(2, 0)), "(2,0) white");
-    assert.notOk(isPointBlackScore($pointAt(2, 1)), "(2,1) black");
-    assert.notOk(isPointWhiteScore($pointAt(2, 1)), "(2,1) white");
+    ref = [[0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1]];
+    for (i = 0, len = ref.length; i < len; i++) {
+      ref1 = ref[i], x = ref1[0], y = ref1[1];
+      assert.notOk(isPointBlackScore($pointAt(x, y)), "(" + x + "," + y + ") black");
+      assert.notOk(isPointWhiteScore($pointAt(x, y)), "(" + x + "," + y + ") white");
+    }
     assert.notOk(isPointBlackScore($pointAt(2, 2)), "(2,2) black");
     return assert.ok(isPointWhiteScore($pointAt(2, 2)), "(2,2) white");
   });
@@ -247,6 +241,26 @@
     $pointAt(2, 2).click();
     assert.notOk(isPointBlackDead($pointAt(1, 1)), "first clicked stone (1, 1) is no longer dead");
     return assert.notOk(isPointBlackDead($pointAt(0, 0)), "neighboring black group (0, 0) is no longer dead");
+  });
+
+  test("initialization sets initial dead stones from form", function(assert) {
+    updateBoardChars(['b..', '.b.', 'bbw']);
+    $('input#dead_stones').val('[[0,0], [1,1], [0,2], [1,2]]');
+    tesuji_charm.game_marking.initialize();
+    assert.ok(isPointBlackDead($pointAt(0, 0)), "(0, 0) is dead");
+    assert.ok(isPointBlackDead($pointAt(1, 1)), "(1, 1) is dead");
+    assert.ok(isPointWhiteScore($pointAt(0, 1)), "(0, 1) scores for White");
+    return assert.ok(isPointWhiteScore($pointAt(1, 1)), "(1, 1) scores for White");
+  });
+
+  test("Form is updated with current dead stones", function(assert) {
+    var actual, expected;
+    updateBoardChars(['b.b', '.b.', 'bbw']);
+    tesuji_charm.game_marking.initialize();
+    $pointAt(1, 1).click();
+    expected = [[0, 0], [0, 2], [1, 1], [1, 2], [2, 0]];
+    actual = JSON.parse($('input#dead_stones').val()).sort();
+    return assert.deepEqual(actual, expected, "JSON in dead_stones correct");
   });
 
   module('Go rules');

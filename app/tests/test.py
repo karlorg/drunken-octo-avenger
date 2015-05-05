@@ -7,6 +7,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 from contextlib import contextmanager
 from itertools import chain
 from mock import ANY, Mock, patch
+import json
 import re
 import unittest
 import time
@@ -304,6 +305,13 @@ class TestStatusIntegrated(TestWithDb):
 
 class TestGameIntegrated(TestWithDb):
 
+    def pass_twice(self, game):
+        db.session.add(Pass(
+            game_no=game.id, move_no=0, color=Move.Color.black))
+        db.session.add(Pass(
+            game_no=game.id, move_no=1, color=Move.Color.white))
+        db.session.commit()
+
     def test_404_if_no_game_specified(self):
         response = self.test_client.get('/game')
         self.assert404(response)
@@ -326,21 +334,75 @@ class TestGameIntegrated(TestWithDb):
         assert pos_row0 < pos_row1
         assert pos_col0 < pos_col1
 
-    def test_after_two_passes_activates_scoring_interface(self):
-        game = self.add_game(['.b',
-                              'bb'])
-        main.db.session.add(Pass(
-            game_no=game.id, move_no=0, color=Move.Color.black))
-        main.db.session.add(Pass(
-            game_no=game.id, move_no=1, color=Move.Color.white))
+    def do_mocked_get(self, game):
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template() as mock_render:
                 test_client.get(url_for('game', game_no=game.id))
-                args, kwargs = mock_render.call_args
+                return mock_render.call_args
+
+    def test_after_two_passes_activates_scoring_interface(self):
+        game = self.add_game(['.b', 'bb'])
+        self.pass_twice(game)
+
+        args, kwargs = self.do_mocked_get(game)
+
         self.assertEqual(kwargs['with_scoring'], True)
-        # maybe an implementation detail, but should help clarify failures that
-        # would otherwise be hard to track down:
-        self.assertIsInstance(kwargs['form'], main.MarkDeadForm)
+
+    def test_sends_dead_stones_in_form(self):
+        game = self.add_game(['.b'])
+        self.pass_twice(game)
+        db.session.add(DeadStone(game_no=game.id, row=0, column=1))
+
+        args, kwargs = self.do_mocked_get(game)
+
+        expected = [[1, 0]]
+        actual = json.loads(kwargs['form'].data['dead_stones'])
+        self.assertEqual(expected, actual)
+
+
+class TestResumeGameIntegrated(TestWithDb):
+
+    def setUp(self):
+        super().setUp()
+        self.game = self.add_game()
+        db.session.add(Pass(
+            game_no=self.game.id, move_no=0, color=Move.Color.black))
+        db.session.add(Pass(
+            game_no=self.game.id, move_no=1, color=Move.Color.white))
+        db.session.commit()
+
+    # at the moment, the correct player to resume play is defined as the
+    # opponent of the last player to pass.
+
+    def test_correct_turn_simple(self):
+        """Sets turn to correct player in the most simple case."""
+        with self.set_email('black@black.com') as test_client:
+            test_client.post(url_for('resumegame'), data={
+                'game_no': self.game.id, 'move_no': 2})
+        self.assertEqual(self.game.to_move(), 'black@black.com')
+
+    def test_correct_turn_with_mark_stones(self):
+        """Sets turn to correct player when stones have been marked once.
+
+        That is, the opponent of the last player to pass has marked dead stones
+        and submitted that proposal, and the last player to pass wishes to
+        resume."""
+        # we use the actual mark stones view function for this, because its
+        # behaviour needs to match up with ours.
+        with self.set_email('black@black.com') as test_client:
+            test_client.post(url_for('markdead'), data={
+                'game_no': self.game.id, 'move_no': 2, 'dead_stones': '[]'})
+        with self.set_email('white@white.com') as test_client:
+            test_client.post(url_for('resumegame'), data={
+                'game_no': self.game.id, 'move_no': 3})
+        self.assertEqual(self.game.to_move(), 'black@black.com')
+
+    def test_removes_dead_stone_marks(self):
+        db.session.add(DeadStone(self.game.id, 1, 1))
+        with self.set_email('black@black.com') as test_client:
+            test_client.post(url_for('resumegame'), data={
+                'game_no': self.game.id, 'move_no': 2})
+        self.assertEqual(len(self.game.dead_stones), 0)
 
 
 class TestGetGobanFromMoves(unittest.TestCase):
@@ -415,6 +477,19 @@ class TestGetRulesBoardFromDbObjects(unittest.TestCase):
         board = main.get_rules_board_from_db_objects(moves, setup_stones)
         self.assertEqual(board[0, 1], go_rules.Color.black)
 
+    def test_copes_with_pass_then_move(self):
+        """Regression test: process setup stones on first move pass.
+
+        This would fail in tests which use a first turn setup stones &
+        pass, with further moves after the pass."""
+        game = Game()
+        moves = [Move(game.id, move_no=1, row=2, column=3,
+                      color=Move.Color.white)]
+        setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        self.assertEqual(board[0, 1], go_rules.Color.black)
+
+
 class TestGetGobanDataFromRulesBoard(unittest.TestCase):
 
     def test_simple(self):
@@ -461,6 +536,12 @@ class TestPlayStoneIntegrated(TestWithDb):
         self.assertEqual(move.row, 3)
         self.assertEqual(move.column, 15)
         self.assertEqual(move.color, Move.Color.black)
+
+    def test_redirects_to_home_if_not_logged_in(self):
+        game = self.add_game()
+        response = self.test_client.post(url_for('playpass'), data=dict(
+            game_no=game.id, move_no=0))
+        self.assert_redirects(response, '/')
 
     def test_rejects_new_move_off_turn(self):
         game = self.add_game()

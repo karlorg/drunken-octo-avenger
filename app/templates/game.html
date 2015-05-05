@@ -24,6 +24,11 @@
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
 </form>
+<form method="POST" action="{{ url_for('resumegame') }}">
+    {{ form.hidden_tag() }}
+    <button type="submit"
+            class="resume_button" name='resume_button'>Resume</button>
+</form>
 
 {% else %}
 <form method="POST" action="{{ url_for('playstone') }}">
