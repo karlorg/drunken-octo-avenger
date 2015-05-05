@@ -414,12 +414,16 @@ class PassAndScoringTest extends BrowserTest
                                           'wwwwb',
                                           'bbbbb']
 
+    # convenience function
+    goToGame = (email, thenFn=(=>)) =>
+      createLoginSession email
+      casper.thenOpen serverUrl
+      casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
+
     # black opens the game and passes
     # (it should be black's turn since there are no actual moves in this game,
     # only setup stones)
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick @lastGameSelector true  # our turn
+    goToGame BLACK_EMAIL
     casper.thenClick '.pass_button'
     # for now we're not defining where the player should end up after passing.
     # navigate back to the game; it should not be our turn and there should no
@@ -429,17 +433,13 @@ class PassAndScoringTest extends BrowserTest
       test.assertDoesntExist '.pass_button:enabled'
 
     # white opens the game and passes
-    createLoginSession WHITE_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick @lastGameSelector true  # our turn
+    goToGame WHITE_EMAIL
     casper.thenClick '.pass_button'
 
     # black opens the game and is invited to mark dead stones
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
     originalImageSrc11 = null
     originalImageSrc22 = null
-    casper.thenClick (@lastGameSelector true), =>  # our turn
+    goToGame BLACK_EMAIL, =>
       test.assertExists 'table.goban'
       originalImageSrc11 = @imageSrc 1, 1
       originalImageSrc22 = @imageSrc 2, 2
@@ -485,9 +485,7 @@ class PassAndScoringTest extends BrowserTest
     casper.thenClick '.confirm_button'
 
     # White then logs in and opens the game
-    createLoginSession WHITE_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick (@lastGameSelector true), =>  # our turn
+    goToGame WHITE_EMAIL, =>
       # we are in marking mode and the white stones are already marked dead
       @assertGeneralPointCounts test,
         label: "White views Black's proposal"
@@ -500,9 +498,7 @@ class PassAndScoringTest extends BrowserTest
     casper.thenClick '.confirm_button'
 
     # Black logs in and opens the game
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick (@lastGameSelector true), =>  # our turn
+    goToGame BLACK_EMAIL, =>
       # White's proposed dead stones show correctly
       @assertGeneralPointCounts test,
         label: "Black views White's counter-proposal"
@@ -514,16 +510,12 @@ class PassAndScoringTest extends BrowserTest
     casper.thenClick '.confirm_button'
 
     # White opens the game
-    createLoginSession WHITE_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick (@lastGameSelector true)
+    goToGame WHITE_EMAIL
     # seeing the reverted proposal, she resumes play
     casper.thenClick '.resume_button'
 
     # White being the last to pass, Black has the turn
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick (@lastGameSelector true), =>  # our turn
+    goToGame BLACK_EMAIL
 
 registerTest new PassAndScoringTest
 
