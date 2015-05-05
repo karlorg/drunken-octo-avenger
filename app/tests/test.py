@@ -402,6 +402,13 @@ class TestResumeGameIntegrated(TestWithDb):
                 'game_no': self.game.id, 'move_no': 3})
         self.assertEqual(self.game.to_move(), 'black@black.com')
 
+    def test_removes_dead_stone_marks(self):
+        db.session.add(DeadStone(self.game.id, 1, 1))
+        with self.set_email('black@black.com') as test_client:
+            test_client.post(url_for('resumegame'), data={
+                'game_no': self.game.id, 'move_no': 2})
+        self.assertEqual(len(self.game.dead_stones), 0)
+
 
 class TestGetGobanFromMoves(unittest.TestCase):
 

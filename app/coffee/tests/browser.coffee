@@ -403,7 +403,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 25
+  numTests: 27
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -509,15 +509,13 @@ class PassAndScoringTest extends BrowserTest
     casper.thenClick (pointSelector 3, 1)
     casper.thenClick '.confirm_button'
 
-    # White opens the game
+    # seeing the reverted proposal, White resumes play
     goToGame WHITE_EMAIL
-    # seeing the reverted proposal, she resumes play
     casper.thenClick '.resume_button'
 
     # White being the last to pass, Black has the turn
     goToGame BLACK_EMAIL
-    casper.thenClick (pointSelector 2, 1), ->
-      casper.capture '../scrn.png'
+    casper.thenClick (pointSelector 2, 1)
     casper.thenClick '.confirm_button'
     # White is ready to give this up
     goToGame WHITE_EMAIL

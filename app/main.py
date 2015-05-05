@@ -120,8 +120,8 @@ def validate_turn_and_record(which, player, game, arguments):
     if game.to_move() != player:
         raise go_rules.IllegalMoveException("It's not your turn!")
     move_no = get_and_validate_move_no(arguments, game)
-
     color = game.to_move_color()
+
     if which == "pass":
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif which == "move":
@@ -130,6 +130,9 @@ def validate_turn_and_record(which, player, game, arguments):
         record_dead_stones_from_json(game, arguments)
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif which == "resume":
+        for dead_stone in game.dead_stones:
+            db.session.delete(dead_stone)
+        db.session.commit()
         if game.first_to_pass() == color:
             # the current player should be the next to play after resumption;
             # insert a padding Pass entry to make it so
