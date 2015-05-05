@@ -475,6 +475,19 @@ class TestGetRulesBoardFromDbObjects(unittest.TestCase):
         board = main.get_rules_board_from_db_objects(moves, setup_stones)
         self.assertEqual(board[0, 1], go_rules.Color.black)
 
+    def test_copes_with_pass_then_move(self):
+        """Regression test: process setup stones on first move pass.
+
+        This would fail in tests which use a first turn setup stones &
+        pass, with further moves after the pass."""
+        game = Game()
+        moves = [Move(game.id, move_no=1, row=2, column=3,
+                      color=Move.Color.white)]
+        setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        self.assertEqual(board[0, 1], go_rules.Color.black)
+
+
 class TestGetGobanDataFromRulesBoard(unittest.TestCase):
 
     def test_simple(self):

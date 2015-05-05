@@ -378,12 +378,17 @@ def get_rules_board_from_db_objects(moves, setup_stones):
         for stone in filter(lambda s: s.before_move == n, setup_stones):
             board[stone.row, stone.column] = stone.color
 
+    moves_by_no = {m.move_no: m for m in moves}
+    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
     board = go_rules.Board()
-    for move in sorted(moves, key=lambda m: m.move_no):
-        place_stones_for_move(move.move_no)
-        board.update_with_move(move)
-    max_move_no = max([-1] + [m.move_no for m in moves])
-    place_stones_for_move(max_move_no + 1)
+    for move_no in range(max_move_no+2):
+        # max_move_no +1 to include setup stones on move 0 with no move played,
+        # +1 again since `range` excludes the stop value
+        place_stones_for_move(move_no)
+        try:
+            board.update_with_move(moves_by_no[move_no])
+        except KeyError:
+            pass
     return board
 
 def get_goban_data_from_rules_board(rules_board, with_scoring=False):
