@@ -230,18 +230,21 @@ class TestStatusIntegrated(TestWithDb):
         game3 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
         game4 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
         game5 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        game6 = Game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
+        game6.winner = self.LOGGED_IN_EMAIL  # this game is over
         main.db.session.add(game1)
         main.db.session.add(game2)
         main.db.session.add(game3)
         main.db.session.add(game4)
         main.db.session.add(game5)
+        main.db.session.add(game6)
         main.db.session.commit()
         main.db.session.add(Move(
             game_no=game4.id, move_no=0,
             row=9, column=9, color=Move.Color.black))
         main.db.session.add(Pass(
             game_no=game5.id, move_no=0, color=Move.Color.black))
-        return (game1, game2, game3, game4, game5,)
+        return (game1, game2, game3, game4, game5, game6,)
 
     def test_anonymous_users_redirected_to_front(self):
         response = self.test_client.get(url_for('status'))
@@ -256,7 +259,7 @@ class TestStatusIntegrated(TestWithDb):
                 4)
 
     def test_sends_games_to_correct_template_params(self):
-        game1, game2, game3, game4, game5 = self.setup_test_games()
+        game1, game2, game3, game4, game5, game6 = self.setup_test_games()
         with self.set_email() as test_client:
             with self.patch_render_template() as mock_render:
 
@@ -272,12 +275,14 @@ class TestStatusIntegrated(TestWithDb):
         self.assertNotIn(game3, your_turn_games)
         self.assertIn(game4, your_turn_games)
         self.assertIn(game5, your_turn_games)
+        self.assertNotIn(game6, your_turn_games)
 
         self.assertNotIn(game1, not_your_turn_games)
         self.assertNotIn(game2, not_your_turn_games)
         self.assertIn(game3, not_your_turn_games)
         self.assertNotIn(game4, not_your_turn_games)
         self.assertNotIn(game5, not_your_turn_games)
+        self.assertNotIn(game6, not_your_turn_games)
 
     def test_games_come_out_sorted(self):
         """Regression test: going via dictionaries can break sorting"""
@@ -403,6 +408,17 @@ class TestResumeGameIntegrated(TestWithDb):
             test_client.post(url_for('resumegame'), data={
                 'game_no': self.game.id, 'move_no': 2})
         self.assertEqual(len(self.game.dead_stones), 0)
+
+
+class TestResignIntegrated(TestWithDb):
+
+    def test_sets_winner(self):
+        game = self.add_game()
+        self.assertEqual(game.winner, None, "winner should be initially unset")
+        with self.set_email(game.black) as test_client:
+            test_client.post(url_for('resign'), data=dict(
+                game_no=game.id, move_no=0, color=Move.Color.black))
+        self.assertEqual(game.winner, game.white)
 
 
 class TestGetGobanFromMoves(unittest.TestCase):

@@ -31,19 +31,23 @@
 </form>
 
 {% else %}
+{% if on_turn %}
 <form method="POST" action="{{ url_for('playstone') }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
 </form>
-{% if on_turn %}
 <form method="POST" action="{{ url_for('playpass') }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="pass_button" name='pass_button'>Pass</button>
 </form>
-{% endif %}
-
+<form method="POST" action="{{ url_for('resign') }}">
+    {{ form.hidden_tag() }}
+    <button type="submit"
+            class="resign_button" name='resign_button'>Resign</button>
+</form>
+{% endif %}  <!-- end on_turn -->
 {% endif %}  <!-- end not with_scoring -->
 
 {% endblock %}

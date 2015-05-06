@@ -539,6 +539,31 @@ class PassAndScoringTest extends BrowserTest
 registerTest new PassAndScoringTest
 
 
+class ResignTest extends BrowserTest
+  names: ['ResignTest', 'resign']
+  description: "resignation"
+  numTests: 2
+  testBody: (test) =>
+    BLACK_EMAIL = "quitter@nomo.re"
+    WHITE_EMAIL = "recipient@easyw.in"
+    clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
+    createGame BLACK_EMAIL, WHITE_EMAIL
+
+    # Black opens the game and, tormented by the blank slate, resigns
+    createLoginSession BLACK_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector true)  # true = our turn
+    casper.thenClick '.resign_button'
+    # the game is no longer visible on Black's status page
+    casper.thenOpen serverUrl, =>
+      test.assertDoesntExist (@lastGameSelector true),
+        "Black no longer sees the resigned game on his status page"
+      test.assertDoesntExist (@lastGameSelector false),
+        "it's not in the off-turn games list either"
+
+registerTest new ResignTest
+
+
 # helper functions
 
 clearGamesForPlayer = (email) ->

@@ -19,7 +19,7 @@ import itertools
 import jinja2
 import json
 import requests
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from wtforms import HiddenField, IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
@@ -95,6 +95,10 @@ def resumegame():
 def markdead():
     return play_general_move("markdead")
 
+@app.route('/resign', methods=['POST'])
+def resign():
+    return play_general_move("resign")
+
 def play_general_move(which):
     try:
         email = logged_in_email()
@@ -141,6 +145,11 @@ def validate_turn_and_record(which, player, game, arguments):
             color = {Move.Color.black: Move.Color.white,
                      Move.Color.white: Move.Color.black}[color]
         turn_object = Resumption(game_no=game.id, move_no=move_no, color=color)
+    elif which == "resign":
+        game.winner = {Move.Color.black: game.white,
+                       Move.Color.white: game.black}[color]
+        db.session.commit()
+        return
     else:
         raise ValueError("'{}' is not a valid value for `which`".format(which))
 
@@ -454,10 +463,15 @@ def get_status_lists(player_email):
 def get_player_games(player_email):
     """Returns the list of games in which `player_email` is involved.
 
+    Only includes running games, ie. not finished.
+
     Accesses database.
     """
-    games = Game.query.filter(or_(Game.black == player_email,
-                                  Game.white == player_email)).all()
+    unfinished_predicate = Game.winner == None  # noqa
+    # ORM doesn't accept 'is None', linter doesn't like '== None'
+    games = Game.query.filter(and_(unfinished_predicate,
+                                   or_(Game.black == player_email,
+                                       Game.white == player_email))).all()
     return games
 
 def check_two_passes(moves, passes, resumptions):
@@ -614,6 +628,7 @@ class Game(db.Model):
     resumptions = db.relationship('Resumption', backref='game')
     dead_stones = db.relationship('DeadStone', backref='game')
     setup_stones = db.relationship('SetupStone', backref='game')
+    winner = db.Column(db.String(length=254), nullable=True)
 
     @property
     def move_no(self):
