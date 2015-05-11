@@ -123,6 +123,7 @@ class BrowserTest
         'noscore': noScore
       return counts
     return counts
+
   assertGeneralPointCounts: (test, expected) =>
     label = expected.label ? "unlabeled"
     delete expected.label
@@ -130,6 +131,7 @@ class BrowserTest
     for own type, count of expected
       test.assertEqual counts[type], count,
           "in #{label}: #{type} should be #{count}, was #{counts[type]}"
+
   assertStonePointCounts: (test, nostone, black, white) =>
     counts = @countStonesAndPoints()
     @assertGeneralPointCounts test,
