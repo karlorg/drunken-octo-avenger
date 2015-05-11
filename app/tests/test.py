@@ -704,6 +704,28 @@ class TestMarkDeadIntegrated(TestWithDb):
         self.assertNotIn((1, 0), coords)
         self.assertIn((3, 3), coords)
 
+    def test_two_identical_proposals_end_game(self):
+        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+        self.do_post(dead_stones_json)
+        self.assertIsNone(self.game.winner,
+                          "game is not over after one submission")
+
+        self.do_post(dead_stones_json)
+
+        self.assertIsNotNone(self.game.winner,
+                             "game is over after second identical submission")
+
+    def test_two_different_proposals_do_not_end_game(self):
+        first_dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+        second_dead_stones_json = ("[[3,0],[3,1],[3,2],[3,3],"
+                                   " [2,3],[1,3],[0,3]]")
+
+        self.do_post(first_dead_stones_json)
+        self.do_post(second_dead_stones_json)
+
+        self.assertIsNone(self.game.winner,
+                          "game is not over after second different submission")
+
     def test_bad_move_no_does_nothing(self):
         dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
         self.do_post(dead_stones_json, move_no=42)

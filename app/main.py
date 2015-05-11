@@ -131,7 +131,7 @@ def validate_turn_and_record(which, player, game, arguments):
     elif which == "move":
         turn_object = create_and_validate_move(move_no, color, game, arguments)
     elif which == "markdead":
-        record_dead_stones_from_json(game, arguments)
+        record_dead_stones_from_json_and_check_end(game, arguments)
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif which == "resume":
         for dead_stone in game.dead_stones:
@@ -184,7 +184,8 @@ def create_and_validate_move(move_no, color, game, arguments):
     # But if no exception is raised then we return the move
     return move
 
-def record_dead_stones_from_json(game, arguments):
+def record_dead_stones_from_json_and_check_end(game, arguments):
+    """Get dead stones list from args; check game over; record both."""
     try:
         coords_as_lists = json.loads(arguments['dead_stones'])
         dead_stones = []
@@ -193,11 +194,29 @@ def record_dead_stones_from_json(game, arguments):
     except ValueError as e:
         raise go_rules.IllegalMoveException(
                 "Invalid JSON: {}".format(e.args[0]))
-    DeadStone.query.filter(DeadStone.game_no == game.id).delete()
-    db.session.commit()
-    for dead_stone in dead_stones:
-        db.session.add(dead_stone)
-    db.session.commit()
+    if dead_stones_matches_db(game, dead_stones):
+        game.winner = True
+    else:
+        DeadStone.query.filter(DeadStone.game_no == game.id).delete()
+        db.session.commit()
+        for dead_stone in dead_stones:
+            db.session.add(dead_stone)
+        db.session.commit()
+
+def dead_stones_matches_db(game, dead_stones):
+    """True if dead stones list matches what's in the db for given game."""
+    db_stones = DeadStone.query.filter(DeadStone.game_no == game.id).all()
+    if len(db_stones) != len(dead_stones):
+        return False
+    key_func = lambda ds: (ds.row, ds.column)
+    dead_stones_sorted = sorted(dead_stones, key=key_func)
+    db_stones_sorted = sorted(db_stones, key=key_func)
+    for db_stone, new_stone in zip(db_stones_sorted, dead_stones_sorted):
+        if db_stone.row != new_stone.row:
+            return False
+        if db_stone.column != new_stone.column:
+            return False
+    return True
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():

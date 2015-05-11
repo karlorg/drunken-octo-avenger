@@ -403,7 +403,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 27
+  numTests: 29
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -534,7 +534,12 @@ class PassAndScoringTest extends BrowserTest
     # finally, Black accepts White's proposal
     casper.thenClick '.confirm_button'
 
-    # TODO: add 'finished' state for games
+    # game is now finished
+    casper.thenOpen serverUrl, =>
+      test.assertDoesntExist (@lastGameSelector true)
+      test.assertDoesntExist (@lastGameSelector false)
+
+    # TODO: add ability to view finished games, verify scores, winner etc.
 
 registerTest new PassAndScoringTest
 

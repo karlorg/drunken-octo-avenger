@@ -549,7 +549,7 @@
 
     PassAndScoringTest.prototype.description = "pass moves and scoring system";
 
-    PassAndScoringTest.prototype.numTests = 27;
+    PassAndScoringTest.prototype.numTests = 29;
 
     PassAndScoringTest.prototype.testBody = function(test) {
       var BLACK_EMAIL, WHITE_EMAIL, goToGame, i, len, originalImageSrc11, originalImageSrc22, p, ref;
@@ -678,7 +678,13 @@
       casper.thenClick(pointSelector(3, 0));
       casper.thenClick('.confirm_button');
       goToGame(BLACK_EMAIL);
-      return casper.thenClick('.confirm_button');
+      casper.thenClick('.confirm_button');
+      return casper.thenOpen(serverUrl, (function(_this) {
+        return function() {
+          test.assertDoesntExist(_this.lastGameSelector(true));
+          return test.assertDoesntExist(_this.lastGameSelector(false));
+        };
+      })(this));
     };
 
     return PassAndScoringTest;
