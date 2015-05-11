@@ -151,7 +151,7 @@ def validate_turn_and_record(which, player, game, arguments):
         db.session.commit()
         return
     else:
-        raise ValueError("'{}' is not a valid value for `which`".format(which))
+        assert False, "'{}' is not a valid value for `which`".format(which)
 
     db.session.add(turn_object)
     db.session.commit()
@@ -458,9 +458,8 @@ def get_goban_data_from_rules_board(rules_board, with_scoring=False):
         classes = classes_template.format(row=str(row),
                                           col=str(column),
                                           color_class=color_classes[color])
-        if with_scoring:
-            classes += ' blackscore'
         return dict(img=color_images[color], classes=classes)
+
     goban = [[create_goban_point(j, i, rules_board[j, i])
               for i in range(19)]
              for j in range(19)]

@@ -581,6 +581,17 @@ class TestPlayStoneIntegrated(TestWithDb):
         moves = Move.query.all()
         assert len(moves) == 0
 
+    def test_rejects_invalid_row_type(self):
+        game = self.add_game()
+        assert Move.query.all() == []
+        with self.set_email('black@black.com') as test_client:
+            with self.assert_flashes('invalid'):
+                test_client.post('/playstone', data=dict(
+                    game_no=game.id, move_no=0, row="sixteen", column=15
+                ), follow_redirects=True)
+        moves = Move.query.all()
+        assert len(moves) == 0
+
     def test_handles_missing_game_no(self):
         with self.set_email('white@white.com') as test_client:
             with self.patch_render_template():
@@ -717,8 +728,7 @@ class TestMarkDeadIntegrated(TestWithDb):
 
     def test_two_different_proposals_do_not_end_game(self):
         first_dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-        second_dead_stones_json = ("[[3,0],[3,1],[3,2],[3,3],"
-                                   " [2,3],[1,3],[0,3]]")
+        second_dead_stones_json = "[[1,0],[1,1],[1,2],[0,3]]"
 
         self.do_post(first_dead_stones_json)
         self.do_post(second_dead_stones_json)
