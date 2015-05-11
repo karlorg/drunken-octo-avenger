@@ -87,9 +87,6 @@ class BrowserTest
     casper.evaluate ((x, y) -> $(".row-#{y}.col-#{x} img").attr('src')),
       x, y
 
-  assertEmptyBoard: (test) =>
-    @assertStonePointCounts test, 19*19, 0, 0
-
   assertPointIsBlack: (test, x, y) ->
     test.assertExists pointSelector(x,y) + ".blackstone",
                       'There is a black stone at the expected point'
@@ -103,34 +100,32 @@ class BrowserTest
                       'The specified point is empty as expected'
 
   countStonesAndPoints: ->
-    counts = casper.evaluate () ->
-      emptyStones = $('.goban .nostone').length
-      blackStones = $('.goban .blackstone').length
-      whiteStones = $('.goban .whitestone').length
-      blackScore = $('.goban .blackscore').length
-      whiteScore = $('.goban .whitescore').length
-      blackDead = $('.goban .blackdead').length
-      whiteDead = $('.goban .whitedead').length
-      noScore = $('.goban td').length - blackScore - whiteScore
-      counts =
-        'empty': emptyStones
-        'black': blackStones
-        'white': whiteStones
-        'blackscore': blackScore
-        'whitescore': whiteScore
-        'blackdead': blackDead
-        'whitedead': whiteDead
-        'noscore': noScore
-      return counts
-    return counts
+    casper.evaluate ->
+      'empty':      $('.goban .nostone').length
+      'black':      $('.goban .blackstone').length
+      'white':      $('.goban .whitestone').length
+      'blackscore': $('.goban .blackscore').length
+      'whitescore': $('.goban .whitescore').length
+      'blackdead':  $('.goban .blackdead').length
+      'whitedead':  $('.goban .whitedead').length
+      'noscore':    $('.goban td:not(.blackscore):not(.whitescore)').length
 
   assertGeneralPointCounts: (test, expected) =>
+    "Run multiple assertions on the number of points with certain contents.
+
+    expected should be an object mapping the names of point types from
+    countStonesAndPoints above to expected counts.  You only need to supply the
+    counts you're interested in; no assertions will be run for missing counts.
+
+    The name 'label' in expected is special, providing a string to show in the
+    test output against these results, for readability."
     label = expected.label ? "unlabeled"
     delete expected.label
     counts = @countStonesAndPoints()
     for own type, count of expected
       test.assertEqual counts[type], count,
           "in #{label}: #{type} should be #{count}, was #{counts[type]}"
+    return
 
   assertStonePointCounts: (test, nostone, black, white) =>
     counts = @countStonesAndPoints()
@@ -138,6 +133,9 @@ class BrowserTest
       'empty': nostone
       'black': black
       'white': white
+
+  assertEmptyBoard: (test) =>
+    @assertStonePointCounts test, 19*19, 0, 0
 
 
 class ClientSideJsTest extends BrowserTest
@@ -152,8 +150,11 @@ class ClientSideJsTest extends BrowserTest
         if casper.exists '.qunit-pass'
           test.pass 'Qunit tests passed'
         else if casper.exists '.qunit-fail'
-          test.fail 'Qunit tests failed'
-      timeoutFunc = -> test.fail "Couldn't detect pass or fail for Qunit tests"
+          test.fail "Qunit tests failed.  " +
+                    "Load the test page in your browser for details."
+      timeoutFunc = ->
+        test.fail "Couldn't detect pass or fail for Qunit tests.  " +
+                  "Load the test page in your browser for details."
       casper.waitFor predicate, foundFunc, timeoutFunc, 5000
 
 registerTest new ClientSideJsTest

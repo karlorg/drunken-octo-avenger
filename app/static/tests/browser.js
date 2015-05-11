@@ -55,9 +55,9 @@
 
   BrowserTest = (function() {
     function BrowserTest() {
+      this.assertEmptyBoard = bind(this.assertEmptyBoard, this);
       this.assertStonePointCounts = bind(this.assertStonePointCounts, this);
       this.assertGeneralPointCounts = bind(this.assertGeneralPointCounts, this);
-      this.assertEmptyBoard = bind(this.assertEmptyBoard, this);
       this.getLastGameLink = bind(this.getLastGameLink, this);
       this.run = bind(this.run, this);
     }
@@ -123,10 +123,6 @@
       }), x, y);
     };
 
-    BrowserTest.prototype.assertEmptyBoard = function(test) {
-      return this.assertStonePointCounts(test, 19 * 19, 0, 0);
-    };
-
     BrowserTest.prototype.assertPointIsBlack = function(test, x, y) {
       return test.assertExists(pointSelector(x, y) + ".blackstone", 'There is a black stone at the expected point');
     };
@@ -140,44 +136,31 @@
     };
 
     BrowserTest.prototype.countStonesAndPoints = function() {
-      var counts;
-      counts = casper.evaluate(function() {
-        var blackDead, blackScore, blackStones, emptyStones, noScore, whiteDead, whiteScore, whiteStones;
-        emptyStones = $('.goban .nostone').length;
-        blackStones = $('.goban .blackstone').length;
-        whiteStones = $('.goban .whitestone').length;
-        blackScore = $('.goban .blackscore').length;
-        whiteScore = $('.goban .whitescore').length;
-        blackDead = $('.goban .blackdead').length;
-        whiteDead = $('.goban .whitedead').length;
-        noScore = $('.goban td').length - blackScore - whiteScore;
-        counts = {
-          'empty': emptyStones,
-          'black': blackStones,
-          'white': whiteStones,
-          'blackscore': blackScore,
-          'whitescore': whiteScore,
-          'blackdead': blackDead,
-          'whitedead': whiteDead,
-          'noscore': noScore
+      return casper.evaluate(function() {
+        return {
+          'empty': $('.goban .nostone').length,
+          'black': $('.goban .blackstone').length,
+          'white': $('.goban .whitestone').length,
+          'blackscore': $('.goban .blackscore').length,
+          'whitescore': $('.goban .whitescore').length,
+          'blackdead': $('.goban .blackdead').length,
+          'whitedead': $('.goban .whitedead').length,
+          'noscore': $('.goban td:not(.blackscore):not(.whitescore)').length
         };
-        return counts;
       });
-      return counts;
     };
 
     BrowserTest.prototype.assertGeneralPointCounts = function(test, expected) {
-      var count, counts, label, ref, results, type;
+      "Run multiple assertions on the number of points with certain contents. expected should be an object mapping the names of point types from countStonesAndPoints above to expected counts.  You only need to supply the counts you're interested in; no assertions will be run for missing counts. The name 'label' in expected is special, providing a string to show in the test output against these results, for readability.";
+      var count, counts, label, ref, type;
       label = (ref = expected.label) != null ? ref : "unlabeled";
       delete expected.label;
       counts = this.countStonesAndPoints();
-      results = [];
       for (type in expected) {
         if (!hasProp.call(expected, type)) continue;
         count = expected[type];
-        results.push(test.assertEqual(counts[type], count, "in " + label + ": " + type + " should be " + count + ", was " + counts[type]));
+        test.assertEqual(counts[type], count, "in " + label + ": " + type + " should be " + count + ", was " + counts[type]);
       }
-      return results;
     };
 
     BrowserTest.prototype.assertStonePointCounts = function(test, nostone, black, white) {
@@ -188,6 +171,10 @@
         'black': black,
         'white': white
       });
+    };
+
+    BrowserTest.prototype.assertEmptyBoard = function(test) {
+      return this.assertStonePointCounts(test, 19 * 19, 0, 0);
     };
 
     return BrowserTest;
@@ -217,11 +204,11 @@
           if (casper.exists('.qunit-pass')) {
             return test.pass('Qunit tests passed');
           } else if (casper.exists('.qunit-fail')) {
-            return test.fail('Qunit tests failed');
+            return test.fail("Qunit tests failed.  " + "Load the test page in your browser for details.");
           }
         };
         timeoutFunc = function() {
-          return test.fail("Couldn't detect pass or fail for Qunit tests");
+          return test.fail("Couldn't detect pass or fail for Qunit tests.  " + "Load the test page in your browser for details.");
         };
         return casper.waitFor(predicate, foundFunc, timeoutFunc, 5000);
       });
