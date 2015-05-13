@@ -3,26 +3,19 @@
 $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 imageSrc = ($point) -> $point.find('img').attr('src')
 
-isPointEmpty = ($point) ->
-  (imageSrc($point).indexOf('e.gif') > -1) and ($point.hasClass('nostone'))
-isPointBlack = ($point) ->
-  (imageSrc($point).indexOf('b.gif') > -1) and ($point.hasClass('blackstone'))
-isPointWhite = ($point) ->
-  (imageSrc($point).indexOf('w.gif') > -1) and ($point.hasClass('whitestone'))
+isPointEmpty = ($point) -> $point.hasClass('nostone')
+isPointBlack = ($point) -> $point.hasClass('blackstone')
+isPointWhite = ($point) -> $point.hasClass('whitestone')
 isPointBlackScore = ($point) ->
-  (imageSrc($point).indexOf('bp.gif') > -1) and
-    ($point.hasClass('blackscore')) and
-    (not $point.hasClass('whitescore'))
+  ($point.hasClass('blackscore')) and
+  (not $point.hasClass('whitescore'))
 isPointWhiteScore = ($point) ->
-  (imageSrc($point).indexOf('wp.gif') > -1) and
-    ($point.hasClass('whitescore')) and
-    (not $point.hasClass('blackscore'))
+  ($point.hasClass('whitescore')) and
+  (not $point.hasClass('blackscore'))
 isPointBlackDead = ($point) ->
-  (imageSrc($point).indexOf('bdwp.gif') > -1) and
-    ($point.hasClass('blackdead'))
+  ($point.hasClass('blackdead'))
 isPointWhiteDead = ($point) ->
-  (imageSrc($point).indexOf('wdbp.gif') > -1) and
-    ($point.hasClass('whitedead'))
+  ($point.hasClass('whitedead'))
 
 
 # ============================================================================
@@ -87,8 +80,19 @@ updateBoardChars = (charArray) ->
 # ============================================================================
 
 
-module "common game page functions"
+module "common game page functions",
+  setup: ->
+    $('input#data').val '()'
+    tesuji_charm.game_common.initialize()
 
+
+test "initialize creates board from SGF data", (assert) ->
+  $('input#data').val '(;B[ca];W[bc])'
+  tesuji_charm.game_common.initialize()
+  assert.equal $('.goban').length, 1, "exactly one goban element exists"
+  assert.ok isPointEmpty($pointAt 0, 0), "(0,0) empty"
+  assert.ok isPointBlack($pointAt 2, 0), "(2,0) black"
+  assert.ok isPointWhite($pointAt 1, 2), "(1,2) white"
 
 test "helper function readBoardState", (assert) ->
   updateBoardChars [

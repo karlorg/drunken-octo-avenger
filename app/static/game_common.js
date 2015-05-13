@@ -103,12 +103,26 @@
 
   game_common.updateBoard = updateBoard = function(state) {
     "set the images and classes of the DOM board to match the given state";
-    var col, color, i, j, len, len1, row, rowArray;
-    for (row = i = 0, len = state.length; i < len; row = ++i) {
+    var col, color, k, l, len, len1, row, rowArray;
+    for (row = k = 0, len = state.length; k < len; row = ++k) {
       rowArray = state[row];
-      for (col = j = 0, len1 = rowArray.length; j < len1; col = ++j) {
+      for (col = l = 0, len1 = rowArray.length; l < len1; col = ++l) {
         color = rowArray[col];
         setPointColor($pointAt(col, row), color);
+      }
+    }
+  };
+
+  game_common.initialize = function() {
+    var $td, $tr, i, j, k, l;
+    $('.goban').remove();
+    $('#content').append('<table class="goban"></table>');
+    for (j = k = 0; k <= 18; j = ++k) {
+      $tr = $('<tr/>');
+      $('.goban').append($tr);
+      for (i = l = 0; l <= 18; i = ++l) {
+        $td = $("<td class='row-" + j + " col-" + i + " nostone' />");
+        $tr.append($td);
       }
     }
   };

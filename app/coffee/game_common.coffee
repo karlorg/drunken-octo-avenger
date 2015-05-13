@@ -68,3 +68,14 @@ game_common.updateBoard = updateBoard = (state) ->
     for color, col in rowArray
       setPointColor ($pointAt col, row), color
   return
+
+game_common.initialize = ->
+  $('.goban').remove()
+  $('#content').append '<table class="goban"></table>'
+  for j in [0..18]
+    $tr = $('<tr/>')
+    $('.goban').append $tr
+    for i in [0..18]
+      $td = $("<td class='row-#{j} col-#{i} nostone' />")
+      $tr.append $td
+  return

@@ -11,31 +11,31 @@
   };
 
   isPointEmpty = function($point) {
-    return (imageSrc($point).indexOf('e.gif') > -1) && ($point.hasClass('nostone'));
+    return $point.hasClass('nostone');
   };
 
   isPointBlack = function($point) {
-    return (imageSrc($point).indexOf('b.gif') > -1) && ($point.hasClass('blackstone'));
+    return $point.hasClass('blackstone');
   };
 
   isPointWhite = function($point) {
-    return (imageSrc($point).indexOf('w.gif') > -1) && ($point.hasClass('whitestone'));
+    return $point.hasClass('whitestone');
   };
 
   isPointBlackScore = function($point) {
-    return (imageSrc($point).indexOf('bp.gif') > -1) && ($point.hasClass('blackscore')) && (!$point.hasClass('whitescore'));
+    return ($point.hasClass('blackscore')) && (!$point.hasClass('whitescore'));
   };
 
   isPointWhiteScore = function($point) {
-    return (imageSrc($point).indexOf('wp.gif') > -1) && ($point.hasClass('whitescore')) && (!$point.hasClass('blackscore'));
+    return ($point.hasClass('whitescore')) && (!$point.hasClass('blackscore'));
   };
 
   isPointBlackDead = function($point) {
-    return (imageSrc($point).indexOf('bdwp.gif') > -1) && ($point.hasClass('blackdead'));
+    return $point.hasClass('blackdead');
   };
 
   isPointWhiteDead = function($point) {
-    return (imageSrc($point).indexOf('wdbp.gif') > -1) && ($point.hasClass('whitedead'));
+    return $point.hasClass('whitedead');
   };
 
   module('Persona');
@@ -102,7 +102,21 @@
     }
   };
 
-  module("common game page functions");
+  module("common game page functions", {
+    setup: function() {
+      $('input#data').val('()');
+      return tesuji_charm.game_common.initialize();
+    }
+  });
+
+  test("initialize creates board from SGF data", function(assert) {
+    $('input#data').val('(;B[ca];W[bc])');
+    tesuji_charm.game_common.initialize();
+    assert.equal($('.goban').length, 1, "exactly one goban element exists");
+    assert.ok(isPointEmpty($pointAt(7, 7)), "(0,0) empty");
+    assert.ok(isPointBlack($pointAt(2, 0)), "(2,0) black");
+    return assert.ok(isPointWhite($pointAt(1, 2)), "(1,2) white");
+  });
 
   test("helper function readBoardState", function(assert) {
     var expected;

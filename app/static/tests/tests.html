@@ -12,28 +12,9 @@
     <a id="persona_login" href="#">Login link</a>
     <a id="logout" href="#">Logout link</a>
 
-    <table class="goban">
-        <tr>
-            <td class="row-0 col-0 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-0 col-1 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-0 col-2 nostone"><img src="/static/images/goban/e.gif" /></td>
-        </tr>
-        <tr>
-            <td class="row-1 col-0 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-1 col-1 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-1 col-2 nostone"><img src="/static/images/goban/e.gif" /></td>
-        </tr>
-        <tr>
-            <td class="row-2 col-0 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-2 col-1 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-2 col-2 nostone"><img src="/static/images/goban/e.gif" /></td>
-        </tr>
-    </table>
+    <div id="content"></div>
     <form method="POST" action="/playstone">
-        <input type="hidden" id="move_no"></input>
-        <input type="hidden" id="row"></input>
-        <input type="hidden" id="column"></input>
-        <input type="hidden" id="dead_stones"></input>
+        <input type="hidden" id="data"></input>
         <button type="submit"
                 class="confirm_button" name='confirm_button'>Confirm</button>
         <button type="submit"
