@@ -141,6 +141,8 @@ exports.parse = (sgf) ->
       else 'unrecognized'
     return parser[type] sgf
 
+  return parse sgf
+
 exports.generate = (record) ->
   "Generate an SGF string from a SmartGame Record JS object
 

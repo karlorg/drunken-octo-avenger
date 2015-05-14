@@ -104,7 +104,7 @@
 
   module("common game page functions", {
     setup: function() {
-      $('input#data').val('()');
+      $('input#data').val('');
       return tesuji_charm.game_common.initialize();
     }
   });
@@ -113,7 +113,7 @@
     $('input#data').val('(;B[ca];W[bc])');
     tesuji_charm.game_common.initialize();
     assert.equal($('.goban').length, 1, "exactly one goban element exists");
-    assert.ok(isPointEmpty($pointAt(7, 7)), "(0,0) empty");
+    assert.ok(isPointEmpty($pointAt(0, 0)), "(0,0) empty");
     assert.ok(isPointBlack($pointAt(2, 0)), "(2,0) black");
     return assert.ok(isPointWhite($pointAt(1, 2)), "(1,2) white");
   });

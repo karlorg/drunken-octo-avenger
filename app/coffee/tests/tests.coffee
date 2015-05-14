@@ -82,7 +82,7 @@ updateBoardChars = (charArray) ->
 
 module "common game page functions",
   setup: ->
-    $('input#data').val '()'
+    $('input#data').val ''
     tesuji_charm.game_common.initialize()
 
 

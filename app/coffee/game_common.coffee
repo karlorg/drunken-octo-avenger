@@ -5,6 +5,10 @@ tesuji_charm.game_common ?= {}
 game_common = tesuji_charm.game_common
 
 
+smartgame = tesuji_charm.smartgame
+go_rules = tesuji_charm.go_rules
+
+
 game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 
 # setPointColor and helpers
@@ -78,4 +82,17 @@ game_common.initialize = ->
     for i in [0..18]
       $td = $("<td class='row-#{j} col-#{i} nostone' />")
       $tr.append $td
+  if $('input#data').val() != ''
+    sgf_object = smartgame.parse $('input#data').val()
+    board_state = (('empty' for i in [0..18]) for j in [0..18])
+    for node in sgf_object.gameTrees[0].nodes
+      if node.B
+        x = node.B.charCodeAt(0) - 'a'.charCodeAt(0)
+        y = node.B.charCodeAt(1) - 'a'.charCodeAt(0)
+        board_state = go_rules.getNewState 'black', x, y, board_state
+      if node.W
+        x = node.W.charCodeAt(0) - 'a'.charCodeAt(0)
+        y = node.W.charCodeAt(1) - 'a'.charCodeAt(0)
+        board_state = go_rules.getNewState 'white', x, y, board_state
+    updateBoard board_state
   return
