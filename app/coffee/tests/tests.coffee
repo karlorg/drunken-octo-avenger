@@ -87,24 +87,14 @@ module "common game page functions",
 
 
 test "initialize creates board from SGF data", (assert) ->
-  $('input#data').val '(;B[ca];W[bc])'
+  $('input#data').val '(;SZ[3];B[ca];W[bc])'
   tesuji_charm.game_common.initialize()
   assert.equal $('.goban').length, 1, "exactly one goban element exists"
   assert.ok isPointEmpty($pointAt 0, 0), "(0,0) empty"
   assert.ok isPointBlack($pointAt 2, 0), "(2,0) black"
   assert.ok isPointWhite($pointAt 1, 2), "(1,2) white"
-
-test "helper function readBoardState", (assert) ->
-  updateBoardChars [
-    'wb'
-    '..'
-  ]
-  expected = [
-    ['white', 'black', 'empty']
-    ['empty', 'empty', 'empty']
-    ['empty', 'empty', 'empty']
-  ]
-  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+  assert.ok $('.row-2.col-2').length == 1, "board is at least 3x3"
+  assert.ok $('.row-3.col-3').length == 0, "board is smaller than 4x4"
 
 test "helper function updateBoardChars", (assert) ->
   updateBoardChars [
@@ -123,12 +113,21 @@ test "helper function updateBoardChars", (assert) ->
   assert.ok isPointEmpty($pointAt(1, 0))
   assert.ok isPointEmpty($pointAt(1, 1))
 
+test "helper function readBoardState", (assert) ->
+  $('input#data').val '(;SZ[3];B[ca];W[bc])'
+  tesuji_charm.game_common.initialize()
+  expected = [ [ 'empty', 'empty', 'black' ]
+               [ 'empty', 'empty', 'empty' ]
+               [ 'empty', 'white', 'empty' ] ]
+  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+
 
 # ============================================================================
 
 
 module 'Basic game page',
   setup: ->
+    $('input#data').val '(;)'
     $('input#move_no').val "0"
     $('input#row').val ""
     $('input#column').val ""
@@ -145,6 +144,13 @@ test 'clicking multiple points moves black stone', ->
   $point2.click()
   ok isPointEmpty($point1), 'after second click, first clicked point clear'
   ok isPointBlack($point2), 'after second click, second clicked point black'
+
+test "next player correctly determined with info node", ->
+  $('input#data').val '(;SZ[3])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  ok isPointBlack($point), 'first player should be Black despite SGF info node'
 
 test 'clicking multiple points updates hidden form', ->
   $point1 = $pointAt 0, 0
@@ -200,20 +206,17 @@ module 'Game page with marking interface',
     $("#qunit-fixture").append $("<div/>",
                                  id: 'with_scoring'
                                  class: 'with_scoring')
-    $('input#dead_stones').val ''
+    $('input#data').val ''
 
 test "clicking empty points in marking mode does nothing", (assert) ->
+  tesuji_charm.game_marking.initialize()
   $point = $pointAt(1, 1)
   assert.ok isPointEmpty($point), "centre point starts empty"
   $point.click()
   assert.ok isPointEmpty($point), "still empty after click"
 
 test "mixed scoring board", (assert) ->
-  updateBoardChars [
-    '.b.'
-    'bww'
-    '.w.'
-  ]
+  $('input#data').val '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc])'
   tesuji_charm.game_marking.initialize()
   assert.ok isPointBlackScore($pointAt(0, 0)), "(0,0) black"
   assert.notOk isPointWhiteScore($pointAt(0, 0)), "(0,0) white"
@@ -225,11 +228,7 @@ test "mixed scoring board", (assert) ->
 
 test "clicking live stones makes them dead, " + \
      "clicking again brings them back", (assert) ->
-  updateBoardChars [
-    'b.w'
-    '.b.'
-    'bbw'
-  ]
+  $('input#data').val '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac])'
   tesuji_charm.game_marking.initialize()
 
   $pointAt(1, 1).click()

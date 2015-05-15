@@ -13,6 +13,7 @@ go_rules = tesuji_charm.go_rules
 
 
 game_marking.initialize = ->
+  game_common.initialize()
   setInitialDead()
   setupScoring()
 

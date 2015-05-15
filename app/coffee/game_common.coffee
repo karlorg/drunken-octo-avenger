@@ -73,18 +73,27 @@ game_common.updateBoard = updateBoard = (state) ->
       setPointColor ($pointAt col, row), color
   return
 
-game_common.initialize = ->
+game_common.initialize = (sgf_object) ->
   $('.goban').remove()
   $('#content').append '<table class="goban"></table>'
-  for j in [0..18]
+
+  unless sgf_object
+    if $('input#data').val() != ''
+      sgf_object = smartgame.parse $('input#data').val()
+
+  size = if sgf_object \
+         then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
+         else 19
+
+  for j in [0...size]
     $tr = $('<tr/>')
     $('.goban').append $tr
-    for i in [0..18]
+    for i in [0...size]
       $td = $("<td class='row-#{j} col-#{i} nostone' />")
       $tr.append $td
+
   if $('input#data').val() != ''
-    sgf_object = smartgame.parse $('input#data').val()
-    board_state = (('empty' for i in [0..18]) for j in [0..18])
+    board_state = (('empty' for i in [0...size]) for j in [0...size])
     for node in sgf_object.gameTrees[0].nodes
       if node.B
         x = node.B.charCodeAt(0) - 'a'.charCodeAt(0)
@@ -95,4 +104,5 @@ game_common.initialize = ->
         y = node.W.charCodeAt(1) - 'a'.charCodeAt(0)
         board_state = go_rules.getNewState 'white', x, y, board_state
     updateBoard board_state
+
   return
