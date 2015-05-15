@@ -6,6 +6,8 @@ game_marking = tesuji_charm.game_marking
 
 # 'imports'
 
+smartgame = tesuji_charm.smartgame
+
 game_common = tesuji_charm.game_common
 $pointAt = game_common.$pointAt
 
@@ -13,8 +15,12 @@ go_rules = tesuji_charm.go_rules
 
 
 game_marking.initialize = ->
-  game_common.initialize()
-  setInitialDead()
+  data = $('input#data').val()
+  sgf_object = switch
+    when data then smartgame.parse data
+    else smartgame.parse '(;)'
+  game_common.initialize sgf_object
+  setInitialDead sgf_object
   setupScoring()
 
   $('table.goban td').click ->
@@ -25,14 +31,15 @@ game_marking.initialize = ->
 
 # setInitialDead
 
-setInitialDead = ->
-  "mark dead stones on the DOM according to the supplied value of the hidden
-  input field dead_stones"
-  try
-    dead_stones = JSON.parse($('input#dead_stones').val())
-  catch e
-    return
-  for [x, y] in dead_stones
+setInitialDead = (sgf_object) ->
+  "mark dead stones on the DOM according to the supplied SGF object"
+  nodes = sgf_object.gameTrees[0].nodes
+  last_node = nodes[nodes.length - 1]
+  tws = last_node.TW or []
+  tbs = last_node.TB or []
+  for asciiCoords in tws.concat tbs
+    x = asciiCoords.charCodeAt(0) - 'a'.charCodeAt(0)
+    y = asciiCoords.charCodeAt(1) - 'a'.charCodeAt(0)
     $point = $pointAt x, y
     color = game_common.colorFromDom $point
     if (color != 'whitedead' and color != 'blackdead')

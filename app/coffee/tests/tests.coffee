@@ -217,6 +217,9 @@ test "clicking empty points in marking mode does nothing", (assert) ->
 
 test "mixed scoring board", (assert) ->
   $('input#data').val '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc])'
+  # b.w
+  # .b.
+  # bbw
   tesuji_charm.game_marking.initialize()
   assert.ok isPointBlackScore($pointAt(0, 0)), "(0,0) black"
   assert.notOk isPointWhiteScore($pointAt(0, 0)), "(0,0) white"
@@ -270,13 +273,12 @@ test "killing stones revives neighbouring enemy groups " + \
   assert.notOk isPointBlackDead($pointAt 0, 0),
     "neighboring black group (0, 0) is no longer dead"
 
-test "initialization sets initial dead stones from form", (assert) ->
-  updateBoardChars [
-    'b..'
-    '.b.'
-    'bbw'
-  ]
-  $('input#dead_stones').val '[[0,0], [1,1], [0,2], [1,2]]'
+test "initialization sets initial dead stones from SGF", (assert) ->
+  $('input#data').val '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac]
+                        ;TW[aa][ab][ba][bb][bc][ac][bc])'
+  # b.w
+  # .b.
+  # bbw
   tesuji_charm.game_marking.initialize()
   assert.ok isPointBlackDead($pointAt 0, 0), "(0, 0) is dead"
   assert.ok isPointBlackDead($pointAt 1, 1), "(1, 1) is dead"
