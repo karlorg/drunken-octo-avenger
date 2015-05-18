@@ -96,13 +96,60 @@ game_common.initialize = (sgf_object) ->
     board_state = (('empty' for i in [0...size]) for j in [0...size])
     for node in sgf_object.gameTrees[0].nodes
       if node.B
-        x = node.B.charCodeAt(0) - 'a'.charCodeAt(0)
-        y = node.B.charCodeAt(1) - 'a'.charCodeAt(0)
+        [x, y] = decodeSgfCoord node.B
         board_state = go_rules.getNewState 'black', x, y, board_state
       if node.W
-        x = node.W.charCodeAt(0) - 'a'.charCodeAt(0)
-        y = node.W.charCodeAt(1) - 'a'.charCodeAt(0)
+        [x, y] = decodeSgfCoord node.W
         board_state = go_rules.getNewState 'white', x, y, board_state
+      if node.AB
+        coords = if Array.isArray(node.AB) then node.AB else [node.AB]
+        for coordStr in coords
+          [x, y] = decodeSgfCoord coordStr
+          board_state[y][x] = 'black'
+      if node.AW
+        coords = if Array.isArray(node.AW) then node.AW else [node.AW]
+        for coordStr in coords
+          [x, y] = decodeSgfCoord coordStr
+          board_state[y][x] = 'white'
     updateBoard board_state
 
   return
+
+aCode = 'a'.charCodeAt(0)
+
+game_common.decodeSgfCoord = decodeSgfCoord = (coordStr) ->
+  x = coordStr.charCodeAt(0) - aCode
+  y = coordStr.charCodeAt(1) - aCode
+  return [x, y]
+
+game_common.encodeSgfCoord = encodeSgfCoord = (x, y) ->
+  encodedX = String.fromCharCode(aCode + x)
+  encodedY = String.fromCharCode(aCode + y)
+  return encodedX + encodedY
+
+game_common.cloneSgfObject = (sgfObject) ->
+  "The trick here is that 'parent' attributes must be replaced with the parent
+  in the new copy instead of pointing to the old one."
+  cloneObjectRecursive = (subObject, parent) ->
+    result = {}
+    for own k, v of subObject
+      if k == 'parent'
+        result[k] = parent
+      else if Array.isArray v
+        result[k] = cloneArrayRecursive v
+      else if v == Object(v)
+        result[k] = cloneObjectRecursive v, result
+      else
+        result[k] = v
+    return result
+  cloneArrayRecursive = (subArray) ->
+    result = []
+    for v in subArray
+      if Array.isArray v
+        result.push cloneArrayRecursive(v)
+      else if v == Object(v)
+        result.push cloneObjectRecursive(v, result)
+      else
+        result.push v
+    return result
+  return cloneObjectRecursive sgfObject, null

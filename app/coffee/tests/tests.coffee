@@ -96,6 +96,17 @@ test "initialize creates board from SGF data", (assert) ->
   assert.ok $('.row-2.col-2').length == 1, "board is at least 3x3"
   assert.ok $('.row-3.col-3').length == 0, "board is smaller than 4x4"
 
+test "setup stones in SGF (tags AB & AW)", (assert) ->
+  # ensure we test both a list of setup stones (AB here) and a single
+  # setup stone (AW here) since the smartgame library produces an
+  # array for one and a single value for the other
+  $('input#data').val '(;SZ[3];AB[ba][ab][bc]AW[bb])'
+  tesuji_charm.game_common.initialize()
+  expected = [ [ 'empty', 'black', 'empty' ]
+               [ 'black', 'white', 'empty' ]
+               [ 'empty', 'black', 'empty' ] ]
+  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+
 test "helper function updateBoardChars", (assert) ->
   updateBoardChars [
     '.b.'
@@ -128,9 +139,6 @@ test "helper function readBoardState", (assert) ->
 module 'Basic game page',
   setup: ->
     $('input#data').val '(;)'
-    $('input#move_no').val "0"
-    $('input#row').val ""
-    $('input#column').val ""
     tesuji_charm.game_basic.initialize()
 
 test 'clicking multiple points moves black stone', ->
@@ -145,6 +153,13 @@ test 'clicking multiple points moves black stone', ->
   ok isPointEmpty($point1), 'after second click, first clicked point clear'
   ok isPointBlack($point2), 'after second click, second clicked point black'
 
+test "white stones play correctly", ->
+  $('input#data').val '(;B[aa])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  ok isPointWhite($point), 'second player should be White'
+
 test "next player correctly determined with info node", ->
   $('input#data').val '(;SZ[3])'
   tesuji_charm.game_basic.initialize()
@@ -155,15 +170,12 @@ test "next player correctly determined with info node", ->
 test 'clicking multiple points updates hidden form', ->
   $point1 = $pointAt 0, 0
   $point2 = $pointAt 1, 2
-  $row = $('input#row')
-  $column = $('input#column')
+  $response = $('input#response')
 
   $point1.click()
-  equal $row.val(), "0", "first stone sets correct row"
-  equal $column.val(), "0", "first stone sets correct column"
+  equal $response.val(), '(;B[aa])', "first stone sets correct SGF"
   $point2.click()
-  equal $row.val(), "2", "second stone sets correct row"
-  equal $column.val(), "1", "second stone sets correct column"
+  equal $response.val(), '(;B[bc])', "second stone sets correct SGF"
 
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
@@ -286,16 +298,27 @@ test "initialization sets initial dead stones from SGF", (assert) ->
   assert.ok isPointWhiteScore($pointAt 1, 1), "(1, 1) scores for White"
 
 test "Form is updated with current dead stones", (assert) ->
-  updateBoardChars [
-    'b.b'
-    '.b.'
-    'bbw'
-  ]
+  $('input#data').val '(;SZ[3];AB[aa][ac][bb][ac][bc]AW[cc])'
+  # b.b
+  # .b.
+  # bbw
   tesuji_charm.game_marking.initialize()
   $pointAt(1, 1).click()
-  expected = [[0,0], [0,2], [1,1], [1,2], [2,0]]  # in [].sort() order
-  actual = JSON.parse($('input#dead_stones').val()).sort()
-  assert.deepEqual actual, expected, "JSON in dead_stones correct"
+  # to keep test simple, we just look for right number of elements in
+  # each tag so that we can accept any order
+  expected = ///
+    AB(\[\w\w]){5}  # sanity check: black setup is retained with 5 coords
+    .*              # (don't check white setup as we can't guarantee the order)
+    TW(\[\w\w]){8}  # white territory has 8 coords
+    ///
+  actual = $('input#response').val()
+  assert.ok actual.match(expected), "correct number of TW coords"
+
+  # here we check for a specific coord
+  $pointAt(2, 2).click()
+  expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
+  actual = $('input#response').val()
+  assert.ok actual.match(expected), "dead white stone found as black territory"
 
 
 # ============================================================================

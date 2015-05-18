@@ -36,7 +36,7 @@
     newStoneColor = nextPlayerInSgfObject(sgf_object);
     $('button.confirm_button').prop('disabled', true);
     return $('table.goban td').click(function() {
-      var col, error, newBoardState, row, _ref;
+      var col, encodedCoords, error, newBoardState, newMove, nodes, row, sgfObjectCopy, sgfTag, _ref;
       if (!game_common.hasCoordClass($(this))) {
         return;
       }
@@ -52,8 +52,27 @@
         }
       }
       game_common.updateBoard(newBoardState);
-      $('input#row').val(row.toString());
-      $('input#column').val(col.toString());
+      sgfTag = (function() {
+        switch (newStoneColor) {
+          case 'black':
+            return 'B';
+          case 'white':
+            return 'W';
+          default:
+            throw Error("invalid new stone color");
+        }
+      })();
+      encodedCoords = game_common.encodeSgfCoord(col, row);
+      newMove = {};
+      newMove[sgfTag] = encodedCoords;
+      sgfObjectCopy = game_common.cloneSgfObject(sgf_object);
+      nodes = sgfObjectCopy.gameTrees[0].nodes;
+      if (nodes.length === 1 && jQuery.isEmptyObject(nodes[0])) {
+        nodes[0] = newMove;
+      } else {
+        nodes.push(newMove);
+      }
+      $('input#response').val(smartgame.generate(sgfObjectCopy));
       return $('button.confirm_button').prop('disabled', false);
     });
   };

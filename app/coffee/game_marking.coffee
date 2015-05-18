@@ -16,11 +16,11 @@ go_rules = tesuji_charm.go_rules
 
 game_marking.initialize = ->
   data = $('input#data').val()
-  sgf_object = switch
+  sgfObject = switch
     when data then smartgame.parse data
     else smartgame.parse '(;)'
-  game_common.initialize sgf_object
-  setInitialDead sgf_object
+  game_common.initialize sgfObject
+  setInitialDead sgfObject
   setupScoring()
 
   $('table.goban td').click ->
@@ -31,15 +31,14 @@ game_marking.initialize = ->
 
 # setInitialDead
 
-setInitialDead = (sgf_object) ->
+setInitialDead = (sgfObject) ->
   "mark dead stones on the DOM according to the supplied SGF object"
-  nodes = sgf_object.gameTrees[0].nodes
+  nodes = sgfObject.gameTrees[0].nodes
   last_node = nodes[nodes.length - 1]
   tws = last_node.TW or []
   tbs = last_node.TB or []
   for asciiCoords in tws.concat tbs
-    x = asciiCoords.charCodeAt(0) - 'a'.charCodeAt(0)
-    y = asciiCoords.charCodeAt(1) - 'a'.charCodeAt(0)
+    [x, y] = game_common.decodeSgfCoord asciiCoords
     $point = $pointAt x, y
     color = game_common.colorFromDom $point
     if (color != 'whitedead' and color != 'blackdead')
@@ -153,11 +152,24 @@ togglePoints = (points) ->
 updateForm = ->
   "Update the hidden form that communicates our marks back to the server, based
   on the current DOM state."
-  dead_stones = []
+  sgfObject = smartgame.parse($('input#data').val() or '(;)')
+  nodes = sgfObject.gameTrees[0].nodes
+  new_node = { TB: [], TW: [] }
+  nodes.push new_node
+  tb = new_node.TB
+  tw = new_node.TW
   state = game_common.readBoardState()
   for row, y in state
     for point, x in row
-      if (point == 'blackdead') or (point == 'whitedead')
-        dead_stones.push [x, y]
-  $('input#dead_stones').val JSON.stringify(dead_stones)
+      if point == 'blackdead'
+        tw.push (game_common.encodeSgfCoord x, y)
+      else if point == 'whitedead'
+        tb.push (game_common.encodeSgfCoord x, y)
+      else if point == 'empty'
+        if $pointAt(x, y).hasClass 'blackscore'
+          tb.push (game_common.encodeSgfCoord x, y)
+        else if $pointAt(x, y).hasClass 'whitescore'
+          tw.push (game_common.encodeSgfCoord x, y)
+  sgf = smartgame.generate sgfObject
+  $('input#response').val sgf
   return

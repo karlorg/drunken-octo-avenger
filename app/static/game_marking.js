@@ -24,9 +24,9 @@
   go_rules = tesuji_charm.go_rules;
 
   game_marking.initialize = function() {
-    var data, sgf_object;
+    var data, sgfObject;
     data = $('input#data').val();
-    sgf_object = (function() {
+    sgfObject = (function() {
       switch (false) {
         case !data:
           return smartgame.parse(data);
@@ -34,8 +34,8 @@
           return smartgame.parse('(;)');
       }
     })();
-    game_common.initialize(sgf_object);
-    setInitialDead(sgf_object);
+    game_common.initialize(sgfObject);
+    setInitialDead(sgfObject);
     setupScoring();
     return $('table.goban td').click(function() {
       var col, row, _ref;
@@ -48,18 +48,17 @@
     });
   };
 
-  setInitialDead = function(sgf_object) {
+  setInitialDead = function(sgfObject) {
     "mark dead stones on the DOM according to the supplied SGF object";
-    var $point, asciiCoords, color, last_node, nodes, tbs, tws, x, y, _i, _len, _ref;
-    nodes = sgf_object.gameTrees[0].nodes;
+    var $point, asciiCoords, color, last_node, nodes, tbs, tws, x, y, _i, _len, _ref, _ref1;
+    nodes = sgfObject.gameTrees[0].nodes;
     last_node = nodes[nodes.length - 1];
     tws = last_node.TW || [];
     tbs = last_node.TB || [];
     _ref = tws.concat(tbs);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       asciiCoords = _ref[_i];
-      x = asciiCoords.charCodeAt(0) - 'a'.charCodeAt(0);
-      y = asciiCoords.charCodeAt(1) - 'a'.charCodeAt(0);
+      _ref1 = game_common.decodeSgfCoord(asciiCoords), x = _ref1[0], y = _ref1[1];
       $point = $pointAt(x, y);
       color = game_common.colorFromDom($point);
       if (color !== 'whitedead' && color !== 'blackdead') {
@@ -239,19 +238,36 @@
 
   updateForm = function() {
     "Update the hidden form that communicates our marks back to the server, based on the current DOM state.";
-    var dead_stones, point, row, state, x, y, _i, _j, _len, _len1;
-    dead_stones = [];
+    var new_node, nodes, point, row, sgf, sgfObject, state, tb, tw, x, y, _i, _j, _len, _len1;
+    sgfObject = smartgame.parse($('input#data').val() || '(;)');
+    nodes = sgfObject.gameTrees[0].nodes;
+    new_node = {
+      TB: [],
+      TW: []
+    };
+    nodes.push(new_node);
+    tb = new_node.TB;
+    tw = new_node.TW;
     state = game_common.readBoardState();
     for (y = _i = 0, _len = state.length; _i < _len; y = ++_i) {
       row = state[y];
       for (x = _j = 0, _len1 = row.length; _j < _len1; x = ++_j) {
         point = row[x];
-        if ((point === 'blackdead') || (point === 'whitedead')) {
-          dead_stones.push([x, y]);
+        if (point === 'blackdead') {
+          tw.push(game_common.encodeSgfCoord(x, y));
+        } else if (point === 'whitedead') {
+          tb.push(game_common.encodeSgfCoord(x, y));
+        } else if (point === 'empty') {
+          if ($pointAt(x, y).hasClass('blackscore')) {
+            tb.push(game_common.encodeSgfCoord(x, y));
+          } else if ($pointAt(x, y).hasClass('whitescore')) {
+            tw.push(game_common.encodeSgfCoord(x, y));
+          }
         }
       }
     }
-    $('input#dead_stones').val(JSON.stringify(dead_stones));
+    sgf = smartgame.generate(sgfObject);
+    $('input#response').val(sgf);
   };
 
 }).call(this);

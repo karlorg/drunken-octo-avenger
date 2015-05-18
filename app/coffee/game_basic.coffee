@@ -47,8 +47,22 @@ game_basic.initialize = ->
         throw error
     game_common.updateBoard newBoardState
 
-    $('input#row').val row.toString()
-    $('input#column').val col.toString()
+    sgfTag = switch newStoneColor
+      when 'black' then 'B'
+      when 'white' then 'W'
+      else throw Error "invalid new stone color"
+    encodedCoords = game_common.encodeSgfCoord col, row
+    newMove = {}
+    newMove[sgfTag] = encodedCoords
+
+    sgfObjectCopy = game_common.cloneSgfObject sgf_object
+    nodes = sgfObjectCopy.gameTrees[0].nodes
+    if nodes.length == 1 and jQuery.isEmptyObject nodes[0]
+      nodes[0] = newMove
+    else
+      nodes.push newMove
+
+    $('input#response').val smartgame.generate(sgfObjectCopy)
     $('button.confirm_button').prop 'disabled', false
 
 # to facilitate testing, export a function to reload our internal state from

@@ -120,6 +120,14 @@
     return assert.ok($('.row-3.col-3').length === 0, "board is smaller than 4x4");
   });
 
+  test("setup stones in SGF (tags AB & AW)", function(assert) {
+    var expected;
+    $('input#data').val('(;SZ[3];AB[ba][ab][bc]AW[bb])');
+    tesuji_charm.game_common.initialize();
+    expected = [['empty', 'black', 'empty'], ['black', 'white', 'empty'], ['empty', 'black', 'empty']];
+    return assert.deepEqual(tesuji_charm.game_common.readBoardState(), expected);
+  });
+
   test("helper function updateBoardChars", function(assert) {
     updateBoardChars(['.b.', 'bw.', '.b.']);
     assert.ok(isPointBlack($pointAt(1, 0)));
@@ -141,9 +149,6 @@
   module('Basic game page', {
     setup: function() {
       $('input#data').val('(;)');
-      $('input#move_no').val("0");
-      $('input#row').val("");
-      $('input#column').val("");
       return tesuji_charm.game_basic.initialize();
     }
   });
@@ -161,6 +166,15 @@
     return ok(isPointBlack($point2), 'after second click, second clicked point black');
   });
 
+  test("white stones play correctly", function() {
+    var $point;
+    $('input#data').val('(;B[aa])');
+    tesuji_charm.game_basic.initialize();
+    $point = $pointAt(1, 1);
+    $point.click();
+    return ok(isPointWhite($point), 'second player should be White');
+  });
+
   test("next player correctly determined with info node", function() {
     var $point;
     $('input#data').val('(;SZ[3])');
@@ -171,17 +185,14 @@
   });
 
   test('clicking multiple points updates hidden form', function() {
-    var $column, $point1, $point2, $row;
+    var $point1, $point2, $response;
     $point1 = $pointAt(0, 0);
     $point2 = $pointAt(1, 2);
-    $row = $('input#row');
-    $column = $('input#column');
+    $response = $('input#response');
     $point1.click();
-    equal($row.val(), "0", "first stone sets correct row");
-    equal($column.val(), "0", "first stone sets correct column");
+    equal($response.val(), '(;B[aa])', "first stone sets correct SGF");
     $point2.click();
-    equal($row.val(), "2", "second stone sets correct row");
-    return equal($column.val(), "1", "second stone sets correct column");
+    return equal($response.val(), '(;B[bc])', "second stone sets correct SGF");
   });
 
   test('Confirm button disabled until stone placed', function() {
@@ -282,12 +293,16 @@
 
   test("Form is updated with current dead stones", function(assert) {
     var actual, expected;
-    updateBoardChars(['b.b', '.b.', 'bbw']);
+    $('input#data').val('(;SZ[3];AB[aa][ac][bb][ac][bc]AW[cc])');
     tesuji_charm.game_marking.initialize();
     $pointAt(1, 1).click();
-    expected = [[0, 0], [0, 2], [1, 1], [1, 2], [2, 0]];
-    actual = JSON.parse($('input#dead_stones').val()).sort();
-    return assert.deepEqual(actual, expected, "JSON in dead_stones correct");
+    expected = /AB(\[\w\w]){5}.*TW(\[\w\w]){8}/;
+    actual = $('input#response').val();
+    assert.ok(actual.match(expected), "correct number of TW coords");
+    $pointAt(2, 2).click();
+    expected = /TB[\]\[\w]*\[cc]/;
+    actual = $('input#response').val();
+    return assert.ok(actual.match(expected), "dead white stone found as black territory");
   });
 
   module('Go rules');
