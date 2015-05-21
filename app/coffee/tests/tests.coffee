@@ -60,23 +60,6 @@ test 'init function sets request and logout callbacks', ->
   equal logoutCalled, true, 'logout callback called correctly'
 
 
-
-# ============================================================================
-
-# helper for game board tests
-
-updateBoardChars = (charArray) ->
-  for rowString, row in charArray
-    for char, col in rowString
-      color = switch char
-        when "b" then "black"
-        when "w" then "white"
-        when "." then "empty"
-        else throw new Error "unknown board char: #{char}"
-      tesuji_charm.game_common.setPointColor(
-        (tesuji_charm.game_common.$pointAt col, row), color)
-  return
-
 # ============================================================================
 
 
@@ -107,23 +90,6 @@ test "setup stones in SGF (tags AB & AW)", (assert) ->
                [ 'empty', 'black', 'empty' ] ]
   assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
 
-test "helper function updateBoardChars", (assert) ->
-  updateBoardChars [
-    '.b.'
-    'bw.'
-    '.b.'
-  ]
-  assert.ok isPointBlack($pointAt(1, 0))
-  assert.ok isPointWhite($pointAt(1, 1))
-  assert.ok isPointEmpty($pointAt(2, 1))
-  updateBoardChars [
-    '...'
-    '...'
-    '...'
-  ]
-  assert.ok isPointEmpty($pointAt(1, 0))
-  assert.ok isPointEmpty($pointAt(1, 1))
-
 test "helper function readBoardState", (assert) ->
   $('input#data').val '(;SZ[3];B[ca];W[bc])'
   tesuji_charm.game_common.initialize()
@@ -139,6 +105,7 @@ test "helper function readBoardState", (assert) ->
 module 'Basic game page',
   setup: ->
     $('input#data').val '(;)'
+    $('input#response').val ''
     tesuji_charm.game_basic.initialize()
 
 test 'clicking multiple points moves black stone', ->
@@ -186,24 +153,17 @@ test 'Confirm button disabled until stone placed', ->
     'enabled after stone placed'
 
 test "clicking a pre-existing stone does nothing", (assert) ->
+  $('input#data').val '(;SZ[3];AW[bb])'
+  tesuji_charm.game_basic.initialize()
   $point = $pointAt 1, 1
-  updateBoardChars [
-    '..'
-    '.w'
-  ]
-  tesuji_charm.game_basic._reloadBoard()
-  # test
   $point.click()
   assert.notOk isPointBlack($point), "point has not become black"
-  assert.notEqual $('input#row').val(), "1", "row not set"
-  assert.notEqual $('input#column').val(), "1", "column not set"
+  assert.notOk $('input#response').val().match(/B\[bb]/),
+    "SGF response does not contain black stone"
 
 test "captured stones are removed from the board", (assert) ->
-  updateBoardChars [
-    'wb'
-    '..'
-  ]
-  tesuji_charm.game_basic._reloadBoard()
+  $('input#data').val '(;SZ[3];B[ba];W[aa])'
+  tesuji_charm.game_basic.initialize()
   # now make the capture
   $pointAt(0, 1).click()
   # corner should be blank now
@@ -272,11 +232,10 @@ test "clicking live stones makes them dead, " + \
 
 test "killing stones revives neighbouring enemy groups " + \
      "automatically", (assert) ->
-  updateBoardChars [
-    'b.b'
-    '.b.'
-    'bbw'
-  ]
+  $('input#data').val '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc])'
+  # b.b
+  # .b.
+  # bbw
   tesuji_charm.game_marking.initialize()
   $pointAt(1, 1).click()
   $pointAt(2, 2).click()
