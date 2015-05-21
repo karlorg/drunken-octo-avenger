@@ -24,16 +24,8 @@
   go_rules = tesuji_charm.go_rules;
 
   game_marking.initialize = function() {
-    var data, sgfObject;
-    data = $('input#data').val();
-    sgfObject = (function() {
-      switch (false) {
-        case !data:
-          return smartgame.parse(data);
-        default:
-          return smartgame.parse('(;)');
-      }
-    })();
+    var sgfObject;
+    sgfObject = smartgame.parse($('input#data').val() || '(;)');
     game_common.initialize(sgfObject);
     setInitialDead(sgfObject);
     setupScoring();

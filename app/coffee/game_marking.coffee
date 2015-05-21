@@ -15,10 +15,7 @@ go_rules = tesuji_charm.go_rules
 
 
 game_marking.initialize = ->
-  data = $('input#data').val()
-  sgfObject = switch
-    when data then smartgame.parse data
-    else smartgame.parse '(;)'
+  sgfObject = smartgame.parse ($('input#data').val() or '(;)')
   game_common.initialize sgfObject
   setInitialDead sgfObject
   setupScoring()
