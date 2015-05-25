@@ -81,8 +81,8 @@ def get_sgf_from_game(game):
     Reads database.
     """
     rules_board = get_rules_board_from_db_game(game)
-    goban = get_goban_data_from_rules_board(rules_board, with_scoring)
-    return goban
+    sgf = get_sgf_from_rules_board(rules_board)
+    return sgf
 
 def get_rules_board_from_db_game(game):
     """Get board layout resulting from given moves and setup stones.
@@ -107,48 +107,34 @@ def get_rules_board_from_db_game(game):
             pass
     return board
 
-def get_goban_data_from_rules_board(rules_board, with_scoring=False):
-    """Transform a dict of {(r,c): color} to a template-ready list of dicts.
-
-    Each output dictionary contains information needed by the game template to
-    render the corresponding board point.
-
-    `classes` contains CSS classes used by the client-side scripts and browser
-    tests to read the board state and locate specific points.  Currently:
-
-    * each point should have classes `row-y` and `col-x` where `y` and `x` are
-      numbers
-
-    * points with stones should have `blackstone` or `whitestone`; empty points
-      should have `nostone`
-
-    * if marking points is enabled, points which can be assigned to one player
-      should have `blackscore` or `whitescore`
+def get_sgf_from_rules_board(rules_board):
+    """Transform a dict of {(r,c): color} to an sgf.
 
     Pure function.
     """
-    black = go_rules.Color.black
-    white = go_rules.Color.white
-    empty = go_rules.Color.empty
-
-    color_images = {black: IMG_PATH_BLACK,
-                    white: IMG_PATH_WHITE,
-                    empty: IMG_PATH_EMPTY}
-    color_classes = {black: 'blackstone',
-                     white: 'whitestone',
-                     empty: 'nostone'}
-
-    def create_goban_point(row, column, color):
-        classes_template = 'gopoint row-{row} col-{col} {color_class}'
-        classes = classes_template.format(row=str(row),
-                                          col=str(column),
-                                          color_class=color_classes[color])
-        return dict(img=color_images[color], classes=classes)
-
-    goban = [[create_goban_point(j, i, rules_board[j, i])
-              for i in range(19)]
-             for j in range(19)]
-    return goban
+    return "(;FF[4]SZ[19])"
+#    black = go_rules.Color.black
+#    white = go_rules.Color.white
+#    empty = go_rules.Color.empty
+#
+#    color_images = {black: IMG_PATH_BLACK,
+#                    white: IMG_PATH_WHITE,
+#                    empty: IMG_PATH_EMPTY}
+#    color_classes = {black: 'blackstone',
+#                     white: 'whitestone',
+#                     empty: 'nostone'}
+#
+#    def create_goban_point(row, column, color):
+#        classes_template = 'gopoint row-{row} col-{col} {color_class}'
+#        classes = classes_template.format(row=str(row),
+#                                          col=str(column),
+#                                          color_class=color_classes[color])
+#        return dict(img=color_images[color], classes=classes)
+#
+#    goban = [[create_goban_point(j, i, rules_board[j, i])
+#              for i in range(19)]
+#             for j in range(19)]
+#    return goban
 
 
 @app.route('/playstone', methods=['POST'])
