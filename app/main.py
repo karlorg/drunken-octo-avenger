@@ -85,13 +85,16 @@ def get_sgf_from_game(game):
     setup_stones = game.setup_stones
 
     def setup_stones_for_move(n):
+        result = {}
         black = [s for s in setup_stones if s.color == go_rules.Color.black]
         white = [s for s in setup_stones if s.color == go_rules.Color.white]
-        ab = [sgftools.encode_coord(stone.column, stone.row)
-              for stone in black if stone.before_move == n]
-        aw = [sgftools.encode_coord(stone.column, stone.row)
-              for stone in white if stone.before_move == n]
-        return {'AB': ab, 'AW': aw}
+        if black:
+            result['AB'] = [sgftools.encode_coord(stone.column, stone.row)
+                            for stone in black if stone.before_move == n]
+        if white:
+            result['AW'] = [sgftools.encode_coord(stone.column, stone.row)
+                            for stone in white if stone.before_move == n]
+        return result
 
     moves = game.moves
     moves_by_no = {m.move_no: m for m in moves}
@@ -110,7 +113,8 @@ def get_sgf_from_game(game):
             tag = {go_rules.Color.black: 'B',
                    go_rules.Color.white: 'W'}[move.color]
             node[tag] = [sgftools.encode_coord(move.column, move.row)]
-        nodes.append(node)
+        if node:
+            nodes.append(node)
     return sgftools.generate(sgftools.SgfTree(nodes))
 
 

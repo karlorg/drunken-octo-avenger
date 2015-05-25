@@ -407,11 +407,11 @@ class TestGetSgfFromGame(unittest.TestCase):
     def test_simple_example_game(self):
         game = Game()
         game.moves = [Move(game_no=1, move_no=0,
-                           row=3, column=4, color=Move.Color.black),
+                           row=2, column=3, color=Move.Color.black),
                       Move(game_no=1, move_no=1,
-                           row=15, column=16, color=Move.Color.white)]
+                           row=14, column=15, color=Move.Color.white)]
         sgf = main.get_sgf_from_game(game)
-        self.assertIn(";B[dc];W[po])", sgf)
+        self.assertRegexpMatches(sgf, r";B\[dc\];W\[po\]\)")
 
     def test_dead_stones(self):
         game = Game()
