@@ -26,6 +26,7 @@ from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
 from app import go_rules
+from app import sgftools
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -81,61 +82,36 @@ def get_sgf_from_game(game):
 
     Reads database.
     """
-    rules_board = get_rules_board_from_db_game(game)
-    sgf = get_sgf_from_rules_board(rules_board)
-    return sgf
+    setup_stones = game.setup_stones
 
-def get_rules_board_from_db_game(game):
-    """Get board layout resulting from given moves and setup stones.
-
-    Reads database.
-    """
-    def place_stones_for_move(n):
-        for stone in filter(lambda s: s.before_move == n, game.setup_stones):
-            board[stone.row, stone.column] = stone.color
+    def setup_stones_for_move(n):
+        black = [s for s in setup_stones if s.color == go_rules.Color.black]
+        white = [s for s in setup_stones if s.color == go_rules.Color.white]
+        ab = [sgftools.encode_coord(stone.column, stone.row)
+              for stone in black if stone.before_move == n]
+        aw = [sgftools.encode_coord(stone.column, stone.row)
+              for stone in white if stone.before_move == n]
+        return {'AB': ab, 'AW': aw}
 
     moves = game.moves
     moves_by_no = {m.move_no: m for m in moves}
     max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
-    board = go_rules.Board()
+    nodes = [{'FF': ['4'], 'SZ': ['19']}]
     for move_no in range(max_move_no+2):
         # max_move_no +1 to include setup stones on move 0 with no move played,
         # +1 again since `range` excludes the stop value
-        place_stones_for_move(move_no)
+        node = {}
+        node.update(setup_stones_for_move(move_no))
         try:
-            board.update_with_move(moves_by_no[move_no])
+            move = moves_by_no[move_no]
         except KeyError:
             pass
-    return board
-
-def get_sgf_from_rules_board(rules_board):
-    """Transform a dict of {(r,c): color} to an sgf.
-
-    Pure function.
-    """
-    return "(;FF[4]SZ[19])"
-#    black = go_rules.Color.black
-#    white = go_rules.Color.white
-#    empty = go_rules.Color.empty
-#
-#    color_images = {black: IMG_PATH_BLACK,
-#                    white: IMG_PATH_WHITE,
-#                    empty: IMG_PATH_EMPTY}
-#    color_classes = {black: 'blackstone',
-#                     white: 'whitestone',
-#                     empty: 'nostone'}
-#
-#    def create_goban_point(row, column, color):
-#        classes_template = 'gopoint row-{row} col-{col} {color_class}'
-#        classes = classes_template.format(row=str(row),
-#                                          col=str(column),
-#                                          color_class=color_classes[color])
-#        return dict(img=color_images[color], classes=classes)
-#
-#    goban = [[create_goban_point(j, i, rules_board[j, i])
-#              for i in range(19)]
-#             for j in range(19)]
-#    return goban
+        else:
+            tag = {go_rules.Color.black: 'B',
+                   go_rules.Color.white: 'W'}[move.color]
+            node[tag] = [sgftools.encode_coord(move.column, move.row)]
+        nodes.append(node)
+    return sgftools.generate(sgftools.SgfTree(nodes))
 
 
 @app.route('/playstone', methods=['POST'])
@@ -241,6 +217,29 @@ def create_and_validate_move(move_no, color, game, arguments):
     board.update_with_move(move)
     # But if no exception is raised then we return the move
     return move
+
+def get_rules_board_from_db_game(game):
+    """Get board layout resulting from given moves and setup stones.
+
+    Reads database.
+    """
+    def place_stones_for_move(n):
+        for stone in filter(lambda s: s.before_move == n, game.setup_stones):
+            board[stone.row, stone.column] = stone.color
+
+    moves = game.moves
+    moves_by_no = {m.move_no: m for m in moves}
+    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
+    board = go_rules.Board()
+    for move_no in range(max_move_no+2):
+        # max_move_no +1 to include setup stones on move 0 with no move played,
+        # +1 again since `range` excludes the stop value
+        place_stones_for_move(move_no)
+        try:
+            board.update_with_move(moves_by_no[move_no])
+        except KeyError:
+            pass
+    return board
 
 def record_dead_stones_from_json_and_check_end(game, arguments):
     """Get dead stones list from args; check game over; record both."""
