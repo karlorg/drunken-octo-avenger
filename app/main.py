@@ -75,26 +75,25 @@ def game(game_no):
             form=form, sgf=sgf,
             on_turn=is_your_turn, with_scoring=is_passed_twice)
 
-def get_goban_from_moves(moves, setup_stones=None, with_scoring=False):
-    """Given the moves for a game, return game template data.
+def get_sgf_from_game(game):
+    """Return an SGF representing the given game.
 
-    Pure function.
+    Reads database.
     """
-    if setup_stones is None:
-        setup_stones = []
-    rules_board = get_rules_board_from_db_objects(moves, setup_stones)
+    rules_board = get_rules_board_from_db_game(game)
     goban = get_goban_data_from_rules_board(rules_board, with_scoring)
     return goban
 
-def get_rules_board_from_db_objects(moves, setup_stones):
+def get_rules_board_from_db_game(game):
     """Get board layout resulting from given moves and setup stones.
 
-    Pure function.
+    Reads database.
     """
     def place_stones_for_move(n):
-        for stone in filter(lambda s: s.before_move == n, setup_stones):
+        for stone in filter(lambda s: s.before_move == n, game.setup_stones):
             board[stone.row, stone.column] = stone.color
 
+    moves = game.moves
     moves_by_no = {m.move_no: m for m in moves}
     max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
     board = go_rules.Board()
