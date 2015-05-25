@@ -86,12 +86,14 @@ game_common.initialize = (sgf_object) ->
          then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
          else 19
 
+  tableContentsStr = ''
   for j in [0...size]
-    $tr = $('<tr/>')
-    $('.goban').append $tr
+    tr = '<tr>'
     for i in [0...size]
-      $td = $("<td class='row-#{j} col-#{i} nostone' />")
-      $tr.append $td
+      tr += "<td class='row-#{j} col-#{i} nostone' />"
+    tr += '</tr>'
+    tableContentsStr += tr
+  $('.goban').append tableContentsStr
 
   if getInputSgf() != ''
     board_state = (('empty' for i in [0...size]) for j in [0...size])

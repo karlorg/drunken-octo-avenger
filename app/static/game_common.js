@@ -123,7 +123,7 @@
   };
 
   game_common.initialize = function(sgf_object) {
-    var $td, $tr, board_state, coordStr, coords, i, j, node, size, x, y, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref, _ref1, _ref2, _ref3, _ref4;
+    var board_state, coordStr, coords, i, j, node, size, tableContentsStr, tr, x, y, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref, _ref1, _ref2, _ref3, _ref4;
     $('.goban').remove();
     $('#content').append('<table class="goban"></table>');
     if (!sgf_object) {
@@ -132,14 +132,16 @@
       }
     }
     size = sgf_object ? parseInt(sgf_object.gameTrees[0].nodes[0].SZ) || 19 : 19;
+    tableContentsStr = '';
     for (j = _i = 0; 0 <= size ? _i < size : _i > size; j = 0 <= size ? ++_i : --_i) {
-      $tr = $('<tr/>');
-      $('.goban').append($tr);
+      tr = '<tr>';
       for (i = _j = 0; 0 <= size ? _j < size : _j > size; i = 0 <= size ? ++_j : --_j) {
-        $td = $("<td class='row-" + j + " col-" + i + " nostone' />");
-        $tr.append($td);
+        tr += "<td class='row-" + j + " col-" + i + " nostone' />";
       }
+      tr += '</tr>';
+      tableContentsStr += tr;
     }
+    $('.goban').append(tableContentsStr);
     if (getInputSgf() !== '') {
       board_state = (function() {
         var _k, _results;
