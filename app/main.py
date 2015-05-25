@@ -20,7 +20,7 @@ import jinja2
 import json
 import requests
 from sqlalchemy import and_, or_
-from wtforms import IntegerField, StringField
+from wtforms import HiddenField, IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
@@ -66,14 +66,15 @@ def game(game_no):
     is_passed_twice = check_two_passes(moves, passes, resumptions)
     if not is_passed_twice:
         form = PlayStoneForm(data={'game_no': game.id,
-                                   'move_no': game.move_no})
+                                   'move_no': game.move_no,
+                                   'data': sgf})
     else:
         form = MarkDeadForm(data={'game_no': game.id,
-                                  'move_no': game.move_no})
+                                  'move_no': game.move_no,
+                                  'data': sgf})
     return render_template_with_email(
             "game.html",
-            form=form, sgf=sgf,
-            on_turn=is_your_turn, with_scoring=is_passed_twice)
+            form=form, on_turn=is_your_turn, with_scoring=is_passed_twice)
 
 def get_sgf_from_game(game):
     """Return an SGF representing the given game.
@@ -761,9 +762,11 @@ class HiddenInteger(IntegerField):
 class PlayStoneForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    data = HiddenField("data")
     row = HiddenInteger("row", validators=[DataRequired()])
     column = HiddenInteger("column", validators=[DataRequired()])
 
 class MarkDeadForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    data = HiddenField("data")
