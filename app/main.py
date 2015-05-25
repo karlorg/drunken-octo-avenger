@@ -237,8 +237,7 @@ def create_and_validate_move(move_no, color, game, arguments):
 
     # test legality, if `board.update_with_move` raises an IllegalMoveException
     # this will be caught above and displayed to the user.
-    board = get_rules_board_from_db_objects(
-                moves=game.moves, setup_stones=game.setup_stones)
+    board = get_rules_board_from_db_game(game)
     board.update_with_move(move)
     # But if no exception is raised then we return the move
     return move

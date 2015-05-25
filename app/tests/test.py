@@ -326,24 +326,16 @@ class TestGameIntegrated(TestWithDb):
         response = self.test_client.get(url_for('game', game_no=out_of_range))
         self.assert_redirects(response, '/')
 
-    def test_annotates_points_with_coords(self):
-        game = self.add_game()
-        # test the logged-in and on-turn case, that's the most interesting
-        with self.set_email('black@black.com') as test_client:
-            response = test_client.get(url_for('game', game_no=game.id))
-        response_str = str(response.get_data())
-        pos_row0 = response_str.index('row-0')
-        pos_row1 = response_str.index('row-1')
-        pos_col0 = response_str.index('col-0')
-        pos_col1 = response_str.index('col-1')
-        assert pos_row0 < pos_row1
-        assert pos_col0 < pos_col1
-
     def do_mocked_get(self, game):
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template() as mock_render:
                 test_client.get(url_for('game', game_no=game.id))
                 return mock_render.call_args
+
+    def test_passes_sgf_in_form(self):
+        game = self.add_game(['.b'])
+        args, kwargs = self.do_mocked_get(game)
+        self.assertIn("B[ba]", kwargs['form'].data.data)
 
     def test_after_two_passes_activates_scoring_interface(self):
         game = self.add_game(['.b', 'bb'])
@@ -352,17 +344,6 @@ class TestGameIntegrated(TestWithDb):
         args, kwargs = self.do_mocked_get(game)
 
         self.assertEqual(kwargs['with_scoring'], True)
-
-    def test_sends_dead_stones_in_form(self):
-        game = self.add_game(['.b'])
-        self.pass_twice(game)
-        db.session.add(DeadStone(game_no=game.id, row=0, column=1))
-
-        args, kwargs = self.do_mocked_get(game)
-
-        expected = [[1, 0]]
-        actual = json.loads(kwargs['form'].data['dead_stones'])
-        self.assertEqual(expected, actual)
 
 
 class TestResumeGameIntegrated(TestWithDb):
@@ -421,62 +402,40 @@ class TestResignIntegrated(TestWithDb):
         self.assertEqual(game.winner, game.white)
 
 
-class TestGetGobanFromMoves(unittest.TestCase):
-
-    def assert_point(self, goban, row, col, color):
-        """`color` in this case is 'e', 'b' or 'w'"""
-        img, stone_class = {'e': ('e.gif', 'nostone'),
-                            'b': ('b.gif', 'blackstone'),
-                            'w': ('w.gif', 'whitestone')}[color]
-        point = goban[row][col]
-        self.assertIn(img, point['img'])
-        self.assertIn('row-{}'.format(str(row)), point['classes'])
-        self.assertIn('col-{}'.format(str(col)), point['classes'])
-        self.assertIn('gopoint', point['classes'])
-        self.assertIn(stone_class, point['classes'])
-
+class TestGetSgfFromGame(unittest.TestCase):
 
     def test_simple_example_game(self):
-        goban = main.get_goban_from_moves([
-            Move(
-                game_no=1, move_no=0,
-                row=3, column=4, color=Move.Color.black),
-            Move(
-                game_no=1, move_no=1,
-                row=15, column=16, color=Move.Color.white)
-        ])
-        self.assert_point(goban, 3, 3, 'e')
-        self.assert_point(goban, 15, 16, 'w')
-        self.assert_point(goban, 3, 4, 'b')
-        ## regression: shared list pointers cause stones to appear on all rows
-        self.assert_point(goban, 4, 4, 'e')
-
-    def test_applies_go_rules(self):
         game = Game()
-        goban = main.get_goban_from_moves([
-            Move(
-                game_no=1, move_no=0,
-                row=1, column=1, color=Move.Color.black),
-            Move(
-                game_no=1, move_no=1,
-                row=1, column=3, color=Move.Color.white)
-        ], setup_stones=main.get_stones_from_text_map([
-            '.ww.',
-            'w.b.',
-            '.ww.'
-        ], game))
-        self.assert_point(goban, 0, 1, 'w')
-        self.assert_point(goban, 1, 2, 'e')
-        self.assert_point(goban, 1, 3, 'w')
+        game.moves = [Move(game_no=1, move_no=0,
+                           row=3, column=4, color=Move.Color.black),
+                      Move(game_no=1, move_no=1,
+                           row=15, column=16, color=Move.Color.white)]
+        sgf = main.get_sgf_from_game(game)
+        self.assertIn(";B[dc];W[po])", sgf)
+
+    def test_dead_stones(self):
+        game = Game()
+        game.moves = [Move(game_no=1, move_no=0,
+                           row=0, column=1, color=Move.Color.black)]
+        game.passes = [Pass(game_no=1, move_no=1,
+                            color=Move.Color.white),
+                       Pass(game_no=1, move_no=2,
+                            color=Move.Color.black)]
+        game.dead_stones = [DeadStone(game_no=1, row=0, column=1)]
+
+        sgf = main.get_sgf_from_game(game)
+
+        regexp = re.compile(";[^;]*TW[^A-Z]*\[ba][^;]*\)")
+        self.assertRegexpMatches(sgf, regexp, "territory not found in SGF")
 
 
-class TestGetRulesBoardFromDbObjects(unittest.TestCase):
+class TestGetRulesBoardFromDbGame(unittest.TestCase):
 
     def test_combination(self):
         game = Game()
-        moves = [Move(game.id, 0, 2, 3, Move.Color.black)]
-        setup_stones = main.get_stones_from_text_map(['.bw'], game)
-        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        game.moves = [Move(game.id, 0, 2, 3, Move.Color.black)]
+        game.setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_game(game)
         self.assertEqual(board[0, 0], go_rules.Color.empty)
         self.assertEqual(board[0, 1], go_rules.Color.black)
         self.assertEqual(board[0, 2], go_rules.Color.white)
@@ -488,9 +447,9 @@ class TestGetRulesBoardFromDbObjects(unittest.TestCase):
         eg. setup stones for 'before move 0' when there are no moves yet.
         """
         game = Game()
-        moves = []
-        setup_stones = main.get_stones_from_text_map(['.bw'], game)
-        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        game.moves = []
+        game.setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_game(game)
         self.assertEqual(board[0, 1], go_rules.Color.black)
 
     def test_copes_with_pass_then_move(self):
@@ -499,24 +458,11 @@ class TestGetRulesBoardFromDbObjects(unittest.TestCase):
         This would fail in tests which use a first turn setup stones &
         pass, with further moves after the pass."""
         game = Game()
-        moves = [Move(game.id, move_no=1, row=2, column=3,
-                      color=Move.Color.white)]
-        setup_stones = main.get_stones_from_text_map(['.bw'], game)
-        board = main.get_rules_board_from_db_objects(moves, setup_stones)
+        game.moves = [Move(game.id, move_no=1, row=2, column=3,
+                           color=Move.Color.white)]
+        game.setup_stones = main.get_stones_from_text_map(['.bw'], game)
+        board = main.get_rules_board_from_db_game(game)
         self.assertEqual(board[0, 1], go_rules.Color.black)
-
-
-class TestGetGobanDataFromRulesBoard(unittest.TestCase):
-
-    def test_simple(self):
-        board = go_rules.Board()
-        board[0, 1] = go_rules.Color.black
-        board[1, 2] = go_rules.Color.white
-        goban = main.get_goban_data_from_rules_board(board)
-        assert 'b.gif' in goban[0][1]['img']
-        assert 'blackstone' in goban[0][1]['classes']
-        assert 'w.gif' in goban[1][2]['img']
-        assert 'whitestone' in goban[1][2]['classes']
 
 
 class TestPlayStoneIntegrated(TestWithDb):
