@@ -75,6 +75,83 @@ def game(game_no):
             form=form, sgf=sgf,
             on_turn=is_your_turn, with_scoring=is_passed_twice)
 
+def get_goban_from_moves(moves, setup_stones=None, with_scoring=False):
+    """Given the moves for a game, return game template data.
+
+    Pure function.
+    """
+    if setup_stones is None:
+        setup_stones = []
+    rules_board = get_rules_board_from_db_objects(moves, setup_stones)
+    goban = get_goban_data_from_rules_board(rules_board, with_scoring)
+    return goban
+
+def get_rules_board_from_db_objects(moves, setup_stones):
+    """Get board layout resulting from given moves and setup stones.
+
+    Pure function.
+    """
+    def place_stones_for_move(n):
+        for stone in filter(lambda s: s.before_move == n, setup_stones):
+            board[stone.row, stone.column] = stone.color
+
+    moves_by_no = {m.move_no: m for m in moves}
+    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
+    board = go_rules.Board()
+    for move_no in range(max_move_no+2):
+        # max_move_no +1 to include setup stones on move 0 with no move played,
+        # +1 again since `range` excludes the stop value
+        place_stones_for_move(move_no)
+        try:
+            board.update_with_move(moves_by_no[move_no])
+        except KeyError:
+            pass
+    return board
+
+def get_goban_data_from_rules_board(rules_board, with_scoring=False):
+    """Transform a dict of {(r,c): color} to a template-ready list of dicts.
+
+    Each output dictionary contains information needed by the game template to
+    render the corresponding board point.
+
+    `classes` contains CSS classes used by the client-side scripts and browser
+    tests to read the board state and locate specific points.  Currently:
+
+    * each point should have classes `row-y` and `col-x` where `y` and `x` are
+      numbers
+
+    * points with stones should have `blackstone` or `whitestone`; empty points
+      should have `nostone`
+
+    * if marking points is enabled, points which can be assigned to one player
+      should have `blackscore` or `whitescore`
+
+    Pure function.
+    """
+    black = go_rules.Color.black
+    white = go_rules.Color.white
+    empty = go_rules.Color.empty
+
+    color_images = {black: IMG_PATH_BLACK,
+                    white: IMG_PATH_WHITE,
+                    empty: IMG_PATH_EMPTY}
+    color_classes = {black: 'blackstone',
+                     white: 'whitestone',
+                     empty: 'nostone'}
+
+    def create_goban_point(row, column, color):
+        classes_template = 'gopoint row-{row} col-{col} {color_class}'
+        classes = classes_template.format(row=str(row),
+                                          col=str(column),
+                                          color_class=color_classes[color])
+        return dict(img=color_images[color], classes=classes)
+
+    goban = [[create_goban_point(j, i, rules_board[j, i])
+              for i in range(19)]
+             for j in range(19)]
+    return goban
+
+
 @app.route('/playstone', methods=['POST'])
 def playstone():
     return play_general_move("move")
@@ -384,82 +461,6 @@ def process_persona_response(response):
         logging.debug(str(verification_data))
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
-
-def get_goban_from_moves(moves, setup_stones=None, with_scoring=False):
-    """Given the moves for a game, return game template data.
-
-    Pure function.
-    """
-    if setup_stones is None:
-        setup_stones = []
-    rules_board = get_rules_board_from_db_objects(moves, setup_stones)
-    goban = get_goban_data_from_rules_board(rules_board, with_scoring)
-    return goban
-
-def get_rules_board_from_db_objects(moves, setup_stones):
-    """Get board layout resulting from given moves and setup stones.
-
-    Pure function.
-    """
-    def place_stones_for_move(n):
-        for stone in filter(lambda s: s.before_move == n, setup_stones):
-            board[stone.row, stone.column] = stone.color
-
-    moves_by_no = {m.move_no: m for m in moves}
-    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
-    board = go_rules.Board()
-    for move_no in range(max_move_no+2):
-        # max_move_no +1 to include setup stones on move 0 with no move played,
-        # +1 again since `range` excludes the stop value
-        place_stones_for_move(move_no)
-        try:
-            board.update_with_move(moves_by_no[move_no])
-        except KeyError:
-            pass
-    return board
-
-def get_goban_data_from_rules_board(rules_board, with_scoring=False):
-    """Transform a dict of {(r,c): color} to a template-ready list of dicts.
-
-    Each output dictionary contains information needed by the game template to
-    render the corresponding board point.
-
-    `classes` contains CSS classes used by the client-side scripts and browser
-    tests to read the board state and locate specific points.  Currently:
-
-    * each point should have classes `row-y` and `col-x` where `y` and `x` are
-      numbers
-
-    * points with stones should have `blackstone` or `whitestone`; empty points
-      should have `nostone`
-
-    * if marking points is enabled, points which can be assigned to one player
-      should have `blackscore` or `whitescore`
-
-    Pure function.
-    """
-    black = go_rules.Color.black
-    white = go_rules.Color.white
-    empty = go_rules.Color.empty
-
-    color_images = {black: IMG_PATH_BLACK,
-                    white: IMG_PATH_WHITE,
-                    empty: IMG_PATH_EMPTY}
-    color_classes = {black: 'blackstone',
-                     white: 'whitestone',
-                     empty: 'nostone'}
-
-    def create_goban_point(row, column, color):
-        classes_template = 'gopoint row-{row} col-{col} {color_class}'
-        classes = classes_template.format(row=str(row),
-                                          col=str(column),
-                                          color_class=color_classes[color])
-        return dict(img=color_images[color], classes=classes)
-
-    goban = [[create_goban_point(j, i, rules_board[j, i])
-              for i in range(19)]
-             for j in range(19)]
-    return goban
 
 def get_status_lists(player_email):
     """Return two lists of games for the player, split by on-turn or not.
