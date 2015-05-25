@@ -20,7 +20,7 @@ import jinja2
 import json
 import requests
 from sqlalchemy import and_, or_
-from wtforms import HiddenField, IntegerField, StringField
+from wtforms import IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
@@ -61,22 +61,18 @@ def game(game_no):
     moves = game.moves
     resumptions = game.resumptions
     passes = game.passes
-    setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
-    goban = get_goban_from_moves(moves, setup_stones)
+    sgf = get_sgf_from_game(game)
     is_passed_twice = check_two_passes(moves, passes, resumptions)
     if not is_passed_twice:
         form = PlayStoneForm(data={'game_no': game.id,
                                    'move_no': game.move_no})
     else:
-        coords = list(map(lambda ds: [ds.column, ds.row], game.dead_stones))
-        dead_stones_json = json.dumps(coords)
         form = MarkDeadForm(data={'game_no': game.id,
-                                  'move_no': game.move_no,
-                                  'dead_stones': dead_stones_json})
+                                  'move_no': game.move_no})
     return render_template_with_email(
             "game.html",
-            form=form, goban=goban,
+            form=form, sgf=sgf,
             on_turn=is_your_turn, with_scoring=is_passed_twice)
 
 @app.route('/playstone', methods=['POST'])
@@ -785,4 +781,3 @@ class PlayStoneForm(Form):
 class MarkDeadForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
-    dead_stones = HiddenField("dead_stones", validators=[DataRequired()])
