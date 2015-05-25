@@ -32,6 +32,9 @@ class Board(object):
         """Update board to the state it should be in after the move is played.
 
         Modifies self.
+
+        :param move: an object with column, row, and color attributes.
+                     color is an instance of the Color enum.
         """
         try:
             enemy = {Color.white: Color.black,
