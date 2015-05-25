@@ -119,7 +119,7 @@
 
   module('Basic game page', {
     setup: function() {
-      setInputSgf('(;)');
+      setInputSgf('(;SZ[3])');
       $('input#response').val('');
       return tesuji_charm.game_basic.initialize();
     }
@@ -140,7 +140,7 @@
 
   test("white stones play correctly", function() {
     var $point;
-    setInputSgf('(;B[aa])');
+    setInputSgf('(;SZ[3];B[aa])');
     tesuji_charm.game_basic.initialize();
     $point = $pointAt(1, 1);
     $point.click();
@@ -158,6 +158,8 @@
 
   test('clicking multiple points updates hidden form', function() {
     var $point1, $point2, $response;
+    setInputSgf('(;)');
+    tesuji_charm.game_basic.initialize();
     $point1 = $pointAt(0, 0);
     $point2 = $pointAt(1, 2);
     $response = $('input#response');
@@ -198,7 +200,7 @@
         id: 'with_scoring',
         "class": 'with_scoring'
       }));
-      return setInputSgf('(;)');
+      return setInputSgf('(;SZ[3])');
     }
   });
 

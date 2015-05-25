@@ -110,7 +110,7 @@ test "helper function readBoardState", (assert) ->
 
 module 'Basic game page',
   setup: ->
-    setInputSgf '(;)'
+    setInputSgf '(;SZ[3])'
     $('input#response').val ''
     tesuji_charm.game_basic.initialize()
 
@@ -127,7 +127,7 @@ test 'clicking multiple points moves black stone', ->
   ok isPointBlack($point2), 'after second click, second clicked point black'
 
 test "white stones play correctly", ->
-  setInputSgf '(;B[aa])'
+  setInputSgf '(;SZ[3];B[aa])'
   tesuji_charm.game_basic.initialize()
   $point = $pointAt 1, 1
   $point.click()
@@ -141,6 +141,8 @@ test "next player correctly determined with info node", ->
   ok isPointBlack($point), 'first player should be Black despite SGF info node'
 
 test 'clicking multiple points updates hidden form', ->
+  setInputSgf '(;)'
+  tesuji_charm.game_basic.initialize()
   $point1 = $pointAt 0, 0
   $point2 = $pointAt 1, 2
   $response = $('input#response')
@@ -184,7 +186,7 @@ module 'Game page with marking interface',
     $("#qunit-fixture").append $("<div/>",
                                  id: 'with_scoring'
                                  class: 'with_scoring')
-    setInputSgf '(;)'
+    setInputSgf '(;SZ[3])'
 
 test "clicking empty points in marking mode does nothing", (assert) ->
   tesuji_charm.game_marking.initialize()
