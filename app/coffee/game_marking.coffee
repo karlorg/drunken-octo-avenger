@@ -10,12 +10,13 @@ smartgame = tesuji_charm.smartgame
 
 game_common = tesuji_charm.game_common
 $pointAt = game_common.$pointAt
+getInputSgf = game_common.getInputSgf
 
 go_rules = tesuji_charm.go_rules
 
 
 game_marking.initialize = ->
-  sgfObject = smartgame.parse ($('input#data').val() or '(;)')
+  sgfObject = smartgame.parse (getInputSgf() or '(;)')
   game_common.initialize sgfObject
   setInitialDead sgfObject
   setupScoring()
@@ -149,7 +150,7 @@ togglePoints = (points) ->
 updateForm = ->
   "Update the hidden form that communicates our marks back to the server, based
   on the current DOM state."
-  sgfObject = smartgame.parse($('input#data').val() or '(;)')
+  sgfObject = smartgame.parse(getInputSgf() or '(;)')
   nodes = sgfObject.gameTrees[0].nodes
   new_node = { TB: [], TW: [] }
   nodes.push new_node

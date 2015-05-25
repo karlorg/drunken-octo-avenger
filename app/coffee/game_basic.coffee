@@ -12,6 +12,7 @@ game_basic = tesuji_charm.game_basic
 
 smartgame = tesuji_charm.smartgame
 game_common = tesuji_charm.game_common
+getInputSgf = game_common.getInputSgf
 go_rules = tesuji_charm.go_rules
 
 
@@ -22,8 +23,8 @@ newStoneColor = null
 
 game_basic.initialize = ->
 
-  if $('input#data').val()
-    sgf_object = smartgame.parse $('input#data').val()
+  if getInputSgf()
+    sgf_object = smartgame.parse getInputSgf()
   else
     sgf_object = smartgame.parse '(;)'
   game_common.initialize(sgf_object)

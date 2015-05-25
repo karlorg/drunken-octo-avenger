@@ -10,6 +10,7 @@ go_rules = tesuji_charm.go_rules
 
 
 game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
+game_common.getInputSgf = getInputSgf = -> $('input#data').val()
 
 # setPointColor and helpers
 
@@ -78,8 +79,8 @@ game_common.initialize = (sgf_object) ->
   $('#content').append '<table class="goban"></table>'
 
   unless sgf_object
-    if $('input#data').val() != ''
-      sgf_object = smartgame.parse $('input#data').val()
+    if getInputSgf() != ''
+      sgf_object = smartgame.parse getInputSgf()
 
   size = if sgf_object \
          then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
@@ -92,7 +93,7 @@ game_common.initialize = (sgf_object) ->
       $td = $("<td class='row-#{j} col-#{i} nostone' />")
       $tr.append $td
 
-  if $('input#data').val() != ''
+  if getInputSgf() != ''
     board_state = (('empty' for i in [0...size]) for j in [0...size])
     for node in sgf_object.gameTrees[0].nodes
       if node.B
