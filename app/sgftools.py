@@ -4,6 +4,9 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
+class ParseError(Exception):
+    pass
+
 
 class SgfTree(object):
     # at the moment just a wrapper around 'nodes', a list of
@@ -31,6 +34,9 @@ def generate(sgf_tree):
                 sgf += '[' + value + ']'
     sgf += ')'
     return sgf
+
+def parse(sgf):
+    pass
 
 _ord_a = ord('a')
 

@@ -207,10 +207,19 @@ def get_and_validate_move_no(arguments, game):
 
 def create_and_validate_move(move_no, color, game, arguments):
     try:
-        row = int(arguments['row'])
-        column = int(arguments['column'])
-    except (KeyError, ValueError):
+        sgf_tree = sgftools.parse(arguments['response'])
+    except (KeyError, sgftools.ParseError):
         raise go_rules.IllegalMoveException("Invalid request made.")
+
+    last_node = sgf_tree.nodes[-1]
+    if 'B' in last_node:
+        sgf_color = Move.Color.black
+        row, column = sgftools.decode_coord(last_node['B'][0])
+    elif 'W' in last_node:
+        sgf_color = Move.Color.white
+        row, column = sgftools.decode_coord(last_node['W'][0])
+    if color != sgf_color:
+        raise go_rules.IllegalMoveException("Wrong move color submitted.")
 
     move = Move(game_no=game.id, move_no=move_no,
                 row=row, column=column, color=color)
@@ -765,8 +774,7 @@ class PlayStoneForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
     data = HiddenField("data")
-    row = HiddenInteger("row", validators=[DataRequired()])
-    column = HiddenInteger("column", validators=[DataRequired()])
+    response = HiddenField("response", validators=[DataRequired()])
 
 class MarkDeadForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])

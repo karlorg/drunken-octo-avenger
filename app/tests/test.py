@@ -473,15 +473,15 @@ class TestPlayStoneIntegrated(TestWithDb):
         with self.patch_render_template():
             with self.set_email('black@black.com') as test_client:
                 test_client.post('/playstone', data=dict(
-                    game_no=game1.id, move_no=0, row=3, column=15
+                    game_no=game1.id, move_no=0, response="(;B[pd])"
                 ))
             with self.set_email('black@black.com') as test_client:
                 test_client.post('/playstone', data=dict(
-                    game_no=game2.id, move_no=0, row=9, column=9
+                    game_no=game2.id, move_no=0, response="(;B[jj])"
                 ))
             with self.set_email('white@white.com') as test_client:
                 test_client.post('/playstone', data=dict(
-                    game_no=game1.id, move_no=1, row=15, column=15
+                    game_no=game1.id, move_no=1, response="(;B[pd];W[pp])"
                 ))
             with self.set_email('black@black.com') as test_client:
                 test_client.post('/playpass', data=dict(
@@ -511,7 +511,7 @@ class TestPlayStoneIntegrated(TestWithDb):
         with self.set_email('white@white.com') as test_client:
             with self.assert_flashes('not your turn'):
                 test_client.post('/playstone', data=dict(
-                    game_no=game.id, move_no=0, row=16, column=15
+                    game_no=game.id, move_no=0, response="(;W[pq])"
                 ))
         moves = Move.query.all()
         assert len(moves) == 0
@@ -527,22 +527,11 @@ class TestPlayStoneIntegrated(TestWithDb):
         moves = Move.query.all()
         assert len(moves) == 0
 
-    def test_rejects_invalid_row_type(self):
-        game = self.add_game()
-        assert Move.query.all() == []
-        with self.set_email('black@black.com') as test_client:
-            with self.assert_flashes('invalid'):
-                test_client.post('/playstone', data=dict(
-                    game_no=game.id, move_no=0, row="sixteen", column=15
-                ), follow_redirects=True)
-        moves = Move.query.all()
-        assert len(moves) == 0
-
     def test_handles_missing_game_no(self):
         with self.set_email('white@white.com') as test_client:
             with self.patch_render_template():
                 test_client.post('/playstone', data=dict(
-                    move_no=0, row=16, column=15
+                    move_no=0, response="(;W[pq])"
                 ))
         # should not raise
 
@@ -559,7 +548,7 @@ class TestPlayStoneIntegrated(TestWithDb):
                         'app.main.validate_turn_and_record', mock_play_move
                 ):
                     test_client.post('/playstone', data=dict(
-                        game_no=game.id, move_no=0, row=9, column=9
+                        game_no=game.id, move_no=0, response="(;B[jj])"
                     ))
                 self.assertIsNotNone(mock_play_move.call_args)
                 passed_dict = mock_play_move.call_args[0][3]
@@ -571,7 +560,7 @@ class TestPlayStoneIntegrated(TestWithDb):
         with self.patch_render_template():
             with self.set_email('black@black.com') as test_client:
                 response = test_client.post('/playstone', data=dict(
-                    game_no=game.id, move_no=0, row=0, column=1
+                    game_no=game.id, move_no=0, response="(;B[ba])"
                 ))
         self.assert_redirects(response, url_for('game', game_no=game.id))
 
@@ -583,7 +572,7 @@ class TestPlayStoneIntegrated(TestWithDb):
             ))
         with self.set_email('white@white.com') as test_client:
             test_client.post('/playstone', data=dict(
-                game_no=game.id, move_no=1, row=15, column=15
+                game_no=game.id, move_no=1, response="(;B[];W[pp])"
             ))
         self.assertEqual(len(game.moves), 1)
 
