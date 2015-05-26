@@ -4,6 +4,8 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
+import re
+
 class ParseError(Exception):
     pass
 
@@ -36,7 +38,73 @@ def generate(sgf_tree):
     return sgf
 
 def parse(sgf):
-    pass
+
+    d = {}
+    d['rest'] = sgf
+
+    def accept(char):
+        return accept_re('\\' + char)
+
+    def accept_re(pattern):
+        """If pattern matches at current point in input, advance and return.
+
+        If the pattern contains a group, return the content of the
+        group.  Otherwise, return the entire match.
+
+        Either way, advance the current point over the entire match.
+
+        If pattern does not match, do nothing and return None.
+        """
+        regexp = re.compile(pattern)
+        match = regexp.match(d['rest'])
+        if match:
+            whole = match.group()
+            groups = match.groups()
+            if len(groups) > 0:
+                result = groups[0]
+            else:
+                result = whole
+            d['rest'] = d['rest'][len(whole):]
+            return result
+        else:
+            return None
+
+    def expect(char):
+        if not accept(char):
+            raise ParseError()
+
+    def sequence():
+        expect('(')
+        nodes_ = nodes()
+        expect(')')
+        return SgfTree(nodes_)
+
+    def nodes():
+        result = []
+        while accept(';'):
+            result.append(node_body())
+        return result
+
+    def node_body():
+        result = {}
+        while True:
+            tag = accept_re(r"[A-Z]+")
+            if not tag:
+                break
+            values = tag_values()
+            result[tag] = values
+        return result
+
+    def tag_values():
+        result = []
+        while True:
+            value = accept_re(r"\[([^]]*)\]")
+            if not value:
+                break
+            result.append(value)
+        return result
+
+    return sequence()
 
 _ord_a = ord('a')
 
