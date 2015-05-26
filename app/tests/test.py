@@ -19,7 +19,7 @@ from werkzeug.datastructures import MultiDict
 
 from .. import go_rules
 from .. import main
-from ..main import DeadStone, Game, Move, Pass, db
+from ..main import DeadStone, Game, Move, Pass, SetupStone, db
 
 
 class TestWithTestingApp(flask.ext.testing.TestCase):
@@ -406,12 +406,15 @@ class TestGetSgfFromGame(unittest.TestCase):
 
     def test_simple_example_game(self):
         game = Game()
+        game.setup_stones = [SetupStone(game_no=game.id, before_move=0,
+                                        column=1, row=0,
+                                        color=Move.Color.black)]
         game.moves = [Move(game_no=1, move_no=0,
                            row=2, column=3, color=Move.Color.black),
                       Move(game_no=1, move_no=1,
                            row=14, column=15, color=Move.Color.white)]
         sgf = main.get_sgf_from_game(game)
-        self.assertRegexpMatches(sgf, r";B\[dc\];W\[po\]\)")
+        self.assertRegex(sgf, r";AB\[ba\];B\[dc\];W\[po\]\)")
 
     def test_dead_stones(self):
         game = Game()
@@ -426,7 +429,7 @@ class TestGetSgfFromGame(unittest.TestCase):
         sgf = main.get_sgf_from_game(game)
 
         regexp = re.compile(";[^;]*TW[^A-Z]*\[ba][^;]*\)")
-        self.assertRegexpMatches(sgf, regexp, "territory not found in SGF")
+        self.assertRegex(sgf, regexp, "territory not found in SGF")
 
 
 class TestGetRulesBoardFromDbGame(unittest.TestCase):

@@ -100,11 +100,9 @@ def get_sgf_from_game(game):
     moves_by_no = {m.move_no: m for m in moves}
     max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
     nodes = [{'FF': ['4'], 'SZ': ['19']}]
-    for move_no in range(max_move_no+2):
-        # max_move_no +1 to include setup stones on move 0 with no move played,
-        # +1 again since `range` excludes the stop value
+    for move_no in range(-1, max_move_no+1):
         node = {}
-        node.update(setup_stones_for_move(move_no))
+        node.update(setup_stones_for_move(move_no + 1))
         try:
             move = moves_by_no[move_no]
         except KeyError:
@@ -214,10 +212,10 @@ def create_and_validate_move(move_no, color, game, arguments):
     last_node = sgf_tree.nodes[-1]
     if 'B' in last_node:
         sgf_color = Move.Color.black
-        row, column = sgftools.decode_coord(last_node['B'][0])
+        column, row = sgftools.decode_coord(last_node['B'][0])
     elif 'W' in last_node:
         sgf_color = Move.Color.white
-        row, column = sgftools.decode_coord(last_node['W'][0])
+        column, row = sgftools.decode_coord(last_node['W'][0])
     if color != sgf_color:
         raise go_rules.IllegalMoveException("Wrong move color submitted.")
 
