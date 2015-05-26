@@ -82,6 +82,8 @@ def get_sgf_from_game(game):
 
     Reads database.
     """
+    # we're allowed to be sloppy here because we'll probably just
+    # store games as SGFs soon anyway and delete this, yay
     setup_stones = game.setup_stones
 
     def setup_stones_for_move(n):
@@ -96,13 +98,36 @@ def get_sgf_from_game(game):
                             for stone in white if stone.before_move == n]
         return result
 
+    def tw_tb_from_dead_stones(dead_stones):
+        rules_board = get_rules_board_from_db_game(game)
+        black_territory = set()
+        white_territory = set()
+        for ds in dead_stones:
+            color = rules_board[(ds.row, ds.column)]
+            group = rules_board.get_group(ds.row, ds.column,
+                                          include=[go_rules.Color.empty,
+                                                   color])
+            target = {go_rules.Color.black: white_territory,
+                      go_rules.Color.white: black_territory}[color]
+            target.update(group)
+        result = {}
+        if black_territory:
+            result['TB'] = [sgftools.encode_coord(p[1], p[0])
+                            for p in black_territory]
+        if white_territory:
+            result['TW'] = [sgftools.encode_coord(p[1], p[0])
+                            for p in white_territory]
+        return result
+
     moves = game.moves
     moves_by_no = {m.move_no: m for m in moves}
     max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
     nodes = [{'FF': ['4'], 'SZ': ['19']}]
     for move_no in range(-1, max_move_no+1):
         node = {}
+        # setup stones
         node.update(setup_stones_for_move(move_no + 1))
+        # move
         try:
             move = moves_by_no[move_no]
         except KeyError:
@@ -111,6 +136,10 @@ def get_sgf_from_game(game):
             tag = {go_rules.Color.black: 'B',
                    go_rules.Color.white: 'W'}[move.color]
             node[tag] = [sgftools.encode_coord(move.column, move.row)]
+        # dead stones
+        if move_no == max_move_no and game.dead_stones:
+            node.update(tw_tb_from_dead_stones(game.dead_stones))
+        # finished!
         if node:
             nodes.append(node)
     return sgftools.generate(sgftools.SgfTree(nodes))

@@ -46,7 +46,7 @@ class Board(object):
             for (r0, c0) in self._get_neighbours(r, c):
                 if self._points[(r0, c0)] == enemy:
                     if self._count_liberties(r0, c0) == 0:
-                        for p in self._get_group(r0, c0):
+                        for p in self.get_group(r0, c0):
                             self._points[p] = Color.empty
 
         if self._points[(move.row, move.column)] == Color.empty:
@@ -63,20 +63,21 @@ class Board(object):
             raise IllegalMoveException(
                     "playing into no liberties", move.move_no)
 
-    def _get_group(self, r, c):
+    def get_group(self, r, c, include=None):
         """Return the group of the stone at (r,c) as an iterable of coords.
 
         Pure function.
         """
-        ally = self._points[(r, c)]
-        if ally is Color.empty:
-            raise EmptyPointGroupException
+        if include is None:
+            include = [self._points[(r, c)]]
+            if include[0] is Color.empty:
+                raise EmptyPointGroupException
 
         def get_group_recursive(r, c, group_so_far):
             # group_so_far is a set
             group_so_far |= set([(r, c)])
             neighbours_to_recurse = filter(
-                lambda p: self._points[p] is ally and p not in group_so_far,
+                lambda p: self._points[p] in include and p not in group_so_far,
                 self._get_neighbours(r, c)
             )
             for (r0, c0) in neighbours_to_recurse:
@@ -102,7 +103,7 @@ class Board(object):
             raise EmptyPointLibertiesException
 
         liberties = set()
-        for (r0, c0) in self._get_group(r, c):
+        for (r0, c0) in self.get_group(r, c):
             liberties |= set(filter(
                     lambda p: self._points[p] == Color.empty,
                     self._get_neighbours(r0, c0)
