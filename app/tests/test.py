@@ -19,6 +19,7 @@ from werkzeug.datastructures import MultiDict
 
 from .. import go_rules
 from .. import main
+from .. import sgftools
 from ..main import DeadStone, Game, Move, Pass, SetupStone, db
 
 
@@ -377,7 +378,7 @@ class TestResumeGameIntegrated(TestWithDb):
         # behaviour needs to match up with ours.
         with self.set_email('black@black.com') as test_client:
             test_client.post(url_for('markdead'), data={
-                'game_no': self.game.id, 'move_no': 2, 'dead_stones': '[]'})
+                'game_no': self.game.id, 'move_no': 2, 'response': '(;)'})
         with self.set_email('white@white.com') as test_client:
             test_client.post(url_for('resumegame'), data={
                 'game_no': self.game.id, 'move_no': 3})
@@ -608,32 +609,37 @@ class TestMarkDeadIntegrated(TestWithDb):
                             color=Move.Color.white))
         db.session.commit()
         self.game = game
+        self.sgf_prefix = ("(;AB[ba][bb][bc][ac]" +
+                           "AW[da][db][dc][dd][cd][bd][ad]" +
+                           ";B[];W[];")
+        self.sgf_suffix = ")"
 
     def coord_set(self):
         db_objs = DeadStone.query.filter(
                 DeadStone.game_no == self.game.id).all()
         return set(map(lambda dead: (dead.column, dead.row,), db_objs))
 
-    def do_post(self, stones_json, move_no=None):
+    def do_post(self, territory_sgf, move_no=None):
         game = self.game
         if move_no is None:
             move_no = game.move_no
+        response = self.sgf_prefix + territory_sgf + self.sgf_suffix
         with self.set_email(game.to_move()) as test_client:
             with self.patch_render_template():
                 test_client.post(url_for('markdead'),
                                  data={'game_no': game.id,
                                        'move_no': move_no,
-                                       'dead_stones': stones_json})
+                                       'response': response})
 
     def test_advances_turn(self):
         original_turn = self.game.to_move()
-        self.do_post('[]')
+        self.do_post('')
         self.assertNotEqual(original_turn, self.game.to_move())
 
     def test_records_dead_stones_in_db(self):
-        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
+        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
 
-        self.do_post(dead_stones_json)
+        self.do_post(territory)
 
         coords = self.coord_set()
         self.assertIn((1, 0), coords)
@@ -642,71 +648,54 @@ class TestMarkDeadIntegrated(TestWithDb):
         self.assertIn((0, 2), coords)
 
     def test_new_proposal_erases_old(self):
-        first_dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-        second_dead_stones_json = ("[[3,0],[3,1],[3,2],[3,3],"
-                                   " [2,3],[1,3],[0,3]]")
+        first_territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
+        second_live_stones_coords = [[1, 0], [1, 1], [1, 2], [0, 2]]
+        second_territory = "TB"
+        for y in range(19):
+            for x in range(19):
+                if [x, y] not in second_live_stones_coords:
+                    second_territory += "[" + sgftools.encode_coord(x, y) + "]"
 
-        self.do_post(first_dead_stones_json)
-        self.do_post(second_dead_stones_json)
+        self.do_post(first_territory)
+        self.do_post(second_territory)
 
         coords = self.coord_set()
         self.assertNotIn((1, 0), coords)
         self.assertIn((3, 3), coords)
 
     def test_two_identical_proposals_end_game(self):
-        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-        self.do_post(dead_stones_json)
+        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
+        self.do_post(territory)
         self.assertIsNone(self.game.winner,
                           "game is not over after one submission")
 
-        self.do_post(dead_stones_json)
+        self.do_post(territory)
 
         self.assertIsNotNone(self.game.winner,
                              "game is over after second identical submission")
 
     def test_two_different_proposals_do_not_end_game(self):
-        first_dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-        second_dead_stones_json = "[[1,0],[1,1],[1,2],[0,3]]"
+        first_territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
+        second_territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cd]"
 
-        self.do_post(first_dead_stones_json)
-        self.do_post(second_dead_stones_json)
+        self.do_post(first_territory)
+        self.do_post(second_territory)
 
         self.assertIsNone(self.game.winner,
                           "game is not over after second different submission")
 
     def test_bad_move_no_does_nothing(self):
-        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-        self.do_post(dead_stones_json, move_no=42)
+        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
+        self.do_post(territory, move_no=42)
         self.assertNotIn((1, 0), self.coord_set())
 
-    def test_malformed_json_gives_helpful_error(self):
-        bad_json = "[[,]]"
-        with self.assert_flashes('json'):
-            self.do_post(bad_json)
-
-    def test_bad_structure_gives_helpful_error(self):
-        bad_structure_json = "[[1]]"
-        with self.assert_flashes('json'):
-            self.do_post(bad_structure_json)
-
-    def test_malformed_json_does_nothing(self):
-        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-        bad_json = "[[,]]"
-        self.do_post(dead_stones_json)
+    def test_malformed_sgf_does_nothing(self):
+        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
+        bad_territory = "TW[;]"
+        self.do_post(territory)
         original_turn = self.game.to_move()
 
-        self.do_post(bad_json)
-
-        self.assertEqual(original_turn, self.game.to_move())
-        self.assertIn((1, 0), self.coord_set())
-
-    def test_bad_structure_does_nothing(self):
-        dead_stones_json = "[[1,0],[1,1],[1,2],[0,2]]"
-        bad_structure_json = "[[1]]"
-        self.do_post(dead_stones_json)
-        original_turn = self.game.to_move()
-
-        self.do_post(bad_structure_json)
+        self.do_post(bad_territory)
 
         self.assertEqual(original_turn, self.game.to_move())
         self.assertIn((1, 0), self.coord_set())

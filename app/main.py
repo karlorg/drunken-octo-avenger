@@ -197,7 +197,7 @@ def validate_turn_and_record(which, player, game, arguments):
     elif which == "move":
         turn_object = create_and_validate_move(move_no, color, game, arguments)
     elif which == "markdead":
-        record_dead_stones_from_json_and_check_end(game, arguments)
+        record_dead_stones_from_sgf_and_check_end(game, arguments)
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif which == "resume":
         for dead_stone in game.dead_stones:
@@ -281,16 +281,20 @@ def get_rules_board_from_db_game(game):
             pass
     return board
 
-def record_dead_stones_from_json_and_check_end(game, arguments):
+def record_dead_stones_from_sgf_and_check_end(game, arguments):
     """Get dead stones list from args; check game over; record both."""
+    sgf_object = sgftools.parse(arguments['response'])
+    last_node = sgf_object.nodes[-1]
+    coded_coords = []
+    coded_coords.extend(last_node.get('TB', []))
+    coded_coords.extend(last_node.get('TW', []))
     try:
-        coords_as_lists = json.loads(arguments['dead_stones'])
-        dead_stones = []
-        for [column, row] in coords_as_lists:
-            dead_stones.append(DeadStone(game.id, row=row, column=column))
-    except ValueError as e:
-        raise go_rules.IllegalMoveException(
-                "Invalid JSON: {}".format(e.args[0]))
+        coords_as_tuples = [sgftools.decode_coord(c) for c in coded_coords]
+    except ValueError:
+        raise go_rules.IllegalMoveException("internal error: invalid SGF data")
+    dead_stones = []
+    for column, row in coords_as_tuples:
+        dead_stones.append(DeadStone(game.id, row=row, column=column))
     if dead_stones_matches_db(game, dead_stones):
         game.winner = True
     else:
@@ -807,3 +811,4 @@ class MarkDeadForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
     data = HiddenField("data")
+    response = HiddenField("response", validators=[DataRequired()])

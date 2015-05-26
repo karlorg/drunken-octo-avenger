@@ -112,6 +112,10 @@ def encode_coord(x, y):
     return "{}{}".format(chr(x + _ord_a), chr(y + _ord_a))
 
 def decode_coord(chars):
-    x = ord(chars[0]) - _ord_a
-    y = ord(chars[1]) - _ord_a
+    try:
+        x = ord(chars[0]) - _ord_a
+        y = ord(chars[1]) - _ord_a
+    except IndexError:
+        raise ValueError("not enough digits in encoded coord: '{}'".format(
+            chars))
     return x, y
