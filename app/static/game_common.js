@@ -136,7 +136,9 @@
     for (j = _i = 0; 0 <= size ? _i < size : _i > size; j = 0 <= size ? ++_i : --_i) {
       tr = '<tr>';
       for (i = _j = 0; 0 <= size ? _j < size : _j > size; i = 0 <= size ? ++_j : --_j) {
-        tr += "<td class='row-" + j + " col-" + i + " nostone' />";
+        tr += "<td class='row-" + j + " col-" + i + " nostone'>";
+        tr += "<img src='static/images/goban/e.gif' />'";
+        tr += "</td>";
       }
       tr += '</tr>';
       tableContentsStr += tr;

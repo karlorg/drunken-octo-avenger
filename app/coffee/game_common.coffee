@@ -90,7 +90,9 @@ game_common.initialize = (sgf_object) ->
   for j in [0...size]
     tr = '<tr>'
     for i in [0...size]
-      tr += "<td class='row-#{j} col-#{i} nostone' />"
+      tr += "<td class='row-#{j} col-#{i} nostone'>"
+      tr += "<img src='static/images/goban/e.gif' />'"
+      tr += "</td>"
     tr += '</tr>'
     tableContentsStr += tr
   $('.goban').append tableContentsStr
