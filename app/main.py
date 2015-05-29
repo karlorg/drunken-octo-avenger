@@ -104,6 +104,8 @@ def get_sgf_from_game(game):
         white_territory = set()
         for ds in dead_stones:
             color = rules_board[go_rules.Coord(x=ds.column, y=ds.row)]
+            if color == go_rules.Color.empty:
+                continue
             group = rules_board.get_group(
                 go_rules.Coord(x=ds.column, y=ds.row),
                 include=[go_rules.Color.empty, color])
