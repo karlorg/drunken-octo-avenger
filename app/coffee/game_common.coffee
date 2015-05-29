@@ -135,26 +135,19 @@ game_common.encodeSgfCoord = encodeSgfCoord = (x, y) ->
 game_common.cloneSgfObject = (sgfObject) ->
   "The trick here is that 'parent' attributes must be replaced with the parent
   in the new copy instead of pointing to the old one."
+  getClone = (v, self, k=null, parent=null) -> switch
+    when k == 'parent' then parent
+    when Array.isArray v then cloneArrayRecursive v
+    when v == Object(v) then cloneObjectRecursive v, self
+    else v
   cloneObjectRecursive = (subObject, parent) ->
     result = {}
     for own k, v of subObject
-      if k == 'parent'
-        result[k] = parent
-      else if Array.isArray v
-        result[k] = cloneArrayRecursive v
-      else if v == Object(v)
-        result[k] = cloneObjectRecursive v, result
-      else
-        result[k] = v
+      result[k] = getClone(v, result, k, parent)
     return result
   cloneArrayRecursive = (subArray) ->
     result = []
     for v in subArray
-      if Array.isArray v
-        result.push cloneArrayRecursive(v)
-      else if v == Object(v)
-        result.push cloneObjectRecursive(v, result)
-      else
-        result.push v
+      result.push getClone(v, result)
     return result
   return cloneObjectRecursive sgfObject, null

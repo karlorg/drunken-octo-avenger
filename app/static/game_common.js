@@ -210,22 +210,32 @@
 
   game_common.cloneSgfObject = function(sgfObject) {
     "The trick here is that 'parent' attributes must be replaced with the parent in the new copy instead of pointing to the old one.";
-    var cloneArrayRecursive, cloneObjectRecursive;
+    var cloneArrayRecursive, cloneObjectRecursive, getClone;
+    getClone = function(v, self, k, parent) {
+      if (k == null) {
+        k = null;
+      }
+      if (parent == null) {
+        parent = null;
+      }
+      switch (false) {
+        case k !== 'parent':
+          return parent;
+        case !Array.isArray(v):
+          return cloneArrayRecursive(v);
+        case v !== Object(v):
+          return cloneObjectRecursive(v, self);
+        default:
+          return v;
+      }
+    };
     cloneObjectRecursive = function(subObject, parent) {
       var k, result, v;
       result = {};
       for (k in subObject) {
         if (!__hasProp.call(subObject, k)) continue;
         v = subObject[k];
-        if (k === 'parent') {
-          result[k] = parent;
-        } else if (Array.isArray(v)) {
-          result[k] = cloneArrayRecursive(v);
-        } else if (v === Object(v)) {
-          result[k] = cloneObjectRecursive(v, result);
-        } else {
-          result[k] = v;
-        }
+        result[k] = getClone(v, result, k, parent);
       }
       return result;
     };
@@ -234,13 +244,7 @@
       result = [];
       for (_i = 0, _len = subArray.length; _i < _len; _i++) {
         v = subArray[_i];
-        if (Array.isArray(v)) {
-          result.push(cloneArrayRecursive(v));
-        } else if (v === Object(v)) {
-          result.push(cloneObjectRecursive(v, result));
-        } else {
-          result.push(v);
-        }
+        result.push(getClone(v, result));
       }
       return result;
     };
