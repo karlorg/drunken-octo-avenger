@@ -103,10 +103,10 @@ def get_sgf_from_game(game):
         black_territory = set()
         white_territory = set()
         for ds in dead_stones:
-            color = rules_board[(ds.row, ds.column)]
-            group = rules_board.get_group(ds.row, ds.column,
-                                          include=[go_rules.Color.empty,
-                                                   color])
+            color = rules_board[go_rules.Coord(x=ds.column, y=ds.row)]
+            group = rules_board.get_group(
+                go_rules.Coord(x=ds.column, y=ds.row),
+                include=[go_rules.Color.empty, color])
             target = {go_rules.Color.black: white_territory,
                       go_rules.Color.white: black_territory}[color]
             target.update(group)
@@ -265,7 +265,7 @@ def get_rules_board_from_db_game(game):
     """
     def place_stones_for_move(n):
         for stone in filter(lambda s: s.before_move == n, game.setup_stones):
-            board[stone.row, stone.column] = stone.color
+            board[go_rules.Coord(x=stone.column, y=stone.row)] = stone.color
 
     moves = game.moves
     moves_by_no = {m.move_no: m for m in moves}
