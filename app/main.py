@@ -407,7 +407,7 @@ def get_rules_board_from_db_objects(moves, setup_stones):
     """
     def place_stones_for_move(n):
         for stone in filter(lambda s: s.before_move == n, setup_stones):
-            board[stone.row, stone.column] = stone.color
+            board[go_rules.Coord(x=stone.column, y=stone.row)] = stone.color
 
     moves_by_no = {m.move_no: m for m in moves}
     max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
@@ -423,7 +423,7 @@ def get_rules_board_from_db_objects(moves, setup_stones):
     return board
 
 def get_goban_data_from_rules_board(rules_board, with_scoring=False):
-    """Transform a dict of {(r,c): color} to a template-ready list of dicts.
+    """Transform a rules board to a template-ready list of dicts.
 
     Each output dictionary contains information needed by the game template to
     render the corresponding board point.
@@ -460,7 +460,7 @@ def get_goban_data_from_rules_board(rules_board, with_scoring=False):
                                           color_class=color_classes[color])
         return dict(img=color_images[color], classes=classes)
 
-    goban = [[create_goban_point(j, i, rules_board[j, i])
+    goban = [[create_goban_point(j, i, rules_board[go_rules.Coord(x=i, y=j)])
               for i in range(19)]
              for j in range(19)]
     return goban

@@ -477,10 +477,10 @@ class TestGetRulesBoardFromDbObjects(unittest.TestCase):
         moves = [Move(game.id, 0, 2, 3, Move.Color.black)]
         setup_stones = main.get_stones_from_text_map(['.bw'], game)
         board = main.get_rules_board_from_db_objects(moves, setup_stones)
-        self.assertEqual(board[0, 0], go_rules.Color.empty)
-        self.assertEqual(board[0, 1], go_rules.Color.black)
-        self.assertEqual(board[0, 2], go_rules.Color.white)
-        self.assertEqual(board[2, 3], go_rules.Color.black)
+        self.assertEqual(board[go_rules.Coord(x=0, y=0)], go_rules.Color.empty)
+        self.assertEqual(board[go_rules.Coord(x=1, y=0)], go_rules.Color.black)
+        self.assertEqual(board[go_rules.Coord(x=2, y=0)], go_rules.Color.white)
+        self.assertEqual(board[go_rules.Coord(x=3, y=2)], go_rules.Color.black)
 
     def test_setup_stones(self):
         """Regression test: need to process setup stones after last move.
@@ -491,7 +491,7 @@ class TestGetRulesBoardFromDbObjects(unittest.TestCase):
         moves = []
         setup_stones = main.get_stones_from_text_map(['.bw'], game)
         board = main.get_rules_board_from_db_objects(moves, setup_stones)
-        self.assertEqual(board[0, 1], go_rules.Color.black)
+        self.assertEqual(board[go_rules.Coord(x=1, y=0)], go_rules.Color.black)
 
     def test_copes_with_pass_then_move(self):
         """Regression test: process setup stones on first move pass.
@@ -503,15 +503,15 @@ class TestGetRulesBoardFromDbObjects(unittest.TestCase):
                       color=Move.Color.white)]
         setup_stones = main.get_stones_from_text_map(['.bw'], game)
         board = main.get_rules_board_from_db_objects(moves, setup_stones)
-        self.assertEqual(board[0, 1], go_rules.Color.black)
+        self.assertEqual(board[go_rules.Coord(x=1, y=0)], go_rules.Color.black)
 
 
 class TestGetGobanDataFromRulesBoard(unittest.TestCase):
 
     def test_simple(self):
         board = go_rules.Board()
-        board[0, 1] = go_rules.Color.black
-        board[1, 2] = go_rules.Color.white
+        board[go_rules.Coord(x=1, y=0)] = go_rules.Color.black
+        board[go_rules.Coord(x=2, y=1)] = go_rules.Color.white
         goban = main.get_goban_data_from_rules_board(board)
         assert 'b.gif' in goban[0][1]['img']
         assert 'blackstone' in goban[0][1]['classes']
