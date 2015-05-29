@@ -23,6 +23,10 @@ class SgfTree(object):
             nodes = []
         self.nodes = nodes
 
+    def main_line(self):
+        """Return a list of nodes on the main branch of the game."""
+        return self.nodes
+
 
 def generate(sgf_tree):
     sgf = '('

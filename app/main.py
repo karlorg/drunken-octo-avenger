@@ -238,7 +238,7 @@ def create_and_validate_move(move_no, color, game, arguments):
     except (KeyError, sgftools.ParseError):
         raise go_rules.IllegalMoveException("Invalid request made.")
 
-    last_node = sgf_tree.nodes[-1]
+    last_node = sgf_tree.main_line()[-1]
     if 'B' in last_node:
         sgf_color = Move.Color.black
         column, row = sgftools.decode_coord(last_node['B'][0])
@@ -284,7 +284,7 @@ def get_rules_board_from_db_game(game):
 def record_dead_stones_from_sgf_and_check_end(game, arguments):
     """Get dead stones list from args; check game over; record both."""
     sgf_object = sgftools.parse(arguments['response'])
-    last_node = sgf_object.nodes[-1]
+    last_node = sgf_object.main_line()[-1]
     coded_coords = []
     coded_coords.extend(last_node.get('TB', []))
     coded_coords.extend(last_node.get('TW', []))
