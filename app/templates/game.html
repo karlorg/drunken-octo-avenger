@@ -32,6 +32,11 @@
     <button type="submit"
             class="resign_button" name='resign_button'>Resign</button>
 </form>
+{% else %}
+<form method="POST" action="/404">
+    <!-- provide a form to supply the hidden data field -->
+    {{ form.hidden_tag() }}
+</form>
 {% endif %}  <!-- end on_turn -->
 {% endif %}  <!-- end not with_scoring -->
 
