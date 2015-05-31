@@ -15,19 +15,15 @@ game_common.getInputSgf = getInputSgf = -> $('input#data').val()
 # setPointColor and helpers
 
 game_common.setPointColor = setPointColor = ($td, color) ->
-  [filename, stoneclass] = switch color
-    when 'empty' then ['e.gif', 'nostone']
-    when 'black' then ['b.gif', 'blackstone']
-    when 'white' then ['w.gif', 'whitestone']
-    when 'blackdead' then ['bdwp.gif', 'blackdead whitescore']
-    when 'whitedead' then ['wdbp.gif', 'whitedead blackscore']
-    when 'blackscore' then ['bp.gif', 'blackscore nostone']
-    when 'whitescore' then ['wp.gif', 'whitescore nostone']
-  setImage $td, filename
+  stoneclass = switch color
+    when 'empty' then 'nostone'
+    when 'black' then 'blackstone'
+    when 'white' then 'whitestone'
+    when 'blackdead' then 'blackdead whitescore'
+    when 'whitedead' then 'whitedead blackscore'
+    when 'blackscore' then 'blackscore nostone'
+    when 'whitescore' then 'whitescore nostone'
   setStoneClass $td, stoneclass
-
-setImage = ($td, filename) ->
-  $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
 setStoneClass = ($td, stoneclass) ->
   $td.removeClass('blackstone whitestone nostone
@@ -91,7 +87,6 @@ game_common.initialize = (sgf_object) ->
     tr = '<tr>'
     for i in [0...size]
       tr += "<td class='row-#{j} col-#{i} nostone'>"
-      tr += "<img src='static/images/goban/e.gif' />'"
       tr += "</td>"
     tr += '</tr>'
     tableContentsStr += tr

@@ -84,8 +84,9 @@ class BrowserTest
     casper.evaluate evaluate_fun, @lastGameSelector(your_turn)
 
   imageSrc: (x, y) ->
-    casper.evaluate ((x, y) -> $(".row-#{y}.col-#{x} img").attr('src')),
-      x, y
+    casper.evaluate ((x, y) ->
+      $("td.row-#{y}.col-#{x}").css('background-image')),
+        x, y
 
   assertPointIsBlack: (test, x, y) ->
     test.assertExists pointSelector(x,y) + ".blackstone",

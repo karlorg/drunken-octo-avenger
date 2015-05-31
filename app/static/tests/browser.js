@@ -119,7 +119,7 @@
 
     BrowserTest.prototype.imageSrc = function(x, y) {
       return casper.evaluate((function(x, y) {
-        return $(".row-" + y + ".col-" + x + " img").attr('src');
+        return $("td.row-" + y + ".col-" + x).css('background-image');
       }), x, y);
     };
 
