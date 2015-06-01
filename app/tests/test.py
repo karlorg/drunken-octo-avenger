@@ -415,7 +415,7 @@ class TestGetSgfFromGame(unittest.TestCase):
                            row=14, column=15, color=Move.Color.white)]
         game.passes = [Pass(game_no=1, move_no=2, color=Move.Color.black)]
         sgf = main.get_sgf_from_game(game)
-        self.assertRegex(sgf, r";AB\[ba\];B\[dc\];W\[po\];B\[\]\)")
+        self.assertRegexpMatches(sgf, r";AB\[ba\];B\[dc\];W\[po\];B\[\]\)")
 
     def test_dead_stones(self):
         game = Game()
@@ -430,7 +430,7 @@ class TestGetSgfFromGame(unittest.TestCase):
         sgf = main.get_sgf_from_game(game)
 
         regexp = re.compile(";[^;]*TW[^A-Z]*\[ba][^;]*\)")
-        self.assertRegex(sgf, regexp, "territory not found in SGF")
+        self.assertRegexpMatches(sgf, regexp, "territory not found in SGF")
 
 
 class TestGetRulesBoardFromDbGame(unittest.TestCase):
