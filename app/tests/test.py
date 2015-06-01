@@ -7,7 +7,6 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 from contextlib import contextmanager
 from itertools import chain
 from mock import ANY, Mock, patch
-import json
 import re
 import unittest
 import time

@@ -115,7 +115,9 @@ def get_sgf_from_game(game):
             assert False, "item is neither move nor pass"
         return {tag: value}
 
-    def dict_from_dead_stones(dead_stones):
+    dead_stones = game.dead_stones
+
+    def dict_from_dead_stones():
         if not dead_stones:
             return {}
 
@@ -152,7 +154,7 @@ def get_sgf_from_game(game):
         node.update(setup_stones_before_move(move_no + 1))
         node.update(move_or_pass_dict_for_move_no(move_no))
         if move_no == max_move_no:
-            node.update(dict_from_dead_stones(game.dead_stones))
+            node.update(dict_from_dead_stones())
         if node:
             nodes.append(node)
     return sgftools.generate(sgftools.SgfTree(nodes))
@@ -307,21 +309,19 @@ def record_dead_stones_from_sgf_and_check_end(game, arguments):
         coords_as_tuples = [sgftools.decode_coord(c) for c in coded_coords]
     except ValueError:
         raise go_rules.IllegalMoveException("internal error: invalid SGF data")
-    dead_stones = []
-    for column, row in coords_as_tuples:
-        dead_stones.append(DeadStone(game.id, row=row, column=column))
+    dead_stones = [DeadStone(game.id, row=row, column=column)
+                   for (column, row) in coords_as_tuples]
     if dead_stones_matches_db(game, dead_stones):
         game.winner = True
     else:
         DeadStone.query.filter(DeadStone.game_no == game.id).delete()
-        db.session.commit()
         for dead_stone in dead_stones:
             db.session.add(dead_stone)
         db.session.commit()
 
 def dead_stones_matches_db(game, dead_stones):
     """True if dead stones list matches what's in the db for given game."""
-    db_stones = DeadStone.query.filter(DeadStone.game_no == game.id).all()
+    db_stones = game.dead_stones
     if len(db_stones) != len(dead_stones):
         return False
     key_func = lambda ds: (ds.row, ds.column)
