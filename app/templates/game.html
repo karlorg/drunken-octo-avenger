@@ -1,22 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<table class="goban">
-    {% for row in goban %}
-    <tr>
-        {% set rowloop = loop %}
-        {% for point in row %}
-        <td class="{{ point['classes'] }}">
-            {% if on_turn %}
-            <a href="#"><img src="{{ point['img'] }}" /></a>
-            {% else %}
-            <img src="{{ point['img'] }}" />
-            {% endif %}
-        </td>
-        {% endfor %}
-    </tr>
-    {% endfor %}
-</table>
+<div id="content"></div>
 
 {% if with_scoring %}
 <form method="POST" action="{{ url_for('markdead') }}">
@@ -47,6 +32,11 @@
     <button type="submit"
             class="resign_button" name='resign_button'>Resign</button>
 </form>
+{% else %}
+<form method="POST" action="/404">
+    <!-- provide a form to supply the hidden data field -->
+    {{ form.hidden_tag() }}
+</form>
 {% endif %}  <!-- end on_turn -->
 {% endif %}  <!-- end not with_scoring -->
 
@@ -54,6 +44,7 @@
 
 {% block page_scripts %}
 <script src="/static/go_rules.js"></script>
+<script src="/static/smartgame.js"></script>
 <script src="/static/game_common.js"></script>
 {% if with_scoring %}
 <script src="/static/game_marking.js"></script>

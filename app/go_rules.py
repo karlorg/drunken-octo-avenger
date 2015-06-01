@@ -52,7 +52,7 @@ class Board(object):
             for n_coord in self._get_neighbours(coord):
                 if self[n_coord] == enemy:
                     if self._count_liberties(n_coord) == 0:
-                        for p in self._get_group(n_coord):
+                        for p in self.get_group(n_coord):
                             self[p] = Color.empty
 
         move_coord = Coord(x=move.column, y=move.row)
@@ -70,22 +70,22 @@ class Board(object):
             raise IllegalMoveException("playing into no liberties",
                                        move.move_no)
 
-    def _get_group(self, coord):
+    def get_group(self, coord, include=None):
         """Return the group of the stone at coord as an iterable of coords.
 
         Pure function.
         """
-        ally = self[coord]
-        if ally is Color.empty:
-            raise EmptyPointGroupException
+        if include is None:
+            include = [self[coord]]
+            if include[0] is Color.empty:
+                raise EmptyPointGroupException
 
         def get_group_recursive(coord, group_so_far):
             # group_so_far is a set
             group_so_far |= set([coord])
-            neighbours_to_recurse = filter(
-                lambda p: self[p] is ally and p not in group_so_far,
-                self._get_neighbours(coord)
-            )
+            neighbours_to_recurse = (
+                n for n in self._get_neighbours(coord)
+                if self[n] in include and n not in group_so_far)
             for n_coord in neighbours_to_recurse:
                 group_so_far |= get_group_recursive(n_coord, group_so_far)
             return group_so_far
@@ -111,10 +111,9 @@ class Board(object):
         if self[coord] is Color.empty:
             raise EmptyPointLibertiesException
         liberties = set()
-        for g_coord in self._get_group(coord):
-            liberties |= set(n_coord
-                             for n_coord in self._get_neighbours(g_coord)
-                             if self[n_coord] == Color.empty)
+        for g_coord in self.get_group(coord):
+            liberties |= set(n for n in self._get_neighbours(g_coord)
+                             if self[n] == Color.empty)
         return len(liberties)
 
 

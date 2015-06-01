@@ -5,24 +5,25 @@ tesuji_charm.game_common ?= {}
 game_common = tesuji_charm.game_common
 
 
+smartgame = tesuji_charm.smartgame
+go_rules = tesuji_charm.go_rules
+
+
 game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
+game_common.getInputSgf = getInputSgf = -> $('input#data').val()
 
 # setPointColor and helpers
 
 game_common.setPointColor = setPointColor = ($td, color) ->
-  [filename, stoneclass] = switch color
-    when 'empty' then ['e.gif', 'nostone']
-    when 'black' then ['b.gif', 'blackstone']
-    when 'white' then ['w.gif', 'whitestone']
-    when 'blackdead' then ['bdwp.gif', 'blackdead whitescore']
-    when 'whitedead' then ['wdbp.gif', 'whitedead blackscore']
-    when 'blackscore' then ['bp.gif', 'blackscore nostone']
-    when 'whitescore' then ['wp.gif', 'whitescore nostone']
-  setImage $td, filename
+  stoneclass = switch color
+    when 'empty' then 'nostone'
+    when 'black' then 'blackstone'
+    when 'white' then 'whitestone'
+    when 'blackdead' then 'blackdead whitescore'
+    when 'whitedead' then 'whitedead blackscore'
+    when 'blackscore' then 'blackscore nostone'
+    when 'whitescore' then 'whitescore nostone'
   setStoneClass $td, stoneclass
-
-setImage = ($td, filename) ->
-  $td.find('img').attr 'src', "/static/images/goban/#{filename}"
 
 setStoneClass = ($td, stoneclass) ->
   $td.removeClass('blackstone whitestone nostone
@@ -68,3 +69,80 @@ game_common.updateBoard = updateBoard = (state) ->
     for color, col in rowArray
       setPointColor ($pointAt col, row), color
   return
+
+game_common.initialize = (sgf_object) ->
+  $('.goban').remove()
+  $('#content').append '<table class="goban"></table>'
+
+  unless sgf_object
+    if getInputSgf() != ''
+      sgf_object = smartgame.parse getInputSgf()
+
+  size = if sgf_object \
+         then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
+         else 19
+
+  tableContentsStr = ''
+  for j in [0...size]
+    tr = '<tr>'
+    for i in [0...size]
+      tr += "<td class='row-#{j} col-#{i} nostone'>"
+      tr += "</td>"
+    tr += '</tr>'
+    tableContentsStr += tr
+  $('.goban').append tableContentsStr
+
+  if getInputSgf() != ''
+    board_state = (('empty' for i in [0...size]) for j in [0...size])
+    for node in sgf_object.gameTrees[0].nodes
+      if node.B
+        [x, y] = decodeSgfCoord node.B
+        board_state = go_rules.getNewState 'black', x, y, board_state
+      if node.W
+        [x, y] = decodeSgfCoord node.W
+        board_state = go_rules.getNewState 'white', x, y, board_state
+      if node.AB
+        coords = if Array.isArray(node.AB) then node.AB else [node.AB]
+        for coordStr in coords
+          [x, y] = decodeSgfCoord coordStr
+          board_state[y][x] = 'black'
+      if node.AW
+        coords = if Array.isArray(node.AW) then node.AW else [node.AW]
+        for coordStr in coords
+          [x, y] = decodeSgfCoord coordStr
+          board_state[y][x] = 'white'
+    updateBoard board_state
+
+  return
+
+aCode = 'a'.charCodeAt(0)
+
+game_common.decodeSgfCoord = decodeSgfCoord = (coordStr) ->
+  x = coordStr.charCodeAt(0) - aCode
+  y = coordStr.charCodeAt(1) - aCode
+  return [x, y]
+
+game_common.encodeSgfCoord = encodeSgfCoord = (x, y) ->
+  encodedX = String.fromCharCode(aCode + x)
+  encodedY = String.fromCharCode(aCode + y)
+  return encodedX + encodedY
+
+game_common.cloneSgfObject = (sgfObject) ->
+  "The trick here is that 'parent' attributes must be replaced with the parent
+  in the new copy instead of pointing to the old one."
+  getClone = (v, self, k=null, parent=null) -> switch
+    when k == 'parent' then parent
+    when Array.isArray v then cloneArrayRecursive v
+    when v == Object(v) then cloneObjectRecursive v, self
+    else v
+  cloneObjectRecursive = (subObject, parent) ->
+    result = {}
+    for own k, v of subObject
+      result[k] = getClone(v, result, k, parent)
+    return result
+  cloneArrayRecursive = (subArray) ->
+    result = []
+    for v in subArray
+      result.push getClone(v, result)
+    return result
+  return cloneObjectRecursive sgfObject, null

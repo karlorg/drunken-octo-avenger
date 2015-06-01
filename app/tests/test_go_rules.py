@@ -130,15 +130,15 @@ class TestGetGroup(unittest.TestCase):
     def test_exception_on_empty_point(self):
         board = board_from_strings(['.'])
         with self.assertRaises(EmptyPointGroupException):
-            board._get_group(Coord(0, 0))
+            board.get_group(Coord(0, 0))
 
     def test_identifies_sample_groups(self):
         board = board_from_strings(['bb..',
                                     'bww.',
                                     '.b..'])
-        top_left = board._get_group(Coord(1, 0))
+        top_left = board.get_group(Coord(1, 0))
         self.assertEqual(top_left, set([Coord(0, 0), Coord(1, 0), Coord(0, 1)]))
-        middle_white = board._get_group(Coord(1, 1))
+        middle_white = board.get_group(Coord(1, 1))
         self.assertEqual(middle_white, set([Coord(1, 1), Coord(x=2, y=1)]))
-        bottom_black = board._get_group(Coord(x=1, y=2))
+        bottom_black = board.get_group(Coord(x=1, y=2))
         self.assertEqual(bottom_black, set([Coord(x=1, y=2)]))

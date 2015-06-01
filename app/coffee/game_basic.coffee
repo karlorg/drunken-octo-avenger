@@ -10,7 +10,9 @@ game_basic = tesuji_charm.game_basic
 
 # 'imports'
 
+smartgame = tesuji_charm.smartgame
 game_common = tesuji_charm.game_common
+getInputSgf = game_common.getInputSgf
 go_rules = tesuji_charm.go_rules
 
 
@@ -21,12 +23,14 @@ newStoneColor = null
 
 game_basic.initialize = ->
 
+  if getInputSgf()
+    sgf_object = smartgame.parse getInputSgf()
+  else
+    sgf_object = smartgame.parse '(;)'
+  game_common.initialize(sgf_object)
   initialBoardState = game_common.readBoardState()
 
-  if parseInt($('input#move_no').val()) % 2 is 0
-    newStoneColor = 'black'
-  else
-    newStoneColor = 'white'
+  newStoneColor = nextPlayerInSgfObject sgf_object
 
   $('button.confirm_button').prop 'disabled', true
 
@@ -44,11 +48,34 @@ game_basic.initialize = ->
         throw error
     game_common.updateBoard newBoardState
 
-    $('input#row').val row.toString()
-    $('input#column').val col.toString()
+    sgfTag = switch newStoneColor
+      when 'black' then 'B'
+      when 'white' then 'W'
+      else throw Error "invalid new stone color"
+    encodedCoords = game_common.encodeSgfCoord col, row
+    newMove = {}
+    newMove[sgfTag] = encodedCoords
+
+    sgfObjectCopy = game_common.cloneSgfObject sgf_object
+    nodes = sgfObjectCopy.gameTrees[0].nodes
+    if nodes.length == 1 and jQuery.isEmptyObject nodes[0]
+      nodes[0] = newMove
+    else
+      nodes.push newMove
+
+    $('input#response').val smartgame.generate(sgfObjectCopy)
     $('button.confirm_button').prop 'disabled', false
 
 # to facilitate testing, export a function to reload our internal state from
 # the page
 game_basic._reloadBoard = ->
   initialBoardState = game_common.readBoardState()
+
+nextPlayerInSgfObject = (sgf_object) ->
+  nodes = sgf_object.gameTrees[0].nodes
+  for node in nodes.slice(0).reverse()  # slice(0) copies
+    if node.B
+      return 'white'
+    else if node.W
+      return 'black'
+  return 'black'

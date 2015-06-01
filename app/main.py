@@ -26,6 +26,7 @@ from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
 from app import go_rules
+from app import sgftools
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -61,23 +62,103 @@ def game(game_no):
     moves = game.moves
     resumptions = game.resumptions
     passes = game.passes
-    setup_stones = game.setup_stones
     is_your_turn = is_players_turn_in_game(game)
-    goban = get_goban_from_moves(moves, setup_stones)
+    sgf = get_sgf_from_game(game)
     is_passed_twice = check_two_passes(moves, passes, resumptions)
+    form_data = {'game_no': game.id, 'move_no': game.move_no, 'data': sgf}
     if not is_passed_twice:
-        form = PlayStoneForm(data={'game_no': game.id,
-                                   'move_no': game.move_no})
+        form = PlayStoneForm(data=form_data)
     else:
-        coords = list(map(lambda ds: [ds.column, ds.row], game.dead_stones))
-        dead_stones_json = json.dumps(coords)
-        form = MarkDeadForm(data={'game_no': game.id,
-                                  'move_no': game.move_no,
-                                  'dead_stones': dead_stones_json})
+        form = MarkDeadForm(data=form_data)
     return render_template_with_email(
             "game.html",
-            form=form, goban=goban,
-            on_turn=is_your_turn, with_scoring=is_passed_twice)
+            form=form, on_turn=is_your_turn, with_scoring=is_passed_twice)
+
+def get_sgf_from_game(game):
+    """Return an SGF representing the given game.
+
+    Reads database.
+    """
+    # we're allowed to be sloppy here because we'll probably just
+    # store games as SGFs soon anyway and delete this, yay
+    setup_stones = game.setup_stones
+
+    def setup_stones_before_move(n):
+        result = {}
+        black = [sgftools.encode_coord(s.column, s.row)
+                 for s in setup_stones
+                 if s.color == go_rules.Color.black and s.before_move == n]
+        white = [sgftools.encode_coord(s.column, s.row)
+                 for s in setup_stones
+                 if s.color == go_rules.Color.white and s.before_move == n]
+        if black:
+            result['AB'] = black
+        if white:
+            result['AW'] = white
+        return result
+
+    moves_passes_by_no = {i.move_no: i
+                          for i in itertools.chain(game.moves, game.passes)}
+
+    def move_or_pass_dict_for_move_no(n):
+        try:
+            item = moves_passes_by_no[n]
+        except KeyError:
+            return {}
+        tag = {go_rules.Color.black: 'B',
+               go_rules.Color.white: 'W'}[item.color]
+        if isinstance(item, Move):
+            value = [sgftools.encode_coord(item.column, item.row)]
+        elif isinstance(item, Pass):
+            value = ['']
+        else:
+            assert False, "item is neither move nor pass"
+        return {tag: value}
+
+    dead_stones = game.dead_stones
+
+    def dict_from_dead_stones():
+        if not dead_stones:
+            return {}
+
+        def coord_sets_from_dead_stones():
+            rules_board = get_rules_board_from_db_game(game)
+            black_territory = set()
+            white_territory = set()
+            for ds in dead_stones:
+                color = rules_board[go_rules.Coord(x=ds.column, y=ds.row)]
+                if color == go_rules.Color.empty:
+                    continue
+                group = rules_board.get_group(
+                    go_rules.Coord(x=ds.column, y=ds.row),
+                    include=[go_rules.Color.empty, color])
+                target_set = {go_rules.Color.black: white_territory,
+                              go_rules.Color.white: black_territory}[color]
+                target_set.update(group)
+            return black_territory, white_territory
+        black_territory, white_territory = coord_sets_from_dead_stones()
+
+        result = {}
+        if black_territory:
+            result['TB'] = [sgftools.encode_coord(p[1], p[0])
+                            for p in black_territory]
+        if white_territory:
+            result['TW'] = [sgftools.encode_coord(p[1], p[0])
+                            for p in white_territory]
+        return result
+
+    max_move_no = max_with_sentinel(-1, moves_passes_by_no.keys())
+    nodes = [{'FF': ['4'], 'SZ': ['19']}]
+    for move_no in range(-1, max_move_no+1):
+        node = {}
+        node.update(setup_stones_before_move(move_no + 1))
+        node.update(move_or_pass_dict_for_move_no(move_no))
+        if move_no == max_move_no:
+            node.update(dict_from_dead_stones())
+        if node:
+            nodes.append(node)
+    return sgftools.generate(sgftools.SgfTree(nodes))
+
 
 @app.route('/playstone', methods=['POST'])
 def playstone():
@@ -131,7 +212,7 @@ def validate_turn_and_record(which, player, game, arguments):
     elif which == "move":
         turn_object = create_and_validate_move(move_no, color, game, arguments)
     elif which == "markdead":
-        record_dead_stones_from_json_and_check_end(game, arguments)
+        record_dead_stones_from_sgf_and_check_end(game, arguments)
         turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
     elif which == "resume":
         for dead_stone in game.dead_stones:
@@ -168,44 +249,79 @@ def get_and_validate_move_no(arguments, game):
 
 def create_and_validate_move(move_no, color, game, arguments):
     try:
-        row = int(arguments['row'])
-        column = int(arguments['column'])
-    except (KeyError, ValueError):
+        sgf_tree = sgftools.parse(arguments['response'])
+    except (KeyError, sgftools.ParseError):
         raise go_rules.IllegalMoveException("Invalid request made.")
+
+    last_node = sgf_tree.main_line()[-1]
+    if 'B' in last_node:
+        sgf_color = Move.Color.black
+        column, row = sgftools.decode_coord(last_node['B'][0])
+    elif 'W' in last_node:
+        sgf_color = Move.Color.white
+        column, row = sgftools.decode_coord(last_node['W'][0])
+    else:
+        raise go_rules.IllegalMoveException("No move submitted.")
+    if color != sgf_color:
+        raise go_rules.IllegalMoveException("Wrong move color submitted.")
 
     move = Move(game_no=game.id, move_no=move_no,
                 row=row, column=column, color=color)
 
     # test legality, if `board.update_with_move` raises an IllegalMoveException
     # this will be caught above and displayed to the user.
-    board = get_rules_board_from_db_objects(
-                moves=game.moves, setup_stones=game.setup_stones)
+    board = get_rules_board_from_db_game(game)
     board.update_with_move(move)
     # But if no exception is raised then we return the move
     return move
 
-def record_dead_stones_from_json_and_check_end(game, arguments):
+def get_rules_board_from_db_game(game):
+    """Get board layout resulting from given moves and setup stones.
+
+    Reads database.
+    """
+    def place_stones_for_move(n):
+        for stone in filter(lambda s: s.before_move == n, game.setup_stones):
+            board[go_rules.Coord(x=stone.column, y=stone.row)] = stone.color
+
+    moves = game.moves
+    moves_by_no = {m.move_no: m for m in moves}
+    max_move_no = max_with_sentinel(-1, (m.move_no for m in moves))
+    board = go_rules.Board()
+    for move_no in range(max_move_no+2):
+        # max_move_no +1 to include setup stones on move 0 with no move played,
+        # +1 again since `range` excludes the stop value
+        place_stones_for_move(move_no)
+        try:
+            board.update_with_move(moves_by_no[move_no])
+        except KeyError:
+            pass
+    return board
+
+def record_dead_stones_from_sgf_and_check_end(game, arguments):
     """Get dead stones list from args; check game over; record both."""
+    sgf_object = sgftools.parse(arguments['response'])
+    last_node = sgf_object.main_line()[-1]
+    coded_coords = []
+    coded_coords.extend(last_node.get('TB', []))
+    coded_coords.extend(last_node.get('TW', []))
     try:
-        coords_as_lists = json.loads(arguments['dead_stones'])
-        dead_stones = []
-        for [column, row] in coords_as_lists:
-            dead_stones.append(DeadStone(game.id, row=row, column=column))
-    except ValueError as e:
-        raise go_rules.IllegalMoveException(
-                "Invalid JSON: {}".format(e.args[0]))
+        coords_as_tuples = [sgftools.decode_coord(c) for c in coded_coords]
+    except ValueError:
+        raise go_rules.IllegalMoveException("internal error: invalid SGF data")
+    dead_stones = [DeadStone(game.id, row=row, column=column)
+                   for (column, row) in coords_as_tuples]
     if dead_stones_matches_db(game, dead_stones):
         game.winner = True
     else:
         DeadStone.query.filter(DeadStone.game_no == game.id).delete()
-        db.session.commit()
         for dead_stone in dead_stones:
             db.session.add(dead_stone)
         db.session.commit()
 
 def dead_stones_matches_db(game, dead_stones):
     """True if dead stones list matches what's in the db for given game."""
-    db_stones = DeadStone.query.filter(DeadStone.game_no == game.id).all()
+    db_stones = game.dead_stones
     if len(db_stones) != len(dead_stones):
         return False
     key_func = lambda ds: (ds.row, ds.column)
@@ -389,82 +505,6 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_goban_from_moves(moves, setup_stones=None, with_scoring=False):
-    """Given the moves for a game, return game template data.
-
-    Pure function.
-    """
-    if setup_stones is None:
-        setup_stones = []
-    rules_board = get_rules_board_from_db_objects(moves, setup_stones)
-    goban = get_goban_data_from_rules_board(rules_board, with_scoring)
-    return goban
-
-def get_rules_board_from_db_objects(moves, setup_stones):
-    """Get board layout resulting from given moves and setup stones.
-
-    Pure function.
-    """
-    def place_stones_for_move(n):
-        for stone in filter(lambda s: s.before_move == n, setup_stones):
-            board[go_rules.Coord(x=stone.column, y=stone.row)] = stone.color
-
-    moves_by_no = {m.move_no: m for m in moves}
-    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
-    board = go_rules.Board()
-    for move_no in range(max_move_no+2):
-        # max_move_no +1 to include setup stones on move 0 with no move played,
-        # +1 again since `range` excludes the stop value
-        place_stones_for_move(move_no)
-        try:
-            board.update_with_move(moves_by_no[move_no])
-        except KeyError:
-            pass
-    return board
-
-def get_goban_data_from_rules_board(rules_board, with_scoring=False):
-    """Transform a rules board to a template-ready list of dicts.
-
-    Each output dictionary contains information needed by the game template to
-    render the corresponding board point.
-
-    `classes` contains CSS classes used by the client-side scripts and browser
-    tests to read the board state and locate specific points.  Currently:
-
-    * each point should have classes `row-y` and `col-x` where `y` and `x` are
-      numbers
-
-    * points with stones should have `blackstone` or `whitestone`; empty points
-      should have `nostone`
-
-    * if marking points is enabled, points which can be assigned to one player
-      should have `blackscore` or `whitescore`
-
-    Pure function.
-    """
-    black = go_rules.Color.black
-    white = go_rules.Color.white
-    empty = go_rules.Color.empty
-
-    color_images = {black: IMG_PATH_BLACK,
-                    white: IMG_PATH_WHITE,
-                    empty: IMG_PATH_EMPTY}
-    color_classes = {black: 'blackstone',
-                     white: 'whitestone',
-                     empty: 'nostone'}
-
-    def create_goban_point(row, column, color):
-        classes_template = 'gopoint row-{row} col-{col} {color_class}'
-        classes = classes_template.format(row=str(row),
-                                          col=str(column),
-                                          color_class=color_classes[color])
-        return dict(img=color_images[color], classes=classes)
-
-    goban = [[create_goban_point(j, i, rules_board[go_rules.Coord(x=i, y=j)])
-              for i in range(19)]
-             for j in range(19)]
-    return goban
-
 def get_status_lists(player_email):
     """Return two lists of games for the player, split by on-turn or not.
 
@@ -496,7 +536,7 @@ def check_two_passes(moves, passes, resumptions):
     """True if last two actions are both passes, false otherwise."""
     move_no_iter = (m.move_no for m in moves)
     resume_no_iter = (r.move_no for r in resumptions)
-    last_move = max(itertools.chain([-1], move_no_iter, resume_no_iter))
+    last_move = max_with_sentinel(-1, move_no_iter, resume_no_iter)
     last_pass = max([-1] + [p.move_no for p in passes])
     if last_move >= last_pass:
         return False
@@ -584,6 +624,9 @@ def render_template_with_email(template_name_or_list, **context):
             current_user_email=email,
             current_persona_email=persona_email,
             **context)
+
+def max_with_sentinel(sentinel, *iterables):
+    return max(itertools.chain([sentinel], *iterables))
 
 # Server player
 
@@ -779,10 +822,11 @@ class HiddenInteger(IntegerField):
 class PlayStoneForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
-    row = HiddenInteger("row", validators=[DataRequired()])
-    column = HiddenInteger("column", validators=[DataRequired()])
+    data = HiddenField("data")
+    response = HiddenField("response", validators=[DataRequired()])
 
 class MarkDeadForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
-    dead_stones = HiddenField("dead_stones", validators=[DataRequired()])
+    data = HiddenField("data")
+    response = HiddenField("response", validators=[DataRequired()])
