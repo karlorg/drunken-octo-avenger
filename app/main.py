@@ -97,17 +97,23 @@ def get_sgf_from_game(game):
             result['AW'] = white
         return result
 
-    moves = game.moves
-    moves_by_no = {m.move_no: m for m in moves}
+    moves_passes_by_no = {i.move_no: i
+                          for i in itertools.chain(game.moves, game.passes)}
 
-    def move_dict_for_move_no(n):
+    def move_or_pass_dict_for_move_no(n):
         try:
-            move = moves_by_no[n]
+            item = moves_passes_by_no[n]
         except KeyError:
             return {}
         tag = {go_rules.Color.black: 'B',
-               go_rules.Color.white: 'W'}[move.color]
-        return {tag: [sgftools.encode_coord(move.column, move.row)]}
+               go_rules.Color.white: 'W'}[item.color]
+        if isinstance(item, Move):
+            value = [sgftools.encode_coord(item.column, item.row)]
+        elif isinstance(item, Pass):
+            value = ['']
+        else:
+            assert False, "item is neither move nor pass"
+        return {tag: value}
 
     def dict_from_dead_stones(dead_stones):
         if not dead_stones:
@@ -139,12 +145,12 @@ def get_sgf_from_game(game):
                             for p in white_territory]
         return result
 
-    max_move_no = max_with_sentinel(-1, (m.move_no for m in moves))
+    max_move_no = max_with_sentinel(-1, moves_passes_by_no.keys())
     nodes = [{'FF': ['4'], 'SZ': ['19']}]
     for move_no in range(-1, max_move_no+1):
         node = {}
         node.update(setup_stones_before_move(move_no + 1))
-        node.update(move_dict_for_move_no(move_no))
+        node.update(move_or_pass_dict_for_move_no(move_no))
         if move_no == max_move_no:
             node.update(dict_from_dead_stones(game.dead_stones))
         if node:
