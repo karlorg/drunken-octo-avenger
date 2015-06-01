@@ -83,32 +83,53 @@ def get_sgf_from_game(game):
     # store games as SGFs soon anyway and delete this, yay
     setup_stones = game.setup_stones
 
-    def setup_stones_for_move(n):
+    def setup_stones_before_move(n):
         result = {}
-        black = [s for s in setup_stones if s.color == go_rules.Color.black]
-        white = [s for s in setup_stones if s.color == go_rules.Color.white]
+        black = [sgftools.encode_coord(s.column, s.row)
+                 for s in setup_stones
+                 if s.color == go_rules.Color.black and s.before_move == n]
+        white = [sgftools.encode_coord(s.column, s.row)
+                 for s in setup_stones
+                 if s.color == go_rules.Color.white and s.before_move == n]
         if black:
-            result['AB'] = [sgftools.encode_coord(stone.column, stone.row)
-                            for stone in black if stone.before_move == n]
+            result['AB'] = black
         if white:
-            result['AW'] = [sgftools.encode_coord(stone.column, stone.row)
-                            for stone in white if stone.before_move == n]
+            result['AW'] = white
         return result
 
-    def tw_tb_from_dead_stones(dead_stones):
-        rules_board = get_rules_board_from_db_game(game)
-        black_territory = set()
-        white_territory = set()
-        for ds in dead_stones:
-            color = rules_board[go_rules.Coord(x=ds.column, y=ds.row)]
-            if color == go_rules.Color.empty:
-                continue
-            group = rules_board.get_group(
-                go_rules.Coord(x=ds.column, y=ds.row),
-                include=[go_rules.Color.empty, color])
-            target = {go_rules.Color.black: white_territory,
-                      go_rules.Color.white: black_territory}[color]
-            target.update(group)
+    moves = game.moves
+    moves_by_no = {m.move_no: m for m in moves}
+
+    def move_dict_for_move_no(n):
+        try:
+            move = moves_by_no[n]
+        except KeyError:
+            return {}
+        tag = {go_rules.Color.black: 'B',
+               go_rules.Color.white: 'W'}[move.color]
+        return {tag: [sgftools.encode_coord(move.column, move.row)]}
+
+    def dict_from_dead_stones(dead_stones):
+        if not dead_stones:
+            return {}
+
+        def coord_sets_from_dead_stones():
+            rules_board = get_rules_board_from_db_game(game)
+            black_territory = set()
+            white_territory = set()
+            for ds in dead_stones:
+                color = rules_board[go_rules.Coord(x=ds.column, y=ds.row)]
+                if color == go_rules.Color.empty:
+                    continue
+                group = rules_board.get_group(
+                    go_rules.Coord(x=ds.column, y=ds.row),
+                    include=[go_rules.Color.empty, color])
+                target_set = {go_rules.Color.black: white_territory,
+                              go_rules.Color.white: black_territory}[color]
+                target_set.update(group)
+            return black_territory, white_territory
+        black_territory, white_territory = coord_sets_from_dead_stones()
+
         result = {}
         if black_territory:
             result['TB'] = [sgftools.encode_coord(p[1], p[0])
@@ -118,27 +139,14 @@ def get_sgf_from_game(game):
                             for p in white_territory]
         return result
 
-    moves = game.moves
-    moves_by_no = {m.move_no: m for m in moves}
-    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
+    max_move_no = max_with_sentinel(-1, (m.move_no for m in moves))
     nodes = [{'FF': ['4'], 'SZ': ['19']}]
     for move_no in range(-1, max_move_no+1):
         node = {}
-        # setup stones
-        node.update(setup_stones_for_move(move_no + 1))
-        # move
-        try:
-            move = moves_by_no[move_no]
-        except KeyError:
-            pass
-        else:
-            tag = {go_rules.Color.black: 'B',
-                   go_rules.Color.white: 'W'}[move.color]
-            node[tag] = [sgftools.encode_coord(move.column, move.row)]
-        # dead stones
-        if move_no == max_move_no and game.dead_stones:
-            node.update(tw_tb_from_dead_stones(game.dead_stones))
-        # finished!
+        node.update(setup_stones_before_move(move_no + 1))
+        node.update(move_dict_for_move_no(move_no))
+        if move_no == max_move_no:
+            node.update(dict_from_dead_stones(game.dead_stones))
         if node:
             nodes.append(node)
     return sgftools.generate(sgftools.SgfTree(nodes))
@@ -268,7 +276,7 @@ def get_rules_board_from_db_game(game):
 
     moves = game.moves
     moves_by_no = {m.move_no: m for m in moves}
-    max_move_no = max(itertools.chain([-1], (m.move_no for m in moves)))
+    max_move_no = max_with_sentinel(-1, (m.move_no for m in moves))
     board = go_rules.Board()
     for move_no in range(max_move_no+2):
         # max_move_no +1 to include setup stones on move 0 with no move played,
@@ -520,7 +528,7 @@ def check_two_passes(moves, passes, resumptions):
     """True if last two actions are both passes, false otherwise."""
     move_no_iter = (m.move_no for m in moves)
     resume_no_iter = (r.move_no for r in resumptions)
-    last_move = max(itertools.chain([-1], move_no_iter, resume_no_iter))
+    last_move = max_with_sentinel(-1, move_no_iter, resume_no_iter)
     last_pass = max([-1] + [p.move_no for p in passes])
     if last_move >= last_pass:
         return False
@@ -608,6 +616,9 @@ def render_template_with_email(template_name_or_list, **context):
             current_user_email=email,
             current_persona_email=persona_email,
             **context)
+
+def max_with_sentinel(sentinel, *iterables):
+    return max(itertools.chain([sentinel], *iterables))
 
 # Server player
 
