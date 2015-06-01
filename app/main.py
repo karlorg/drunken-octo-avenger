@@ -252,6 +252,8 @@ def create_and_validate_move(move_no, color, game, arguments):
     elif 'W' in last_node:
         sgf_color = Move.Color.white
         column, row = sgftools.decode_coord(last_node['W'][0])
+    else:
+        raise go_rules.IllegalMoveException("No move submitted.")
     if color != sgf_color:
         raise go_rules.IllegalMoveException("Wrong move color submitted.")
 

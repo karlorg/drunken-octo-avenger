@@ -539,6 +539,14 @@ class TestPlayStoneIntegrated(TestWithDb):
                 ))
         # should not raise
 
+    def test_handles_missing_move(self):
+        game = self.add_game()
+        with self.set_email('black@black.com') as test_client:
+            with self.patch_render_template():
+                test_client.post('/playstone', data=dict(
+                    game_no=game.id, move_no=0, response="(;)"))
+        # should not raise
+
     def test_passes_ordinary_dict_to_helper(self):
         """Regression test: request.form is a werkzeug MultiDict that doesn't
         always raise KeyError for missing arguments; need to check we're
