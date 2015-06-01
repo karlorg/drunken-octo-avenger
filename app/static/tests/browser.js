@@ -430,7 +430,7 @@
 
     GameInterfaceTest.prototype.description = "Game interface";
 
-    GameInterfaceTest.prototype.numTests = 43;
+    GameInterfaceTest.prototype.numTests = 46;
 
     GameInterfaceTest.prototype.testBody = function(test) {
       var ONE_EMAIL, TWO_EMAIL, initialEmptyCount;
@@ -486,6 +486,13 @@
       casper.thenClick('.confirm_button', (function(_this) {
         return function() {
           return _this.assertNumGames(test, 1, 1);
+        };
+      })(this));
+      casper.thenOpen(serverUrl);
+      casper.thenClick(this.lastGameSelector(false));
+      casper.thenClick(pointSelector(3, 3), (function(_this) {
+        return function() {
+          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0);
         };
       })(this));
       createLoginSession(TWO_EMAIL);

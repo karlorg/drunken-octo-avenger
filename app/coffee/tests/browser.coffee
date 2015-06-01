@@ -309,7 +309,7 @@ registerTest new PlaceStonesTest
 class GameInterfaceTest extends BrowserTest
   names: ['GameInterfaceTest', 'game']
   description: "Game interface"
-  numTests: 43
+  numTests: 46
   testBody: (test) =>
 
     ONE_EMAIL = 'player@one.com'
@@ -370,6 +370,13 @@ class GameInterfaceTest extends BrowserTest
     casper.thenClick '.confirm_button', =>
       # now we're taken back to the status page
       @assertNumGames test, 1, 1
+
+    # opening the game from 'not your turn' list, Black can no longer
+    # place stones
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector false)  # false = not our turn
+    casper.thenClick (pointSelector 3, 3), =>
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
 
     # -- PLAYER TWO
     # now the white player logs in and visits the same game
