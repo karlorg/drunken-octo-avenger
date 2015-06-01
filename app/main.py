@@ -65,14 +65,11 @@ def game(game_no):
     is_your_turn = is_players_turn_in_game(game)
     sgf = get_sgf_from_game(game)
     is_passed_twice = check_two_passes(moves, passes, resumptions)
+    form_data = {'game_no': game.id, 'move_no': game.move_no, 'data': sgf}
     if not is_passed_twice:
-        form = PlayStoneForm(data={'game_no': game.id,
-                                   'move_no': game.move_no,
-                                   'data': sgf})
+        form = PlayStoneForm(data=form_data)
     else:
-        form = MarkDeadForm(data={'game_no': game.id,
-                                  'move_no': game.move_no,
-                                  'data': sgf})
+        form = MarkDeadForm(data=form_data)
     return render_template_with_email(
             "game.html",
             form=form, on_turn=is_your_turn, with_scoring=is_passed_twice)
