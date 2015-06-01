@@ -163,10 +163,14 @@
       }
     };
 
-    BrowserTest.prototype.assertStonePointCounts = function(test, nostone, black, white) {
+    BrowserTest.prototype.assertStonePointCounts = function(test, nostone, black, white, label) {
       var counts;
+      if (label == null) {
+        label = null;
+      }
       counts = this.countStonesAndPoints();
       return this.assertGeneralPointCounts(test, {
+        'label': label,
         'empty': nostone,
         'black': black,
         'white': white
@@ -397,7 +401,7 @@
       return casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban', 'The Go board does exist.');
-          _this.assertStonePointCounts(test, initialEmptyCount, 3, 1);
+          _this.assertStonePointCounts(test, initialEmptyCount, 3, 1, "Black opens the game");
           test.assertDoesntExist('.confirm_button:enabled', 'no usable confirm button appears');
           _this.assertPointIsEmpty(test, 0, 0);
           _this.assertPointIsBlack(test, 1, 0);
@@ -450,7 +454,7 @@
       casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
           test.assertExists('table.goban', 'The Go board does exist.');
-          _this.assertStonePointCounts(test, initialEmptyCount, 2, 2);
+          _this.assertStonePointCounts(test, initialEmptyCount, 2, 2, "initial board layout");
           test.assertTrue(casper.evaluate(function() {
             var result;
             result = false;
@@ -467,20 +471,20 @@
       })(this));
       casper.thenClick(pointSelector(1, 1), (function(_this) {
         return function() {
-          _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0);
+          _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0, "Black places a stone capturing two white stones");
           return test.assertExists('.confirm_button:enabled');
         };
       })(this));
       casper.thenClick(pointSelector(15, 3), (function(_this) {
         return function() {
-          _this.assertStonePointCounts(test, initialEmptyCount - 1, 3, 2);
+          _this.assertStonePointCounts(test, initialEmptyCount - 1, 3, 2, "Black clicks another point, capture is undone");
           _this.assertPointIsEmpty(test, 1, 1);
           return _this.assertPointIsWhite(test, 1, 0);
         };
       })(this));
       casper.thenClick(pointSelector(1, 1), (function(_this) {
         return function() {
-          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0);
+          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0, "Black clicks capture for second time");
         };
       })(this));
       casper.thenClick('.confirm_button', (function(_this) {
@@ -492,7 +496,7 @@
       casper.thenClick(this.lastGameSelector(false));
       casper.thenClick(pointSelector(3, 3), (function(_this) {
         return function() {
-          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0);
+          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0, "Black attempts to place a stone off-turn");
         };
       })(this));
       createLoginSession(TWO_EMAIL);
@@ -503,17 +507,17 @@
       })(this));
       casper.thenClick(this.lastGameSelector(true), (function(_this) {
         return function() {
-          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0);
+          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0, "White opens the board, white stones still captured");
         };
       })(this));
       casper.thenClick(pointSelector(1, 1), (function(_this) {
         return function() {
-          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0);
+          return _this.assertStonePointCounts(test, initialEmptyCount + 1, 3, 0, "White clicks a black stone, nothing happens");
         };
       })(this));
       casper.thenClick(pointSelector(3, 3), (function(_this) {
         return function() {
-          return _this.assertStonePointCounts(test, initialEmptyCount, 3, 1);
+          return _this.assertStonePointCounts(test, initialEmptyCount, 3, 1, "White clicks an empty point, white stone appears");
         };
       })(this));
       casper.thenClick('.confirm_button');

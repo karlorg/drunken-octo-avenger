@@ -128,9 +128,10 @@ class BrowserTest
           "in #{label}: #{type} should be #{count}, was #{counts[type]}"
     return
 
-  assertStonePointCounts: (test, nostone, black, white) =>
+  assertStonePointCounts: (test, nostone, black, white, label=null) =>
     counts = @countStonesAndPoints()
     @assertGeneralPointCounts test,
+      'label': label
       'empty': nostone
       'black': black
       'white': white
@@ -286,7 +287,8 @@ class PlaceStonesTest extends BrowserTest
       test.assertExists 'table.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
-      @assertStonePointCounts test, initialEmptyCount, 3, 1
+      @assertStonePointCounts test, initialEmptyCount, 3, 1,
+        "Black opens the game"
       # no (usable) confirm button appears yet
       test.assertDoesntExist '.confirm_button:enabled',
                              'no usable confirm button appears'
@@ -335,7 +337,8 @@ class GameInterfaceTest extends BrowserTest
       test.assertExists 'table.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
-      @assertStonePointCounts test, initialEmptyCount, 2, 2
+      @assertStonePointCounts test, initialEmptyCount, 2, 2,
+        "initial board layout"
       # check one of those images can be loaded
       test.assertTrue (casper.evaluate ->
         result = false
@@ -350,21 +353,24 @@ class GameInterfaceTest extends BrowserTest
     # user clicks an empty spot, which is a link
     casper.thenClick pointSelector(1, 1), =>
       # the board updates to show a stone there and other stones captured
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "Black places a stone capturing two white stones"
       # a confirm button is now available
       test.assertExists '.confirm_button:enabled'
 
     # we click a different point
     casper.thenClick pointSelector(15, 3), =>
       # now the capture is undone
-      @assertStonePointCounts test, initialEmptyCount-1, 3, 2
+      @assertStonePointCounts test, initialEmptyCount-1, 3, 2,
+        "Black clicks another point, capture is undone"
       @assertPointIsEmpty test, 1, 1
       @assertPointIsWhite test, 1, 0
 
     # we click the capturing point again, as we'll want to see what happens when
     # we confirm a capturing move
     casper.thenClick pointSelector(1, 1), =>
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "Black clicks capture for second time"
 
     # we confirm this new move
     casper.thenClick '.confirm_button', =>
@@ -376,7 +382,8 @@ class GameInterfaceTest extends BrowserTest
     casper.thenOpen serverUrl
     casper.thenClick (@lastGameSelector false)  # false = not our turn
     casper.thenClick (pointSelector 3, 3), =>
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "Black attempts to place a stone off-turn"
 
     # -- PLAYER TWO
     # now the white player logs in and visits the same game
@@ -387,17 +394,20 @@ class GameInterfaceTest extends BrowserTest
     # It should be the only game in player two's 'your_turn' games
     casper.thenClick (@lastGameSelector true), =>
       # the captured stones are still captured
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "White opens the board, white stones still captured"
 
     # clicking the point with a black stone does nothing
     casper.thenClick pointSelector(1, 1), =>
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "White clicks a black stone, nothing happens"
 
     # user clicks an empty spot
     casper.thenClick pointSelector(3, 3), =>
       # a white stone is placed, reduces the empty count by 1 and increments
       # the count of white stones
-      @assertStonePointCounts test, initialEmptyCount, 3, 1
+      @assertStonePointCounts test, initialEmptyCount, 3, 1,
+        "White clicks an empty point, white stone appears"
 
     # confirm move
     casper.thenClick '.confirm_button'
