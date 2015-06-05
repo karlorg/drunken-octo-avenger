@@ -7,7 +7,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 import unittest
 
 from ..sgftools import (
-    ParseError, SgfTree, parse
+    ParseError, SgfTree, generate, parse
 )
 
 
@@ -23,13 +23,15 @@ class TestParse(unittest.TestCase):
         self.assertEqual(actual.nodes, expected.nodes)
 
     def test_empty_node(self):
+        """Special case: SGF requires one node even when empty, should
+        parse to no nodes."""
         actual = parse('(;)')
-        expected = SgfTree([{}])
+        expected = SgfTree([])
         self.assertEqual(actual.nodes, expected.nodes)
 
     def test_single_pass(self):
         actual = parse('(;B[])')
-        expected = SgfTree([{'B': []}])
+        expected = SgfTree([{'B': ['']}])
         self.assertEqual(actual.nodes, expected.nodes)
 
     def test_single_move(self):
@@ -44,3 +46,12 @@ class TestParse(unittest.TestCase):
             {'B': ['ab']},
             {'W': ['cc'], 'C': ['hello world!']}])
         self.assertEqual(actual.nodes, expected.nodes)
+
+
+class TestGenerate(unittest.TestCase):
+
+    def test_empty_tree(self):
+        """Special case: SGF requires at least one node."""
+        actual = generate(SgfTree([]))
+        expected = '(;)'
+        self.assertEqual(actual, expected)

@@ -25,6 +25,7 @@ from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
+from app import go
 from app import go_rules
 from app import sgftools
 
@@ -59,13 +60,11 @@ def game(game_no):
     if game is None:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
-    moves = game.moves
-    resumptions = game.resumptions
-    passes = game.passes
-    is_your_turn = is_players_turn_in_game(game)
     sgf = get_sgf_from_game(game)
-    is_passed_twice = check_two_passes(moves, passes, resumptions)
-    form_data = {'game_no': game.id, 'move_no': game.move_no, 'data': sgf}
+    is_your_turn = is_players_turn_in_game(game)
+    is_passed_twice = go.is_sgf_passed_twice(sgf)
+    move_no = go.next_move_no(sgf)
+    form_data = {'game_no': game.id, 'move_no': move_no, 'data': sgf}
     if not is_passed_twice:
         form = PlayStoneForm(data=form_data)
     else:
@@ -87,10 +86,10 @@ def get_sgf_from_game(game):
         result = {}
         black = [sgftools.encode_coord(s.column, s.row)
                  for s in setup_stones
-                 if s.color == go_rules.Color.black and s.before_move == n]
+                 if s.color == go.Color.black and s.before_move == n]
         white = [sgftools.encode_coord(s.column, s.row)
                  for s in setup_stones
-                 if s.color == go_rules.Color.white and s.before_move == n]
+                 if s.color == go.Color.white and s.before_move == n]
         if black:
             result['AB'] = black
         if white:
@@ -105,8 +104,8 @@ def get_sgf_from_game(game):
             item = moves_passes_by_no[n]
         except KeyError:
             return {}
-        tag = {go_rules.Color.black: 'B',
-               go_rules.Color.white: 'W'}[item.color]
+        tag = {go.Color.black: 'B',
+               go.Color.white: 'W'}[item.color]
         if isinstance(item, Move):
             value = [sgftools.encode_coord(item.column, item.row)]
         elif isinstance(item, Pass):
@@ -127,13 +126,13 @@ def get_sgf_from_game(game):
             white_territory = set()
             for ds in dead_stones:
                 color = rules_board[go_rules.Coord(x=ds.column, y=ds.row)]
-                if color == go_rules.Color.empty:
+                if color == go.Color.empty:
                     continue
                 group = rules_board.get_group(
                     go_rules.Coord(x=ds.column, y=ds.row),
-                    include=[go_rules.Color.empty, color])
-                target_set = {go_rules.Color.black: white_territory,
-                              go_rules.Color.white: black_territory}[color]
+                    include=[go.Color.empty, color])
+                target_set = {go.Color.black: white_territory,
+                              go.Color.white: black_territory}[color]
                 target_set.update(group)
             return black_territory, white_territory
         black_territory, white_territory = coord_sets_from_dead_stones()
@@ -195,7 +194,7 @@ def play_general_move(which):
 
     try:
         validate_turn_and_record(which, email, game, arguments)
-    except go_rules.IllegalMoveException as e:
+    except go.ValidationException as e:
         flash("Illegal move received: " + e.args[0])
         return redirect(url_for('game', game_no=game_no))
 
@@ -203,7 +202,7 @@ def play_general_move(which):
 
 def validate_turn_and_record(which, player, game, arguments):
     if game.to_move() != player:
-        raise go_rules.IllegalMoveException("It's not your turn!")
+        raise go.ValidationException("It's not your turn!")
     move_no = get_and_validate_move_no(arguments, game)
     color = game.to_move_color()
 
@@ -241,19 +240,21 @@ def get_and_validate_move_no(arguments, game):
     try:
         move_no = int(arguments['move_no'])
     except (KeyError, ValueError):
-        raise go_rules.IllegalMoveException("Invalid request received")
+        raise go.ValidationException("Invalid request received")
     if move_no != game.move_no:
-        raise go_rules.IllegalMoveException(
-                "Move number supplied not sequential")
+        raise go.ValidationException("Move number supplied not sequential")
     return move_no
 
 def create_and_validate_move(move_no, color, game, arguments):
     try:
         sgf_tree = sgftools.parse(arguments['response'])
     except (KeyError, sgftools.ParseError):
-        raise go_rules.IllegalMoveException("Invalid request made.")
+        raise go.ValidationException("Invalid request made.")
 
-    last_node = sgf_tree.main_line()[-1]
+    try:
+        last_node = sgf_tree.main_line[-1]
+    except IndexError:
+        raise go.ValidationException("No move submitted.")
     if 'B' in last_node:
         sgf_color = Move.Color.black
         column, row = sgftools.decode_coord(last_node['B'][0])
@@ -261,17 +262,18 @@ def create_and_validate_move(move_no, color, game, arguments):
         sgf_color = Move.Color.white
         column, row = sgftools.decode_coord(last_node['W'][0])
     else:
-        raise go_rules.IllegalMoveException("No move submitted.")
+        raise go.ValidationException("No move submitted.")
     if color != sgf_color:
-        raise go_rules.IllegalMoveException("Wrong move color submitted.")
+        raise go.ValidationException("Wrong move color submitted.")
 
     move = Move(game_no=game.id, move_no=move_no,
                 row=row, column=column, color=color)
 
-    # test legality, if `board.update_with_move` raises an IllegalMoveException
-    # this will be caught above and displayed to the user.
-    board = get_rules_board_from_db_game(game)
-    board.update_with_move(move)
+    # test legality, if `go` raises a ValidationException this will
+    # be caught above and displayed to the user.
+    go.check_continuation(old_sgf=get_sgf_from_game(game),
+                          new_sgf=arguments['response'],
+                          allowed_new_moves=1)
     # But if no exception is raised then we return the move
     return move
 
@@ -301,14 +303,17 @@ def get_rules_board_from_db_game(game):
 def record_dead_stones_from_sgf_and_check_end(game, arguments):
     """Get dead stones list from args; check game over; record both."""
     sgf_object = sgftools.parse(arguments['response'])
-    last_node = sgf_object.main_line()[-1]
+    try:
+        last_node = sgf_object.main_line[-1]
+    except IndexError:
+        return
     coded_coords = []
     coded_coords.extend(last_node.get('TB', []))
     coded_coords.extend(last_node.get('TW', []))
     try:
         coords_as_tuples = [sgftools.decode_coord(c) for c in coded_coords]
     except ValueError:
-        raise go_rules.IllegalMoveException("internal error: invalid SGF data")
+        raise go.ValidationException("internal error: invalid SGF data")
     dead_stones = [DeadStone(game.id, row=row, column=column)
                    for (column, row) in coords_as_tuples]
     if dead_stones_matches_db(game, dead_stones):
@@ -725,7 +730,7 @@ class Move(db.Model):
     column = db.Column(db.Integer)
     move_no = db.Column(db.Integer)
 
-    Color = go_rules.Color
+    Color = go.Color
     color = db.Column(db.Integer)
 
     def __init__(self, game_no, move_no, row, column, color):
