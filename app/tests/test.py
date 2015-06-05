@@ -531,6 +531,27 @@ class TestPlayStoneIntegrated(TestWithDb):
         moves = Move.query.all()
         assert len(moves) == 0
 
+    def test_works_with_setup_stones(self):
+        game = self.add_game('.w')
+        assert Move.query.all() == []
+        with self.set_email('black@black.com') as test_client:
+            test_client.post('/playstone', data=dict(
+                game_no=game.id, move_no=0, response="(;AW[ba]B[bc])"
+            ))
+        moves = Move.query.all()
+        self.assertEqual(len(moves), 1, "move not played after setup stone")
+
+    def test_rejects_invalid_move(self):
+        game = self.add_game('.w')
+        assert Move.query.all() == []
+        with self.set_email('black@black.com') as test_client:
+            with self.assert_flashes('illegal'):
+                test_client.post('/playstone', data=dict(
+                    game_no=game.id, move_no=0, response="(;AW[ba]B[ba])"
+                ))
+        moves = Move.query.all()
+        assert len(moves) == 0
+
     def test_handles_missing_game_no(self):
         with self.set_email('white@white.com') as test_client:
             with self.patch_render_template():

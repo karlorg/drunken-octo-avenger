@@ -7,8 +7,9 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 import unittest
 
 from .. import go
-from ..go import (_Board, Color, _Coord, ValidationException,
+from ..go import (_Board, Color, _Coord, _GameNode, ValidationException,
                   check_continuation, is_sgf_passed_twice, next_move_no)
+from app import sgftools
 
 empty = Color.empty
 white = Color.white
@@ -43,7 +44,8 @@ class TestCheckContinuation(unittest.TestCase):
              ("(;B[ba])", "(;B[ba];W[bc])", (True,)),
              ("(;B[ab])", "(;B[ba];W[bc])", ('ve', 0)),
              ("(;B[bc])", "(;B[bc];W[bc])", ('ve', 1)),
-             ("(;)", "(;FF[4];B[ba])", (True,))]
+             ("(;)", "(;FF[4];B[ba])", (True,)),
+             ("(;FF[4])", "(;B[ba])", (True,))]
 
         def should_msg(expected):
             if expected[0] is True:
@@ -194,3 +196,22 @@ class TestGetGroup(unittest.TestCase):
         self.assertEqual(middle_white, set([_Coord(1, 1), _Coord(x=2, y=1)]))
         bottom_black = board.get_group(_Coord(x=1, y=2))
         self.assertEqual(bottom_black, set([_Coord(x=1, y=2)]))
+
+# test Game Tree/Node helper classes
+
+class TestGameNode(unittest.TestCase):
+
+    @staticmethod
+    def node_from_sgf(sgf):
+        return _GameNode.from_sgf_node(sgftools.parse(sgf).main_line[0])
+
+    def test_instance_equality(self):
+        e = [("(;B[])", "(;B[])", True),
+             ("(;B[])", "(;W[])", False),
+             ("(;B[ba])", "(;B[ab])", False)]
+        for s1, s2, result in e:
+            n1 = self.node_from_sgf(s1)
+            n2 = self.node_from_sgf(s2)
+            self.assertEqual(n1 == n2, result,
+                             "{s1} == {s2} should be {result}".format(
+                                 s1=s1, s2=s2, result=result))
