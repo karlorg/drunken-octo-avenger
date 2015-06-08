@@ -78,9 +78,9 @@ class TestCheckContinuation(unittest.TestCase):
 class TestNextMoveNo(unittest.TestCase):
 
     def test_various_cases(self):
-        e = [("(;)", 1),
-             ("(;B[ab])", 2),
-             ("(;AB[ab])", 1)]
+        e = [("(;)", 0),
+             ("(;B[ab])", 1),
+             ("(;AB[ab])", 0)]
         for sgf, no in e:
             actual = next_move_no(sgf)
             msg = "next_move_no('{sgf}') was {a}, should be {e}".format(

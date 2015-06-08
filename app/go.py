@@ -66,11 +66,7 @@ def _is_continuation(old_sgf, new_sgf, allowed_new_moves=1):
 
 def next_move_no(sgf):
     game_tree = _GameTree.from_sgf(sgf)
-    no = 1
-    for node in game_tree.main_line:
-        if node.is_action:
-            no += 1
-    return no
+    return sum(1 for node in game_tree.main_line if node.is_action)
 
 # helper facilities for playing out a simulated game on a board and checking
 # legality
