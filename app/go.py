@@ -20,6 +20,7 @@ class ValidationException(Exception):
         self.move_no = move_no
 
 def is_sgf_passed_twice(sgf):
+    """True if the last two actions in sgf are both passes."""
     nodes = _GameTree.from_sgf(sgf).main_line
     if len(nodes) < 2:
         return False
@@ -29,6 +30,14 @@ def is_sgf_passed_twice(sgf):
     return True
 
 def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
+    """True if new_sgf is a valid continuation of old_sgf.
+
+    If not True, raises a ValidationException with details.
+
+    Only one new move is expected.  (In the future we may support
+    setting allowed_new_moves to a different number, or None to remove
+    this restriction.)
+    """
     new_is_valid = _is_valid(new_sgf)
     new_continues_old = _is_continuation(old_sgf, new_sgf)
     return new_is_valid and new_continues_old
@@ -65,6 +74,7 @@ def _is_continuation(old_sgf, new_sgf, allowed_new_moves=1):
     return True
 
 def next_move_no(sgf):
+    """Return the number of the next move to be played on sgf."""
     game_tree = _GameTree.from_sgf(sgf)
     return sum(1 for node in game_tree.main_line if node.is_action)
 
@@ -213,6 +223,11 @@ class _GameTree(object):
 
 
 class _GameNode(object):
+    """Represents a node in a game tree.
+
+    Unlike SGF nodes, these nodes never mix setup stones with actions.
+    Each set of setup stones gets a node to itself.
+    """
 
     def __init__(self):
         """Not for use by client code"""
