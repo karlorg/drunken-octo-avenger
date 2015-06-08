@@ -582,6 +582,8 @@ def add_stones_from_text_map_to_game(text_map, game):
 
     An example text map is [[".b.","bw.",".b."]]
     """
+    assert not isinstance(text_map, str), \
+        "text_map should be a list of strings"
     stones = get_stones_from_text_map(text_map, game)
     for stone in stones:
         db.session.add(stone)

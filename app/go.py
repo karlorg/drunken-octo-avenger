@@ -20,63 +20,57 @@ class ValidationException(Exception):
         self.move_no = move_no
 
 def is_sgf_passed_twice(sgf):
-    nodes = sgftools.parse(sgf).main_line
+    nodes = _GameTree.from_sgf(sgf).main_line
     if len(nodes) < 2:
         return False
     for node in nodes[-2:]:
-        if "B" not in node and "W" not in node:
-            return False
-        elif "B" in node and node["B"] != ['']:
-            return False
-        elif "W" in node and node["W"] != ['']:
+        if not node.is_pass:
             return False
     return True
 
 def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
+    new_is_valid = _is_valid(new_sgf)
+    new_continues_old = _is_continuation(old_sgf, new_sgf)
+    return new_is_valid and new_continues_old
+
+def _is_valid(sgf):
+    nodes = _GameTree.from_sgf(sgf).main_line
+    board = _Board()
+    move_no = 0
+    for node in nodes:
+        if node.is_setup:
+            for coord in node.setup_coords_black:
+                board[coord] = Color.black
+            for coord in node.setup_coords_white:
+                board[coord] = Color.white
+        elif node.is_move:
+            board.update_with_move(node.move_coord, node.move_color, move_no)
+            move_no += 1
+    # if none of those updates raised, it's a valid sequence
+    return True
+
+def _is_continuation(old_sgf, new_sgf, allowed_new_moves=1):
     assert allowed_new_moves == 1, "(allowed_new_moves != 1) not implemented"
     old_nodes = _GameTree.from_sgf(old_sgf).main_line
     new_nodes = _GameTree.from_sgf(new_sgf).main_line
-    if len(new_nodes) < len(old_nodes) + 1:
-        raise ValidationException("no new move",
-                                  move_no=len(old_nodes))
-    elif len(new_nodes) > len(old_nodes) + 1:
+    if len(old_nodes) >= len(new_nodes):
+        raise ValidationException("no new node",
+                                  move_no=len(new_nodes))
+    if len(new_nodes) - len(old_nodes) > 1:
         raise ValidationException("too many new moves",
                                   move_no=len(old_nodes) + 1)
     if old_nodes != new_nodes[:-1]:
         raise ValidationException("games don't match",
                                   move_no=0)
-    return _is_valid_nodelist(new_nodes)
-
-def _is_valid_nodelist(nodes):
-
-    def decode_or_none(chars):
-        try:
-            x, y = sgftools.decode_coord(chars)
-        except ValueError:
-            return None
-        else:
-            return _Coord(x=x, y=y)
-
-    def get_coords_for_tag(tag, node):
-        return (decode_or_none(chars)
-                for chars in node.get(tag, []))
-
-    board = _Board()
-    move_no = 0
-    for node in nodes:
-        for coord in node.setup_coords_black:
-            board[coord] = Color.black
-        for coord in node.setup_coords_white:
-            board[coord] = Color.white
-        if node.has_move:
-            board.update_with_move(node.move_coord, node.move_color, move_no)
-            move_no += 1
-
-    # if none of those updates raised, it's a valid sequence
     return True
 
 def next_move_no(sgf):
-    pass
+    game_tree = _GameTree.from_sgf(sgf)
+    no = 1
+    for node in game_tree.main_line:
+        if node.is_action:
+            no += 1
+    return no
 
 # helper facilities for playing out a simulated game on a board and checking
 # legality
@@ -191,10 +185,10 @@ class EmptyPointLibertiesException(Exception):
 # GameTree abstraction of a parsed game
 
 class _GameTree(object):
-    """For now, just like an sgftools parse tree, but filters out
-    non-action nodes like ';FF[4]SZ[19]'.
+    """An abstract representation of a game history.
 
-    Maybe later will have a more abstract node interface.
+    Use `.main_line` to obtain a list of _GameNodes.  A node is either
+    a move, a pass, or setup stones.
     """
 
     def __init__(self, sgf_tree):
@@ -202,7 +196,7 @@ class _GameTree(object):
 
         Use classmethod instantiators instead.
         """
-        self.nodes = self._filter_nodes(sgf_tree.main_line)
+        self.nodes = self._nodes_from_sgf_nodes(sgf_tree.main_line)
         self.main_line = self.nodes
 
     @classmethod
@@ -215,68 +209,93 @@ class _GameTree(object):
         return cls(sgf_tree)
 
     @staticmethod
-    def _filter_nodes(sgf_nodes):
+    def _nodes_from_sgf_nodes(sgf_nodes):
         result = []
         for node in sgf_nodes:
-            for interesting in ['AW', 'AB', 'W', 'B', 'TW', 'TB']:
-                if interesting in node:
-                    result.append(_GameNode.from_sgf_node(node))
-                    break
+            result.extend(_GameNode.from_sgf_node(node))
         return result
 
 
 class _GameNode(object):
 
-    def __init__(self, sgf_node):
-        """Don't call directly please, may change.
+    def __init__(self):
+        """Not for use by client code"""
+        self.is_move = False
+        """Does this node represent a stone played at a coordinate?"""
+        self.is_pass = False
+        """Does this node represent a pass?"""
+        self.is_setup = False
+        """Does this node place setup stones outside the game rules?"""
 
-        Use classmethod instantiators instead.
-        """
-        self.setup_coords_black = []
-        self.setup_coords_white = []
-        if 'B' in sgf_node:
-            self._setup_move_or_pass(Color.black, sgf_node['B'])
-        elif 'W' in sgf_node:
-            self._setup_move_or_pass(Color.white, sgf_node['W'])
-        else:
-            self.has_move = False
+    @classmethod
+    def _make_setup(cls, sgf_node):
+        result = cls()
+        result.is_setup = True
+        result.setup_coords_black = set(cls._decode_or_invalid(chars)
+                                        for chars in sgf_node.get('AB', []))
+        result.setup_coords_white = set(cls._decode_or_invalid(chars)
+                                        for chars in sgf_node.get('AW', []))
+        return result
 
-    def _setup_move_or_pass(self, color, tag_value):
-        self.move_color = color
-        coord = self._decode_or_none(tag_value[0])
+    @classmethod
+    def _make_move_or_pass(cls, color, tag_value):
+        result = cls()
+        result.move_color = color
+        coord = result._decode_or_none(tag_value[0])
         if coord:
-            self.move_coord = coord
-            self.has_move = True
-            self.has_pass = False
+            result.move_coord = coord
+            result.is_move = True
         else:
-            self.has_move = False
-            self.has_pass = True
+            result.is_pass = True
+        return result
+
+    @classmethod
+    def _decode_or_none(cls, chars):
+        try:
+            return cls._decode_or_invalid(chars)
+        except ValidationException:
+            return None
 
     @staticmethod
-    def _decode_or_none(chars):
+    def _decode_or_invalid(chars):
         try:
             x, y = sgftools.decode_coord(chars)
         except ValueError:
-            return None
+            raise ValidationException(
+                "unparseable coordinate {c}".format(c=chars))
         else:
             return _Coord(x=x, y=y)
 
     @classmethod
-    def _get_coords_for_tag(cls, tag, node):
-        return (cls._decode_or_none(chars)
-                for chars in node.get(tag, []))
-
-    @classmethod
     def from_sgf_node(cls, sgf_node):
-        return cls(sgf_node)
+        """Return a list of nodes built from the given SGF node."""
+        result = []
+        if 'AB' in sgf_node or 'AW' in sgf_node:
+            result.append(cls._make_setup(sgf_node))
+        if 'B' in sgf_node:
+            result.append(cls._make_move_or_pass(Color.black, sgf_node['B']))
+        elif 'W' in sgf_node:
+            result.append(cls._make_move_or_pass(Color.white, sgf_node['W']))
+        return result
+
+    @property
+    def is_action(self):
+        """True if this node should count toward the move count."""
+        return self.is_move or self.is_pass
 
     def __eq__(self, other):
+        if self.is_setup:
+            if not other.is_setup:
+                return False
+            return (self.setup_coords_black == other.setup_coords_black
+                    and self.setup_coords_white == other.setup_coords_white)
+
         if self.move_color != other.move_color:
             return False
-        if self.has_pass and other.has_pass:
+        if self.is_pass and other.is_pass:
             return True
-        if self.has_move != other.has_move:
+        if self.is_move != other.is_move:
             return False
-        if self.has_move and (self.move_coord != other.move_coord):
+        if self.is_move and (self.move_coord != other.move_coord):
             return False
         return True

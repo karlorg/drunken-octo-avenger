@@ -44,8 +44,10 @@ class TestCheckContinuation(unittest.TestCase):
              ("(;B[ba])", "(;B[ba];W[bc])", (True,)),
              ("(;B[ab])", "(;B[ba];W[bc])", ('ve', 0)),
              ("(;B[bc])", "(;B[bc];W[bc])", ('ve', 1)),
+             ("(;AW[ba])", "(;AW[ba]B[bc])", (True,)),
              ("(;)", "(;FF[4];B[ba])", (True,)),
-             ("(;FF[4])", "(;B[ba])", (True,))]
+             ("(;FF[4])", "(;B[ba])", (True,)),
+             ("(;SZ[19]FF[4];AW[ba])", "(;AW[ba]B[bc])", (True,))]
 
         def should_msg(expected):
             if expected[0] is True:
@@ -60,9 +62,9 @@ class TestCheckContinuation(unittest.TestCase):
                 result = check_continuation(old_sgf, new_sgf,
                                             allowed_new_moves=1)
             except ValidationException as ex:
-                msg = ("{o} -> {n} failed at move {m}, " +
+                msg = ("{o} -> {n} failed with message '{msg}' at move {m}, " +
                        should_msg(expected)).format(
-                           o=old_sgf, n=new_sgf, m=ex.move_no)
+                           o=old_sgf, n=new_sgf, m=ex.move_no, msg=str(ex))
                 self.assertEqual(expected[0], 've', msg)
                 self.assertEqual(expected[1], ex.move_no, msg)
             else:
@@ -72,6 +74,18 @@ class TestCheckContinuation(unittest.TestCase):
                 msg = ("{o} -> {n} was OK, " +
                        should_msg(expected)).format(o=old_sgf, n=new_sgf)
                 self.assertIs(expected[0], True, msg)
+
+class TestNextMoveNo(unittest.TestCase):
+
+    def test_various_cases(self):
+        e = [("(;)", 1),
+             ("(;B[ab])", 2),
+             ("(;AB[ab])", 1)]
+        for sgf, no in e:
+            actual = next_move_no(sgf)
+            msg = "next_move_no('{sgf}') was {a}, should be {e}".format(
+                sgf=sgf, a=actual, e=no)
+            self.assertEqual(actual, no, msg)
 
 # test helper Board facilities
 
