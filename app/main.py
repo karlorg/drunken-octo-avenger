@@ -85,10 +85,10 @@ def get_sgf_from_game(game):
 
     def setup_stones_before_move(n):
         result = {}
-        black = [sgftools.encode_coord(s.column, s.row)
+        black = [sgftools.encode_coord(x=s.column, y=s.row)
                  for s in setup_stones
                  if s.color == go_rules.Color.black and s.before_move == n]
-        white = [sgftools.encode_coord(s.column, s.row)
+        white = [sgftools.encode_coord(x=s.column, y=s.row)
                  for s in setup_stones
                  if s.color == go_rules.Color.white and s.before_move == n]
         if black:
@@ -600,9 +600,8 @@ def get_stones_from_text_map(text_map, game):
                     'b': Move.Color.black,
                     'w': Move.Color.white
             }[stone]
-            row = rowno
-            column = colno
-            setup_stone = SetupStone(game_no, before_move, row, column, color)
+            setup_stone = SetupStone(game_no, before_move,
+                                     row=rowno, column=colno, color=color)
             stones.append(setup_stone)
     return stones
 
