@@ -38,6 +38,7 @@ def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
     setting allowed_new_moves to a different number, or None to remove
     this restriction.)
     """
+    assert allowed_new_moves == 1, "(allowed_new_moves != 1) not implemented"
     new_is_valid = _is_valid(new_sgf)
     new_continues_old = _is_continuation(old_sgf, new_sgf)
     return new_is_valid and new_continues_old
@@ -48,18 +49,17 @@ def _is_valid(sgf):
     move_no = 0
     for node in nodes:
         if node.is_setup:
-            for coord in node.setup_coords_black:
+            for coord in node.black_coords:
                 board[coord] = Color.black
-            for coord in node.setup_coords_white:
+            for coord in node.white_coords:
                 board[coord] = Color.white
         elif node.is_move:
-            board.update_with_move(node.move_coord, node.move_color, move_no)
+            board.update_with_move(node.coord, node.color, move_no)
             move_no += 1
     # if none of those updates raised, it's a valid sequence
     return True
 
-def _is_continuation(old_sgf, new_sgf, allowed_new_moves=1):
-    assert allowed_new_moves == 1, "(allowed_new_moves != 1) not implemented"
+def _is_continuation(old_sgf, new_sgf):
     old_nodes = _GameTree.from_sgf(old_sgf).main_line
     new_nodes = _GameTree.from_sgf(new_sgf).main_line
     if len(old_nodes) >= len(new_nodes):
@@ -238,75 +238,115 @@ class _GameNode(object):
         self.is_setup = False
         """Does this node place setup stones outside the game rules?"""
 
-    @classmethod
-    def _make_setup(cls, sgf_node):
-        result = cls()
-        result.is_setup = True
-        result.setup_coords_black = set(cls._decode_or_invalid(chars)
-                                        for chars in sgf_node.get('AB', []))
-        result.setup_coords_white = set(cls._decode_or_invalid(chars)
-                                        for chars in sgf_node.get('AW', []))
-        return result
-
-    @classmethod
-    def _make_move_or_pass(cls, color, tag_value):
-        result = cls()
-        result.move_color = color
-        coord = result._decode_or_none(tag_value[0])
-        if coord:
-            result.move_coord = coord
-            result.is_move = True
-        else:
-            result.is_pass = True
-        return result
-
-    @classmethod
-    def _decode_or_none(cls, chars):
-        try:
-            return cls._decode_or_invalid(chars)
-        except ValidationException:
-            return None
-
-    @staticmethod
-    def _decode_or_invalid(chars):
-        try:
-            x, y = sgftools.decode_coord(chars)
-        except ValueError:
-            raise ValidationException(
-                "unparseable coordinate {c}".format(c=chars))
-        else:
-            return _Coord(x=x, y=y)
-
-    @classmethod
-    def from_sgf_node(cls, sgf_node):
-        """Return a list of nodes built from the given SGF node."""
-        result = []
-        if 'AB' in sgf_node or 'AW' in sgf_node:
-            result.append(cls._make_setup(sgf_node))
-        if 'B' in sgf_node:
-            result.append(cls._make_move_or_pass(Color.black, sgf_node['B']))
-        elif 'W' in sgf_node:
-            result.append(cls._make_move_or_pass(Color.white, sgf_node['W']))
-        return result
-
     @property
     def is_action(self):
         """True if this node should count toward the move count."""
         return self.is_move or self.is_pass
 
-    def __eq__(self, other):
-        if self.is_setup:
-            if not other.is_setup:
-                return False
-            return (self.setup_coords_black == other.setup_coords_black
-                    and self.setup_coords_white == other.setup_coords_white)
+    @classmethod
+    def from_sgf_node(cls, sgf_node):
+        """Return a list of nodes built from the given SGF node.
 
-        if self.move_color != other.move_color:
-            return False
-        if self.is_pass and other.is_pass:
-            return True
-        if self.is_move != other.is_move:
-            return False
-        if self.is_move and (self.move_coord != other.move_coord):
-            return False
-        return True
+        If one SGF node is broken into several GameNodes, the order
+        will be correct so that earlier nodes 'occur' before later
+        ones in the game.
+        """
+        nodes = []
+        if 'AB' in sgf_node or 'AW' in sgf_node:
+            nodes.append(cls._make_setup(sgf_node))
+        if 'B' in sgf_node:
+            nodes.append(cls._make_move_or_pass(Color.black, sgf_node['B']))
+        elif 'W' in sgf_node:
+            nodes.append(cls._make_move_or_pass(Color.white, sgf_node['W']))
+        return nodes
+
+    @classmethod
+    def _make_move_or_pass(cls, color, tag_value):
+        coord = cls._decode_or_none(tag_value[0])
+        if coord:
+            return _MoveNode(color, coord)
+        else:
+            return _PassNode(color)
+
+    @classmethod
+    def _make_setup(cls, sgf_node):
+        black_coords = set(cls._decode(chars)
+                           for chars in sgf_node.get('AB', []))
+        white_coords = set(cls._decode(chars)
+                           for chars in sgf_node.get('AW', []))
+        return _SetupNode(black_coords, white_coords)
+
+    @classmethod
+    def _decode_or_none(cls, chars):
+        try:
+            return cls._decode(chars)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _decode(chars):
+        x, y = sgftools.decode_coord(chars)
+        return _Coord(x=x, y=y)
+
+
+class _MoveNode(_GameNode):
+
+    def __init__(self, color, coord):
+        super(_MoveNode, self).__init__()
+        self.is_move = True
+        self.coord = coord
+        """The coordinate played at."""
+        self.color = color
+        """The color of the stone being placed."""
+
+    def __eq__(self, other):
+        return (other.is_move
+                and self.color == other.color
+                and self.coord == other.coord)
+
+    def __repr__(self):
+        return "Move node: {col} ({x},{y})".format(
+            col={Color.black: "Black", Color.white: "White"}[self.color],
+            x=self.coord.x, y=self.coord.y)
+
+
+class _PassNode(_GameNode):
+
+    def __init__(self, color):
+        super(_PassNode, self).__init__()
+        self.is_pass = True
+        self.color = color
+        """The color of the passing player."""
+
+    def __eq__(self, other):
+        return (other.is_pass and self.color == other.color)
+
+    def __repr__(self):
+        return "Pass node: {col}".format(
+            col={Color.black: "Black", Color.white: "White"}[self.color])
+
+
+class _SetupNode(_GameNode):
+
+    def __init__(self, black_coords, white_coords):
+        """A node of setup stones in a Game tree.
+
+        :param black_coords: a set of _Coord
+        :param white_coords: a set of _Coord
+        """
+        super(_SetupNode, self).__init__()
+        self.is_setup = True
+        self.black_coords = black_coords
+        """A set of _Coord representing black setup stones."""
+        self.white_coords = white_coords
+        """A set of _Coord representing white setup stones."""
+
+    def __eq__(self, other):
+        return (other.is_setup
+                and self.black_coords == other.black_coords
+                and self.white_coords == other.white_coords)
+
+    def __repr__(self):
+        return ("Setup node:\n"
+                " Black: {b}\n"
+                " White: {w}".format(b=self.black_coords, w=self.white_coords))
