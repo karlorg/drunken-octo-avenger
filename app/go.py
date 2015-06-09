@@ -20,19 +20,19 @@ class ValidationException(Exception):
         self.move_no = move_no
 
 def is_sgf_passed_twice(sgf):
-    """True if there are no moves since the last run of two passes."""
+    """True if this game has been passed twice and not resumed."""
     nodes = _GameTree.from_sgf(sgf).main_line
     passes = 0
     for node in reversed(nodes):
         if not node.is_action:
             continue
         else:
-            if node.is_move:
-                return False
-            elif node.is_pass:
+            if node.is_pass:
                 passes += 1
                 if passes == 2:
                     return True
+            elif node.is_move or node.is_resumption:
+                return False
     return False
 
 def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
@@ -245,11 +245,14 @@ class _GameNode(object):
         """Does this node place setup stones outside the game rules?"""
         self.is_mark = False
         """Does this node represent one player marking dead stones?"""
+        self.is_resumption = False
+        """Does this node represent a player resuming a finished game?"""
 
     @property
     def is_action(self):
-        """True if this node should count toward the move count."""
-        return self.is_move or self.is_pass or self.is_mark
+        """True if this node affects the move count."""
+        return (self.is_move or self.is_pass or self.is_mark
+                or self.is_resumption)
 
     @classmethod
     def from_sgf_node(cls, sgf_node):
@@ -262,6 +265,8 @@ class _GameNode(object):
         nodes = []
         if 'AB' in sgf_node or 'AW' in sgf_node:
             nodes.append(cls._make_setup(sgf_node))
+        if 'TCRESUME' in sgf_node:
+            nodes.append(_ResumptionNode())
         if 'B' in sgf_node:
             nodes.append(cls._make_move_or_pass(Color.black, sgf_node['B']))
         elif 'W' in sgf_node:
@@ -289,9 +294,9 @@ class _GameNode(object):
     @classmethod
     def _make_mark(cls, sgf_node):
         black_coord = set(cls._decode(chars)
-                         for chars in sgf_node.get('TB', []))
+                          for chars in sgf_node.get('TB', []))
         white_coord = set(cls._decode(chars)
-                         for chars in sgf_node.get('TW', []))
+                          for chars in sgf_node.get('TW', []))
         return _MarkNode(black_coord, white_coord)
 
     @classmethod
@@ -394,3 +399,17 @@ class _MarkNode(_GameNode):
         return ("Territory marking node:\n"
                 " Black: {b}\n"
                 " White: {w}".format(b=self.black_coords, w=self.white_coords))
+
+
+class _ResumptionNode(_GameNode):
+
+    def __init__(self):
+        """A node signalling that a finished game should resume."""
+        super(_ResumptionNode, self).__init__()
+        self.is_resumption = True
+
+    def __eq__(self, other):
+        return other.is_resumption
+
+    def __repr__(self):
+        return "Resumption node"

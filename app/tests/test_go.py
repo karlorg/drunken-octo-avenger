@@ -24,7 +24,9 @@ class TestIsSgfPassedTwice(unittest.TestCase):
                     ("(;B[ab];W[])", False),
                     ("(;B[];W[])", True),
                     ("(;B[ab];W[];B[])", True),
-                    ("(;B[ab];W[];B[];W[bc])", False)]
+                    ("(;B[ab];W[];B[];W[bc])", False),
+                    ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", True),
+                    ("(;B[ab];W[];B[];TCRESUME[])", False)]
         for sgf, value in expected:
             self.assertEqual(is_sgf_passed_twice(sgf), value,
                              "{sgf} should be {value}".format(sgf=sgf,
@@ -82,7 +84,8 @@ class TestNextMoveNo(unittest.TestCase):
              ("(;B[ab])", 1),
              ("(;AB[ab])", 0),
              ("(;SZ[2];B[ab];W[];B[])", 3),
-             ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", 4)]
+             ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", 4),
+             ("(;SZ[2];B[ab];W[];B[];TCRESUME[])", 4)]
         for sgf, no in e:
             actual = next_move_no(sgf)
             msg = "next_move_no('{sgf}') was {a}, should be {e}".format(

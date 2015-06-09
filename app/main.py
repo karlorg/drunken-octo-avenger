@@ -114,6 +114,14 @@ def get_sgf_from_game(game):
             assert False, "item is neither move nor pass"
         return {tag: value}
 
+    resumptions_by_no = {r.move_no: r for r in game.resumptions}
+
+    def resumption_dict_for_move_no(n):
+        if n in resumptions_by_no:
+            return {'TCRESUME': ['']}
+        else:
+            return {}
+
     dead_stones = game.dead_stones
 
     def dict_from_dead_stones():
@@ -146,7 +154,8 @@ def get_sgf_from_game(game):
                             for p in white_territory]
         return result
 
-    max_move_no = max_with_sentinel(-1, moves_passes_by_no.keys())
+    max_move_no = max_with_sentinel(-1, moves_passes_by_no.keys(),
+                                    resumptions_by_no.keys())
     nodes = [{'FF': ['4'], 'SZ': ['19']}]
     for move_no in range(-1, max_move_no+1):
         node = {}
@@ -161,6 +170,7 @@ def get_sgf_from_game(game):
         # go away)
         if (not dead_stones) or (move_no != max_move_no):
             node.update(move_or_pass_dict_for_move_no(move_no))
+        node.update(resumption_dict_for_move_no(move_no))
         if move_no == max_move_no:
             node.update(dict_from_dead_stones())
         if node:
