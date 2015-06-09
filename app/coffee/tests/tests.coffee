@@ -254,8 +254,8 @@ test "killing stones revives neighbouring enemy groups " + \
 
 test "initialization sets initial dead stones from SGF", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac]
-                ;TW[aa][ab][ba][bb][bc][ac][bc])'
-  # b.w
+                ;W[];B[];TW[aa][ba][bb][bc][ac][bc])'
+  # bww
   # .b.
   # bbw
   tesuji_charm.game_marking.initialize()

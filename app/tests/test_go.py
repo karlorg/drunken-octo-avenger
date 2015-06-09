@@ -80,7 +80,9 @@ class TestNextMoveNo(unittest.TestCase):
     def test_various_cases(self):
         e = [("(;)", 0),
              ("(;B[ab])", 1),
-             ("(;AB[ab])", 0)]
+             ("(;AB[ab])", 0),
+             ("(;SZ[2];B[ab];W[];B[])", 3),
+             ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", 4)]
         for sgf, no in e:
             actual = next_move_no(sgf)
             msg = "next_move_no('{sgf}') was {a}, should be {e}".format(

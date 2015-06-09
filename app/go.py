@@ -20,14 +20,20 @@ class ValidationException(Exception):
         self.move_no = move_no
 
 def is_sgf_passed_twice(sgf):
-    """True if the last two actions in sgf are both passes."""
+    """True if there are no moves since the last run of two passes."""
     nodes = _GameTree.from_sgf(sgf).main_line
-    if len(nodes) < 2:
-        return False
-    for node in nodes[-2:]:
-        if not node.is_pass:
-            return False
-    return True
+    passes = 0
+    for node in reversed(nodes):
+        if not node.is_action:
+            continue
+        else:
+            if node.is_move:
+                return False
+            elif node.is_pass:
+                passes += 1
+                if passes == 2:
+                    return True
+    return False
 
 def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
     """True if new_sgf is a valid continuation of old_sgf.
@@ -237,11 +243,13 @@ class _GameNode(object):
         """Does this node represent a pass?"""
         self.is_setup = False
         """Does this node place setup stones outside the game rules?"""
+        self.is_mark = False
+        """Does this node represent one player marking dead stones?"""
 
     @property
     def is_action(self):
         """True if this node should count toward the move count."""
-        return self.is_move or self.is_pass
+        return self.is_move or self.is_pass or self.is_mark
 
     @classmethod
     def from_sgf_node(cls, sgf_node):
@@ -258,6 +266,8 @@ class _GameNode(object):
             nodes.append(cls._make_move_or_pass(Color.black, sgf_node['B']))
         elif 'W' in sgf_node:
             nodes.append(cls._make_move_or_pass(Color.white, sgf_node['W']))
+        if 'TB' in sgf_node or 'TW' in sgf_node:
+            nodes.append(cls._make_mark(sgf_node))
         return nodes
 
     @classmethod
@@ -275,6 +285,14 @@ class _GameNode(object):
         white_coords = set(cls._decode(chars)
                            for chars in sgf_node.get('AW', []))
         return _SetupNode(black_coords, white_coords)
+
+    @classmethod
+    def _make_mark(cls, sgf_node):
+        black_coord = set(cls._decode(chars)
+                         for chars in sgf_node.get('TB', []))
+        white_coord = set(cls._decode(chars)
+                         for chars in sgf_node.get('TW', []))
+        return _MarkNode(black_coord, white_coord)
 
     @classmethod
     def _decode_or_none(cls, chars):
@@ -329,7 +347,7 @@ class _PassNode(_GameNode):
 class _SetupNode(_GameNode):
 
     def __init__(self, black_coords, white_coords):
-        """A node of setup stones in a Game tree.
+        """Create a node from two sets of coords.
 
         :param black_coords: a set of _Coord
         :param white_coords: a set of _Coord
@@ -348,5 +366,31 @@ class _SetupNode(_GameNode):
 
     def __repr__(self):
         return ("Setup node:\n"
+                " Black: {b}\n"
+                " White: {w}".format(b=self.black_coords, w=self.white_coords))
+
+
+class _MarkNode(_GameNode):
+
+    def __init__(self, black_coords, white_coords):
+        """A node that marks territories in a Game tree.
+
+        :param black_coords: a set of _Coord
+        :param white_coords: a set of _Coord
+        """
+        super(_MarkNode, self).__init__()
+        self.is_mark = True
+        self.black_coords = black_coords
+        """A set of _Coord representing black territory."""
+        self.white_coords = white_coords
+        """A set of _Coord representing white territory."""
+
+    def __eq__(self, other):
+        return (other.is_mark
+                and self.black_coords == other.black_coords
+                and self.white_coords == other.white_coords)
+
+    def __repr__(self):
+        return ("Territory marking node:\n"
                 " Black: {b}\n"
                 " White: {w}".format(b=self.black_coords, w=self.white_coords))

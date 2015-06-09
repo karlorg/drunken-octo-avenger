@@ -256,7 +256,7 @@
   });
 
   test("initialization sets initial dead stones from SGF", function(assert) {
-    setInputSgf('(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac] ;TW[aa][ab][ba][bb][bc][ac][bc])');
+    setInputSgf('(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac] ;W[];B[];TW[aa][ba][bb][bc][ac][bc])');
     tesuji_charm.game_marking.initialize();
     assert.ok(isPointBlackDead($pointAt(0, 0)), "(0, 0) is dead");
     assert.ok(isPointBlackDead($pointAt(1, 1)), "(1, 1) is dead");

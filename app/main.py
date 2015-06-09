@@ -151,7 +151,16 @@ def get_sgf_from_game(game):
     for move_no in range(-1, max_move_no+1):
         node = {}
         node.update(setup_stones_before_move(move_no + 1))
-        node.update(move_or_pass_dict_for_move_no(move_no))
+        # hack: since the db encodes marking stones 'moves' as passes,
+        # and the 'go' module treats both passes and marking stones as
+        # separate actions, we need to not create a pass in the SGF if
+        # there are marked stones on the same move.
+        #
+        # Thankfully this will no longer be an issue once we're
+        # storing SGFs in the db (this whole get_sgf... function will
+        # go away)
+        if (not dead_stones) or (move_no != max_move_no):
+            node.update(move_or_pass_dict_for_move_no(move_no))
         if move_no == max_move_no:
             node.update(dict_from_dead_stones())
         if node:
@@ -310,6 +319,7 @@ def record_dead_stones_from_sgf_and_check_end(game, arguments):
     coded_coords = []
     coded_coords.extend(last_node.get('TB', []))
     coded_coords.extend(last_node.get('TW', []))
+    coded_coords = [c for c in coded_coords if c != '']
     try:
         coords_as_tuples = [sgftools.decode_coord(c) for c in coded_coords]
     except ValueError:
