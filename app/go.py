@@ -21,18 +21,14 @@ class ValidationException(Exception):
 
 def is_sgf_passed_twice(sgf):
     """True if this game has been passed twice and not resumed."""
-    nodes = _GameTree.from_sgf(sgf).main_line
     passes = 0
-    for node in reversed(nodes):
-        if not node.is_action:
-            continue
-        else:
-            if node.is_pass:
-                passes += 1
-                if passes == 2:
-                    return True
-            elif node.is_move or node.is_resumption:
-                return False
+    for node in reversed(_GameTree.from_sgf(sgf).main_line):
+        if node.is_pass:
+            passes += 1
+            if passes == 2:
+                return True
+        elif node.is_move or node.is_resumption:
+            return False
     return False
 
 def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
@@ -82,7 +78,12 @@ def _is_continuation(old_sgf, new_sgf):
 def next_move_no(sgf):
     """Return the number of the next move to be played on sgf."""
     game_tree = _GameTree.from_sgf(sgf)
-    return sum(1 for node in game_tree.main_line if node.is_action)
+    return sum(1 for node in game_tree.main_line if _is_action(node))
+
+def _is_action(node):
+    """Should the node advance the move count?"""
+    return (node.is_move or node.is_pass or node.is_mark
+            or node.is_resumption)
 
 # helper facilities for playing out a simulated game on a board and checking
 # legality
@@ -208,8 +209,7 @@ class _GameTree(object):
 
         Use classmethod instantiators instead.
         """
-        self.nodes = self._nodes_from_sgf_nodes(sgf_tree.main_line)
-        self.main_line = self.nodes
+        self.main_line = self._nodes_from_sgf_nodes(sgf_tree.main_line)
 
     @classmethod
     def from_sgf(cls, sgf):
@@ -247,12 +247,6 @@ class _GameNode(object):
         """Does this node represent one player marking dead stones?"""
         self.is_resumption = False
         """Does this node represent a player resuming a finished game?"""
-
-    @property
-    def is_action(self):
-        """True if this node affects the move count."""
-        return (self.is_move or self.is_pass or self.is_mark
-                or self.is_resumption)
 
     @classmethod
     def from_sgf_node(cls, sgf_node):
