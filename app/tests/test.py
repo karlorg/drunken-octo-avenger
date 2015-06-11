@@ -393,73 +393,6 @@ class TestResignIntegrated(TestWithDb):
         self.assertEqual(game.winner, game.white)
 
 
-class TestGetSgfFromGame(unittest.TestCase):
-
-    def test_simple_example_game(self):
-        game = Game()
-        game.setup_stones = [SetupStone(game_no=game.id, before_move=0,
-                                        column=1, row=0,
-                                        color=Move.Color.black)]
-        game.moves = [Move(game_no=1, move_no=0,
-                           row=2, column=3, color=Move.Color.black),
-                      Move(game_no=1, move_no=1,
-                           row=14, column=15, color=Move.Color.white)]
-        game.passes = [Pass(game_no=1, move_no=2, color=Move.Color.black)]
-        sgf = main.get_sgf_from_game(game)
-        self.assertRegexpMatches(sgf, r";AB\[ba\];B\[dc\];W\[po\];B\[\]\)")
-
-    def test_dead_stones(self):
-        game = Game()
-        game.moves = [Move(game_no=1, move_no=0,
-                           row=0, column=1, color=Move.Color.black)]
-        game.passes = [Pass(game_no=1, move_no=1,
-                            color=Move.Color.white),
-                       Pass(game_no=1, move_no=2,
-                            color=Move.Color.black)]
-        game.dead_stones = [DeadStone(game_no=1, row=0, column=1)]
-
-        sgf = main.get_sgf_from_game(game)
-
-        regexp = re.compile(";[^;]*TW[^A-Z]*\[ba][^;]*\)")
-        self.assertRegexpMatches(sgf, regexp, "territory not found in SGF")
-
-
-class TestGetRulesBoardFromDbGame(unittest.TestCase):
-
-    def test_combination(self):
-        game = Game()
-        game.moves = [Move(game.id, 0, 2, 3, Move.Color.black)]
-        game.setup_stones = main.get_stones_from_text_map(['.bw'], game)
-        board = main.get_rules_board_from_db_game(game)
-        self.assertEqual(board[go_rules.Coord(x=0, y=0)], go_rules.Color.empty)
-        self.assertEqual(board[go_rules.Coord(x=1, y=0)], go_rules.Color.black)
-        self.assertEqual(board[go_rules.Coord(x=2, y=0)], go_rules.Color.white)
-        self.assertEqual(board[go_rules.Coord(x=3, y=2)], go_rules.Color.black)
-
-    def test_setup_stones(self):
-        """Regression test: need to process setup stones after last move.
-
-        eg. setup stones for 'before move 0' when there are no moves yet.
-        """
-        game = Game()
-        game.moves = []
-        game.setup_stones = main.get_stones_from_text_map(['.bw'], game)
-        board = main.get_rules_board_from_db_game(game)
-        self.assertEqual(board[go_rules.Coord(x=1, y=0)], go_rules.Color.black)
-
-    def test_copes_with_pass_then_move(self):
-        """Regression test: process setup stones on first move pass.
-
-        This would fail in tests which use a first turn setup stones &
-        pass, with further moves after the pass."""
-        game = Game()
-        game.moves = [Move(game.id, move_no=1, row=2, column=3,
-                           color=Move.Color.white)]
-        game.setup_stones = main.get_stones_from_text_map(['.bw'], game)
-        board = main.get_rules_board_from_db_game(game)
-        self.assertEqual(board[go_rules.Coord(x=1, y=0)], go_rules.Color.black)
-
-
 class TestPlayIntegrated(TestWithDb):
 
     def test_can_add_stones_and_passes_to_two_games(self):
@@ -487,9 +420,17 @@ class TestPlayIntegrated(TestWithDb):
 
     def test_redirects_to_home_if_not_logged_in(self):
         game = self.add_game()
-        response = self.test_client.post(
-            url_for('play', game_no=game.id),
-            data=dict(game_no=game.id, move_no=0, response="(;B[])"))
+        with main.app.test_client() as test_client:
+            response = test_client.post(
+                url_for('play', game_no=game.id),
+                data=dict(game_no=game.id, move_no=0, response="(;B[])"))
+        self.assert_redirects(response, '/')
+
+    def test_redirects_to_home_if_game_not_found(self):
+        with self.set_email('black@black.com') as test_client:
+            response = test_client.post(
+                url_for('play', game_no=0),
+                data=dict(game_no=0, move_no=0, response="(;B[])"))
         self.assert_redirects(response, '/')
 
     def test_rejects_new_move_off_turn(self):
@@ -523,7 +464,7 @@ class TestPlayIntegrated(TestWithDb):
     def test_rejects_invalid_move(self):
         game = self.add_game("(;AW[ba])")
         with self.set_email('black@black.com') as test_client:
-            with self.assert_flashes('illegal'):
+            with self.assert_flashes('invalid'):
                 response = test_client.post(
                     url_for('play', game_no=game.id),
                     data=dict(game_no=game.id, move_no=0,

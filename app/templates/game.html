@@ -5,7 +5,7 @@
 
 {% if on_turn %}
 {% if with_scoring %}
-<form method="POST" action="{{ url_for('markdead') }}">
+<form method="POST" action="{{ url_for('play', game_no=game_no) }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
@@ -17,12 +17,12 @@
 </form>
 
 {% else %}  <!-- if with_scoring -->
-<form method="POST" action="{{ url_for('playstone') }}">
+<form method="POST" action="{{ url_for('play', game_no=game_no) }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
 </form>
-<form method="POST" action="{{ url_for('playpass') }}">
+<form method="POST" action="{{ url_for('play', game_no=game_no) }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="pass_button" name='pass_button'>Pass</button>

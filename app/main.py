@@ -72,14 +72,30 @@ def game(game_no):
             "game.html",
             form=form, on_turn=is_your_turn, with_scoring=is_passed_twice)
 
-@app.route('/play/<int:game_no>')
+@app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
     try:
-        game = db.query(Game).filter_by(id=game_no).one()
+        game = db.session.query(Game).filter_by(id=game_no).one()
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
-    pass
+    if not is_players_turn_in_game(game):
+        flash("It's not your turn in that game.")
+        return redirect('/')
+    arguments = request.form.to_dict()
+    try:
+        go.check_continuation(old_sgf=game.sgf,
+                              new_sgf=arguments['response'],
+                              allowed_new_moves=1)
+    except go.ValidationException as e:
+        flash("Invalid move: {}".format(e.args[0]))
+        return redirect(url_for('game', game_no=game_no))
+    except KeyError:
+        flash("Invalid request.")
+        return redirect(url_for('game', game_no=game_no))
+    game.sgf = arguments['response']
+    db.session.commit()
+    return ''
 
 @app.route('/resign', methods=['POST'])
 def resign():
