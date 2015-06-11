@@ -730,6 +730,22 @@ class TestMarkDeadIntegrated(TestWithDb):
         self.assertIn((1, 0), self.coord_set())
 
 
+class TestStorage(TestWithDb):
+
+    def test_handles_large_sgf(self):
+        # this will hopefully fail if we switch from SQLite to a backend that
+        # actually restricts the length of string fields; in which case, we
+        # probably would have to save SGFs in files or something.
+        with open('app/tests/adc-karlnaylor-948890-20150121.sgf') as test_file:
+            test_sgf = test_file.read()
+        saved = Game(black='black@black.com', white='white@white.com',
+                     sgf=test_sgf)
+        db.session.add(saved)
+        db.session.commit()
+        returned = db.query(Game).filter_by(id=saved.id).one()
+        self.assertEqual(returned.sgf, saved.sgf)
+
+
 # I'm skipping this test because I have removed the method that it tests.
 # Still I think the idea of testing that nothing happens should I make an
 # invalid request is a good one. But we should test it more functionally, by
