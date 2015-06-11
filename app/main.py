@@ -196,15 +196,60 @@ def testing_create_game():
     create_game_internal(black_email, white_email, stones)
     return ''
 
-def create_game_internal(black_email, white_email, stones=None):
-    game = Game()
-    game.black = black_email
-    game.white = white_email
+def create_game_internal(black_email, white_email,
+                         sgf_or_stones=None,
+                         stones=None, sgf=None):
+    """Create a custom game for testing purposes.
+
+    Can be initialized with an SGF or a 'text map', ie. a list of strings
+    representing setup stones like this:
+
+        ['w.',
+         '.b']
+    """
+    assert sum(1 for x in [sgf_or_stones, stones, sgf]
+               if x is not None) <= 1, \
+        "can't supply more than one initial state to create_game_internal"
+    if sgf_or_stones:
+        if isinstance(sgf_or_stones, str):
+            assert sgf_or_stones[0] == '(', \
+                "invalid SGF passed to create_game_internal; if you meant " \
+                "a text map, make it a list"
+            sgf = sgf_or_stones
+        else:
+            stones = sgf_or_stones
+    if not sgf:
+        if not stones:
+            stones = []
+        sgf = sgf_from_text_map(stones)
+    game = Game(black=black_email, white=white_email, sgf=sgf)
     db.session.add(game)
     db.session.commit()
-    if stones is not None:
-        add_stones_from_text_map_to_game(stones, game)
     return game
+
+def sgf_from_text_map(text_map):
+    assert not isinstance(text_map, str), \
+        "text maps should be lists of strings, not a single string"
+    ab_coords = []
+    aw_coords = []
+    for rowno, row in enumerate(text_map):
+        for colno, char in enumerate(row):
+            if char == 'b':
+                ab_coords.append((colno, rowno))
+            elif char == 'w':
+                aw_coords.append((colno, rowno))
+
+    def sgfify(coords, tag):
+        if not coords:
+            return ''
+        return (tag + '[' +
+                ']['.join(sgftools.encode_coord(x, y)
+                          for (x, y) in coords)
+                + ']')
+    ab_str = sgfify(ab_coords, 'AB')
+    aw_str = sgfify(aw_coords, 'AW')
+    return "(;{ab}{aw})".format(ab=ab_str, aw=aw_str)
+
 
 @app.test_only_route('/testing_clear_games_for_player', methods=['POST'])
 def testing_clear_games_for_player():

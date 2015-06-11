@@ -746,6 +746,16 @@ class TestStorage(TestWithDb):
         self.assertEqual(returned.sgf, saved.sgf)
 
 
+class TestSgfFromTextMap(unittest.TestCase):
+
+    def test_empty_map(self):
+        self.assertEqual(main.sgf_from_text_map([]), "(;)")
+
+    def test_black_and_white_stone(self):
+        self.assertEqual(main.sgf_from_text_map(['.w', 'b.']),
+                         "(;AB[ab]AW[ba])")
+
+
 # I'm skipping this test because I have removed the method that it tests.
 # Still I think the idea of testing that nothing happens should I make an
 # invalid request is a good one. But we should test it more functionally, by
