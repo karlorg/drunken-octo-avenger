@@ -69,8 +69,9 @@ def game(game_no):
     form_data = {'game_no': game.id, 'move_no': move_no, 'data': sgf}
     form = PlayStoneForm(data=form_data)
     return render_template_with_email(
-            "game.html",
-            form=form, on_turn=is_your_turn, with_scoring=is_passed_twice)
+        "game.html",
+        form=form, game_no=game_no,
+        on_turn=is_your_turn, with_scoring=is_passed_twice)
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
@@ -115,13 +116,67 @@ def challenge():
 
 @app.route('/status')
 def status():
-    if 'email' not in session:
+    try:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
         return redirect('/')
-    your_turn_games, not_your_turn_games = get_status_lists(logged_in_email())
+    your_turn_games, not_your_turn_games = get_status_lists(email)
     return render_template_with_email(
             "status.html",
             your_turn_games=your_turn_games,
             not_your_turn_games=not_your_turn_games)
+
+def get_status_lists(player_email):
+    """Return two lists of games for the player, split by on-turn or not.
+
+    Accesses database.
+    """
+    player_games = get_player_games(player_email)
+
+    your_turn_games = [g for g in player_games
+                       if email_to_move_in_game(g) == player_email]
+    not_your_turn_games = [g for g in player_games
+                           if email_to_move_in_game(g) != player_email]
+    return (your_turn_games, not_your_turn_games)
+
+def get_player_games(player_email):
+    """Returns the list of games in which `player_email` is involved.
+
+    Only includes running games, ie. not finished.
+
+    Accesses database.
+    """
+    unfinished_predicate = True
+    # unfinished_predicate = Game.winner == None  # noqa
+    # ORM doesn't accept 'is None', linter doesn't like '== None'
+    games = Game.query.filter(and_(unfinished_predicate,
+                                   or_(Game.black == player_email,
+                                       Game.white == player_email))).all()
+    return games
+
+def is_players_turn_in_game(game):
+    """Test if it's the logged-in player's turn to move in `game`.
+
+    Reads email from the session.
+    """
+    try:
+        current_email = logged_in_email()
+    except NoLoggedInPlayerException:
+        return False
+    next_in_game = email_to_move_in_game(game)
+    return next_in_game == current_email
+
+def email_to_move_in_game(game):
+    """Return the email of the player to move in game.
+
+    Accesses database.  Return None if game is finished.
+    """
+    black_or_white = go.next_color(game.sgf)
+    next_in_game = {go.Color.black: game.black,
+                    go.Color.white: game.white}[black_or_white]
+    return next_in_game
+
+
 
 @app.route('/persona/login', methods=['POST'])
 def persona_login():
@@ -213,7 +268,7 @@ def testing_create_game():
     create_game_internal(black_email, white_email, stones)
     return ''
 
-def create_game_internal(black_email, white_email,
+def create_game_internal(black, white,
                          sgf_or_stones=None,
                          stones=None, sgf=None):
     """Create a custom game for testing purposes.
@@ -239,7 +294,7 @@ def create_game_internal(black_email, white_email,
         if not stones:
             stones = []
         sgf = sgf_from_text_map(stones)
-    game = Game(black=black_email, white=white_email, sgf=sgf)
+    game = Game(black=black, white=white, sgf=sgf)
     db.session.add(game)
     db.session.commit()
     return game
@@ -305,33 +360,6 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_status_lists(player_email):
-    """Return two lists of games for the player, split by on-turn or not.
-
-    Accesses database.
-    """
-    player_games = get_player_games(player_email)
-
-    your_turn_games = [g for g in player_games
-                       if g.to_move() == player_email]
-    not_your_turn_games = [g for g in player_games
-                           if g.to_move() != player_email]
-    return (your_turn_games, not_your_turn_games)
-
-def get_player_games(player_email):
-    """Returns the list of games in which `player_email` is involved.
-
-    Only includes running games, ie. not finished.
-
-    Accesses database.
-    """
-    unfinished_predicate = Game.winner == None  # noqa
-    # ORM doesn't accept 'is None', linter doesn't like '== None'
-    games = Game.query.filter(and_(unfinished_predicate,
-                                   or_(Game.black == player_email,
-                                       Game.white == player_email))).all()
-    return games
-
 class NoLoggedInPlayerException(Exception):
     pass
 
@@ -344,20 +372,6 @@ def logged_in_email():
         return session['email']
     except KeyError:
         raise NoLoggedInPlayerException()
-
-def is_players_turn_in_game(game):
-    """Test if it's the logged-in player's turn to move in `game`.
-
-    Reads email from the session.
-    """
-    try:
-        current_email = logged_in_email()
-    except NoLoggedInPlayerException:
-        return False
-    black_or_white = go.next_color(game.sgf)
-    next_in_game = {go.Color.black: game.black,
-                    go.Color.white: game.white}[black_or_white]
-    return next_in_game == current_email
 
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.

@@ -87,9 +87,11 @@ class TestWithDb(TestWithTestingApp):
         main.db.drop_all()
         super().tearDown()
 
-    def add_game(self, stones=None):
+    def add_game(self, sgf_or_stones=None, stones=None, sgf=None,
+                 black='black@black.com', white='white@white.com'):
         game = main.create_game_internal(
-                'black@black.com', 'white@white.com', stones)
+            black=black, white=white,
+            sgf_or_stones=sgf_or_stones, stones=stones, sgf=sgf)
         return game
 
 
@@ -225,29 +227,20 @@ class TestStatusIntegrated(TestWithDb):
         self.LOGGED_IN_EMAIL = 'testplayer@gotgames.mk'
         OTHER_EMAIL_1 = 'rando@opponent.net'
         OTHER_EMAIL_2 = 'wotsit@thingy.com'
-        game1 = Game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
-        game2 = Game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
-        game3 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
-        game4 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
-        game5 = Game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
-        game6 = Game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
-        game6.winner = self.LOGGED_IN_EMAIL  # this game is over
-        main.db.session.add(game1)
-        main.db.session.add(game2)
-        main.db.session.add(game3)
-        main.db.session.add(game4)
-        main.db.session.add(game5)
-        main.db.session.add(game6)
-        main.db.session.commit()
-        main.db.session.add(Move(
-            game_no=game4.id, move_no=0,
-            row=9, column=9, color=Move.Color.black))
-        main.db.session.add(Pass(
-            game_no=game5.id, move_no=0, color=Move.Color.black))
+        game1 = self.add_game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
+        game2 = self.add_game(black=OTHER_EMAIL_1, white=OTHER_EMAIL_2)
+        game3 = self.add_game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL)
+        game4 = self.add_game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL,
+                              sgf="(;B[jj])")
+        game5 = self.add_game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL,
+                              sgf="(;B[])")
+        game6 = self.add_game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1,
+                              sgf="(;RE[W+R])")
         return (game1, game2, game3, game4, game5, game6,)
 
     def test_anonymous_users_redirected_to_front(self):
-        response = self.test_client.get(url_for('status'))
+        with main.app.test_client() as test_client:
+            response = test_client.get(url_for('status'))
         self.assert_redirects(response, '/')
 
     def test_shows_links_to_existing_games(self):
@@ -287,8 +280,8 @@ class TestStatusIntegrated(TestWithDb):
     def test_games_come_out_sorted(self):
         """Regression test: going via dictionaries can break sorting"""
         for i in range(5):
-            db.session.add(Game(black='some@one.com', white='some@two.com'))
-            db.session.add(Game(black='some@two.com', white='some@one.com'))
+            self.add_game(black='some@one.com', white='some@two.com')
+            self.add_game(black='some@two.com', white='some@one.com')
         with self.set_email('some@one.com') as test_client:
             with self.patch_render_template() as mock_render:
 
