@@ -78,7 +78,7 @@ class PhantomTest(unittest.TestCase):
         command = [
                 "./node_modules/.bin/casperjs", "test",
                 "--fail-fast",  # stop at first failed assertion
-                "app/static/tests/browser.js"
+                "app/static/compiled-js/tests/browser.js"
         ]
         if single:
             command.append("--single={}".format(str(single)))
