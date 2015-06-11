@@ -460,145 +460,94 @@ class TestGetRulesBoardFromDbGame(unittest.TestCase):
         self.assertEqual(board[go_rules.Coord(x=1, y=0)], go_rules.Color.black)
 
 
-class TestPlayStoneIntegrated(TestWithDb):
+class TestPlayIntegrated(TestWithDb):
 
     def test_can_add_stones_and_passes_to_two_games(self):
         game1 = self.add_game()
         game2 = self.add_game()
         with self.patch_render_template():
             with self.set_email('black@black.com') as test_client:
-                test_client.post('/playstone', data=dict(
+                test_client.post(url_for('play', game_no=game1.id), data=dict(
                     game_no=game1.id, move_no=0, response="(;B[pd])"
                 ))
             with self.set_email('black@black.com') as test_client:
-                test_client.post('/playstone', data=dict(
+                test_client.post(url_for('play', game_no=game2.id), data=dict(
                     game_no=game2.id, move_no=0, response="(;B[jj])"
                 ))
             with self.set_email('white@white.com') as test_client:
-                test_client.post('/playstone', data=dict(
+                test_client.post(url_for('play', game_no=game1.id), data=dict(
                     game_no=game1.id, move_no=1, response="(;B[pd];W[pp])"
                 ))
             with self.set_email('black@black.com') as test_client:
-                test_client.post('/playpass', data=dict(
-                    game_no=game1.id, move_no=2
+                test_client.post(url_for('play', game_no=game1.id), data=dict(
+                    game_no=game1.id, move_no=2, response="(;B[pd];W[pp];B[])"
                 ))
-        self.assertEqual(len(game1.moves), 2)
-        self.assertEqual(len(game1.passes), 1)
-        self.assertEqual(len(game2.moves), 1)
-        # also check the data in one of the moves
-        moves = Move.query.all()
-        move = moves[0]
-        self.assertEqual(move.game_no, game1.id)
-        self.assertEqual(move.move_no, 0)
-        self.assertEqual(move.row, 3)
-        self.assertEqual(move.column, 15)
-        self.assertEqual(move.color, Move.Color.black)
+        self.assertEqual(game1.sgf, "(;B[pd];W[pp];B[])")
+        self.assertEqual(game2.sgf, "(;B[jj])")
 
     def test_redirects_to_home_if_not_logged_in(self):
         game = self.add_game()
-        response = self.test_client.post(url_for('playpass'), data=dict(
-            game_no=game.id, move_no=0))
+        response = self.test_client.post(
+            url_for('play', game_no=game.id),
+            data=dict(game_no=game.id, move_no=0, response="(;B[])"))
         self.assert_redirects(response, '/')
 
     def test_rejects_new_move_off_turn(self):
         game = self.add_game()
-        assert Move.query.all() == []
+        self.assertEqual(game.sgf, "(;)")
         with self.set_email('white@white.com') as test_client:
             with self.assert_flashes('not your turn'):
-                test_client.post('/playstone', data=dict(
+                test_client.post(url_for('play', game_no=game.id), data=dict(
                     game_no=game.id, move_no=0, response="(;W[pq])"
                 ))
-        moves = Move.query.all()
-        assert len(moves) == 0
+        self.assertEqual(game.sgf, "(;)")
 
     def test_rejects_missing_args(self):
         game = self.add_game()
-        assert Move.query.all() == []
+        self.assertEqual(game.sgf, "(;)")
         with self.set_email('black@black.com') as test_client:
             with self.assert_flashes('invalid'):
-                test_client.post('/playstone', data=dict(
+                test_client.post(url_for('play', game_no=game.id), data=dict(
                     game_no=game.id
                 ), follow_redirects=True)
-        moves = Move.query.all()
-        assert len(moves) == 0
+        self.assertEqual(game.sgf, "(;)")
 
     def test_works_with_setup_stones(self):
-        game = self.add_game(['.w'])
-        assert Move.query.all() == []
+        game = self.add_game("(;AW[ba])")
         with self.set_email('black@black.com') as test_client:
-            test_client.post('/playstone', data=dict(
+            test_client.post(url_for('play', game_no=game.id), data=dict(
                 game_no=game.id, move_no=0, response="(;AW[ba]B[bc])"
             ))
-        moves = Move.query.all()
-        self.assertEqual(len(moves), 1, "move not played after setup stone")
+        self.assertEqual(game.sgf, "(;AW[ba]B[bc])")
 
     def test_rejects_invalid_move(self):
-        game = self.add_game(['.w'])
-        assert Move.query.all() == []
+        game = self.add_game("(;AW[ba])")
         with self.set_email('black@black.com') as test_client:
             with self.assert_flashes('illegal'):
-                test_client.post('/playstone', data=dict(
-                    game_no=game.id, move_no=0, response="(;AW[ba]B[ba])"
-                ))
-        moves = Move.query.all()
-        assert len(moves) == 0
-
-    def test_handles_missing_game_no(self):
-        with self.set_email('white@white.com') as test_client:
-            with self.patch_render_template():
-                test_client.post('/playstone', data=dict(
-                    move_no=0, response="(;W[pq])"
-                ))
-        # should not raise
+                response = test_client.post(
+                    url_for('play', game_no=game.id),
+                    data=dict(game_no=game.id, move_no=0,
+                              response="(;AW[ba]B[ba])"))
+        self.assertEqual(game.sgf, "(;AW[ba])")
+        self.assert_redirects(response, url_for('game', game_no=game.id))
 
     def test_handles_missing_move(self):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                test_client.post('/playstone', data=dict(
+                test_client.post(url_for('play', game_no=game.id), data=dict(
                     game_no=game.id, move_no=0, response="(;)"))
         # should not raise
-
-    def test_passes_ordinary_dict_to_helper(self):
-        """Regression test: request.form is a werkzeug MultiDict that doesn't
-        always raise KeyError for missing arguments; need to check we're
-        converting it to an ordinary dict for the helper function."""
-        game = self.add_game()
-        with self.set_email('black@black.com') as test_client:
-            with self.patch_render_template():
-                mock_play_move = Mock(spec=main.validate_turn_and_record)
-                mock_play_move.return_value = None
-                with patch(
-                        'app.main.validate_turn_and_record', mock_play_move
-                ):
-                    test_client.post('/playstone', data=dict(
-                        game_no=game.id, move_no=0, response="(;B[jj])"
-                    ))
-                self.assertIsNotNone(mock_play_move.call_args)
-                passed_dict = mock_play_move.call_args[0][3]
-                self.assertIsInstance(passed_dict, dict)
-                self.assertNotIsInstance(passed_dict, MultiDict)
-
-    def test_returns_to_game_on_illegal_move(self):
-        game = self.add_game(['.b'])
-        with self.patch_render_template():
-            with self.set_email('black@black.com') as test_client:
-                response = test_client.post('/playstone', data=dict(
-                    game_no=game.id, move_no=0, response="(;B[ba])"
-                ))
-        self.assert_redirects(response, url_for('game', game_no=game.id))
 
     def test_counts_passes_toward_turn_count(self):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
-            test_client.post('/playpass', data=dict(
-                game_no=game.id, move_no=0
-            ))
+            test_client.post(url_for('play', game_no=game.id), data=dict(
+                game_no=game.id, move_no=0, response="(;B[])"))
         with self.set_email('white@white.com') as test_client:
-            test_client.post('/playstone', data=dict(
-                game_no=game.id, move_no=1, response="(;B[];W[pp])"
-            ))
-        self.assertEqual(len(game.moves), 1)
+            test_client.post(url_for('play', game_no=game.id), data=dict(
+                game_no=game.id, move_no=1, response="(;B[];W[pp])"))
+        self.assertEqual(game.sgf, "(;B[];W[pp])")
 
     @unittest.skip(
             """haven't decided yet what should be returned after a move is
