@@ -413,6 +413,7 @@ class GameInterfaceTest extends BrowserTest
     casper.thenClick '.confirm_button'
     # reload front page and get the other game
     # (it should be the first listed under 'not your turn')
+    casper.thenOpen serverUrl
     casper.thenClick '#not_your_turn_games li:first-child a', =>
       # we should be back to an empty board
       test.assertExists '.goban', 'The Go board still exists.'
