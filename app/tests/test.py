@@ -310,13 +310,6 @@ class TestStatusIntegrated(TestWithDb):
 
 class TestGameIntegrated(TestWithDb):
 
-    def pass_twice(self, game):
-        db.session.add(Pass(
-            game_no=game.id, move_no=0, color=Move.Color.black))
-        db.session.add(Pass(
-            game_no=game.id, move_no=1, color=Move.Color.white))
-        db.session.commit()
-
     def test_404_if_no_game_specified(self):
         response = self.test_client.get('/game')
         self.assert404(response)
@@ -338,11 +331,8 @@ class TestGameIntegrated(TestWithDb):
         self.assertIn("B[ba]", kwargs['form'].data.data)
 
     def test_after_two_passes_activates_scoring_interface(self):
-        game = self.add_game(['.b', 'bb'])
-        self.pass_twice(game)
-
+        game = self.add_game("(;B[];W[])")
         args, kwargs = self.do_mocked_get(game)
-
         self.assertEqual(kwargs['with_scoring'], True)
 
 
