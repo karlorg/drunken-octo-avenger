@@ -75,6 +75,20 @@ def _is_continuation(old_sgf, new_sgf):
                                   move_no=0)
     return True
 
+def next_color(sgf):
+    """Return the color that is next to move in sgf."""
+
+    def opponent(color):
+        return {Color.black: Color.white,
+                Color.white: Color.black}[color]
+
+    nodes = _GameTree.from_sgf(sgf).main_line
+    next_ = Color.black
+    for node in nodes:
+        if _is_action(node):
+            next_ = opponent(next_)
+    return next_
+
 def next_move_no(sgf):
     """Return the number of the next move to be played on sgf."""
     game_tree = _GameTree.from_sgf(sgf)

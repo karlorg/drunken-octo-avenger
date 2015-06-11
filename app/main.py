@@ -27,6 +27,7 @@ from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
 from app import go
+from app import sgftools
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -56,7 +57,7 @@ def front_page():
 @app.route('/game/<int:game_no>')
 def game(game_no):
     try:
-        game = db.query(Game).filter_by(id=game_no).one()
+        game = db.session.query(Game).filter_by(id=game_no).one()
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
@@ -334,18 +335,13 @@ def is_players_turn_in_game(game):
     Reads email from the session.
     """
     try:
-        return game.to_move() == logged_in_email()
+        current_email = logged_in_email()
     except NoLoggedInPlayerException:
         return False
-
-def add_stones_from_text_map_to_game(text_map, game):
-    """Given a list of strings, add setup stones to the given game.
-
-    An example text map is [[".b.","bw.",".b."]]
-    """
-    assert not isinstance(text_map, str), \
-        "text_map should be a list of strings"
-    assert False, "needs implementation"
+    black_or_white = go.next_color(game.sgf)
+    next_in_game = {go.Color.black: game.black,
+                    go.Color.white: game.white}[black_or_white]
+    return next_in_game == current_email
 
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.

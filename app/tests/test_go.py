@@ -8,7 +8,8 @@ import unittest
 
 from .. import go
 from ..go import (_Board, Color, _Coord, _GameNode, ValidationException,
-                  check_continuation, is_sgf_passed_twice, next_move_no)
+                  check_continuation, is_sgf_passed_twice, next_color,
+                  next_move_no)
 from app import sgftools
 
 empty = Color.empty
@@ -91,6 +92,23 @@ class TestNextMoveNo(unittest.TestCase):
             msg = "next_move_no('{sgf}') was {a}, should be {e}".format(
                 sgf=sgf, a=actual, e=no)
             self.assertEqual(actual, no, msg)
+
+class TestNextColor(unittest.TestCase):
+
+    def test_various_cases(self):
+        e = [("(;)", black),
+             ("(;B[ab])", white),
+             ("(;B[ab];W[bc])", black),
+             ("(;AB[ab])", black),
+             ("(;AB[ab]B[bc])", white),
+             ("(;SZ[2];B[ab];W[];B[])", white),
+             ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", black)]
+        for sgf, no in e:
+            actual = next_color(sgf)
+            msg = "next_color('{sgf}') was {a}, should be {e}".format(
+                sgf=sgf, a=actual, e=no)
+            self.assertEqual(actual, no, msg)
+
 
 # test helper Board facilities
 

@@ -19,7 +19,7 @@ from werkzeug.datastructures import MultiDict
 from .. import go_rules
 from .. import main
 from .. import sgftools
-from ..main import DeadStone, Game, Move, Pass, SetupStone, db
+from ..main import Game, db
 
 
 class TestWithTestingApp(flask.ext.testing.TestCase):
@@ -316,7 +316,8 @@ class TestGameIntegrated(TestWithDb):
 
     def test_redirects_to_home_if_game_not_found(self):
         out_of_range = max(chain([0], Game.query.filter(Game.id))) + 1
-        response = self.test_client.get(url_for('game', game_no=out_of_range))
+        with main.app.test_client() as test_client:
+            response = test_client.get(url_for('game', game_no=out_of_range))
         self.assert_redirects(response, '/')
 
     def do_mocked_get(self, game):
