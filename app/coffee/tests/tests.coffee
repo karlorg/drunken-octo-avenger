@@ -62,9 +62,10 @@ test 'init function sets request and logout callbacks', ->
 
 # ============================================================================
 
-# helper for game page tests
+# helpers for game page tests
 
 setInputSgf = (sgf) -> $('input#data').val sgf
+getResponseSgf = -> $('input#response').val()
 
 # ============================================================================
 
@@ -145,12 +146,11 @@ test 'clicking multiple points updates hidden form', ->
   tesuji_charm.game_basic.initialize()
   $point1 = $pointAt 0, 0
   $point2 = $pointAt 1, 2
-  $response = $('input#response')
 
   $point1.click()
-  equal $response.val(), '(;B[aa])', "first stone sets correct SGF"
+  equal getResponseSgf(), '(;B[aa])', "first stone sets correct SGF"
   $point2.click()
-  equal $response.val(), '(;B[bc])', "second stone sets correct SGF"
+  equal getResponseSgf(), '(;B[bc])', "second stone sets correct SGF"
 
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
@@ -159,6 +159,32 @@ test 'Confirm button disabled until stone placed', ->
   $('table.goban td').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'
+
+test 'Pass button sets data and submits', ->
+  setInputSgf '(;)'
+  tesuji_charm.game_basic.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  submitCalled = false
+  form.submit = -> submitCalled = true
+
+  $('.pass_button').click()
+
+  equal getResponseSgf(), '(;B[])', "pass button sets SGF in response"
+  ok submitCalled, "form submit function called"
+  form.submit = oldSubmit
+
+test 'Pass move is for correct color', ->
+  setInputSgf '(;B[])'
+  tesuji_charm.game_basic.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  form.submit = ->
+
+  $('.pass_button').click()
+
+  equal getResponseSgf(), '(;B[];W[])', "white pass added after black"
+  form.submit = oldSubmit
 
 test "clicking a pre-existing stone does nothing", (assert) ->
   setInputSgf '(;SZ[3];AW[bb])'

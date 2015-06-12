@@ -11,6 +11,8 @@ go_rules = tesuji_charm.go_rules
 
 game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 game_common.getInputSgf = getInputSgf = -> $('input#data').val()
+game_common.setResponseSgf = setResponseSgf = (sgf) ->
+  $('#response').val sgf
 
 # setPointColor and helpers
 

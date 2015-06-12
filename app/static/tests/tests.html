@@ -13,13 +13,15 @@
     <a id="logout" href="#">Logout link</a>
 
     <div id="content"></div>
-    <form method="POST" action="/playstone">
+    <form id="main_form" method="POST" action="/play/0">
         <input type="hidden" id="data"></input>
         <input type="hidden" id="response"></input>
         <button type="submit"
                 class="confirm_button" name='confirm_button'>Confirm</button>
-        <button type="submit"
-                class="pass_button" name='pass_button'>Confirm</button>
+        <button type="button"
+                class="pass_button" name='pass_button'>Pass</button>
+        <button type="button"
+                class="resign" name='resign_button'>Resign</button>
     </form>
 </div>
 
@@ -32,7 +34,7 @@
 <script src="../compiled-js/game_marking.js" data-cover></script>
 <script src="qunit.js"></script>
 <script src="blanket.js"></script>
-<script src="tests.js"></script>
+<script src="../compiled-js/tests/tests.js"></script>
 
 </body>
 </html>

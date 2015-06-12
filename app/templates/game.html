@@ -4,36 +4,23 @@
 <div id="content"></div>
 
 {% if on_turn %}
-{% if with_scoring %}
-<form method="POST" action="{{ url_for('play', game_no=game_no) }}">
+<form id="main_form"
+      method="POST" action="{{ url_for('play', game_no=game_no) }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
-</form>
-<form method="POST" action="{{ url_for('resumegame') }}">
-    {{ form.hidden_tag() }}
-    <button type="submit"
+
+    {% if with_scoring %}
+    <button type="button"
             class="resume_button" name='resume_button'>Resume</button>
-</form>
-
-{% else %}  <!-- if with_scoring -->
-<form method="POST" action="{{ url_for('play', game_no=game_no) }}">
-    {{ form.hidden_tag() }}
-    <button type="submit"
-            class="confirm_button" name='confirm_button'>Confirm</button>
-</form>
-<form method="POST" action="{{ url_for('play', game_no=game_no) }}">
-    {{ form.hidden_tag() }}
-    <button type="submit"
-            class="pass_button" name='pass_button'>Pass</button>
-</form>
-<form method="POST" action="{{ url_for('resign') }}">
-    {{ form.hidden_tag() }}
-    <button type="submit"
+    {% else %}  <!-- if with_scoring -->
+    <button type="button"
+            class="pass_button"  name='pass_button'>Pass</button>
+    <button type="button"
             class="resign_button" name='resign_button'>Resign</button>
-</form>
+    {% endif %}  <!-- if with_scoring -->
 
-{% endif %}  <!-- if with_scoring -->
+</form>
 {% else %}  <!-- if on_turn -->
 <form method="POST" action="/404">
     <!-- provide a form to supply the hidden data field -->
