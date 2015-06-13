@@ -348,21 +348,17 @@ class TestPlayIntegrated(TestWithDb):
         game2 = self.add_game()
         with self.patch_render_template():
             with self.set_email('black@black.com') as test_client:
-                test_client.post(url_for('play', game_no=game1.id), data=dict(
-                    game_no=game1.id, move_no=0, response="(;B[pd])"
-                ))
+                test_client.post(url_for('play', game_no=game1.id),
+                                 data=dict(response="(;B[pd])"))
             with self.set_email('black@black.com') as test_client:
-                test_client.post(url_for('play', game_no=game2.id), data=dict(
-                    game_no=game2.id, move_no=0, response="(;B[jj])"
-                ))
+                test_client.post(url_for('play', game_no=game2.id),
+                                 data=dict(response="(;B[jj])"))
             with self.set_email('white@white.com') as test_client:
-                test_client.post(url_for('play', game_no=game1.id), data=dict(
-                    game_no=game1.id, move_no=1, response="(;B[pd];W[pp])"
-                ))
+                test_client.post(url_for('play', game_no=game1.id),
+                                 data=dict(response="(;B[pd];W[pp])"))
             with self.set_email('black@black.com') as test_client:
-                test_client.post(url_for('play', game_no=game1.id), data=dict(
-                    game_no=game1.id, move_no=2, response="(;B[pd];W[pp];B[])"
-                ))
+                test_client.post(url_for('play', game_no=game1.id),
+                                 data=dict(response="(;B[pd];W[pp];B[])"))
         self.assertEqual(game1.sgf, "(;B[pd];W[pp];B[])")
         self.assertEqual(game2.sgf, "(;B[jj])")
 
@@ -371,14 +367,14 @@ class TestPlayIntegrated(TestWithDb):
         with main.app.test_client() as test_client:
             response = test_client.post(
                 url_for('play', game_no=game.id),
-                data=dict(game_no=game.id, move_no=0, response="(;B[])"))
+                data=dict(response="(;B[])"))
         self.assert_redirects(response, '/')
 
     def test_redirects_to_home_if_game_not_found(self):
         with self.set_email('black@black.com') as test_client:
             response = test_client.post(
                 url_for('play', game_no=0),
-                data=dict(game_no=0, move_no=0, response="(;B[])"))
+                data=dict(response="(;B[])"))
         self.assert_redirects(response, '/')
 
     def test_rejects_new_move_off_turn(self):
@@ -386,9 +382,8 @@ class TestPlayIntegrated(TestWithDb):
         self.assertEqual(game.sgf, "(;)")
         with self.set_email('white@white.com') as test_client:
             with self.assert_flashes('not your turn'):
-                test_client.post(url_for('play', game_no=game.id), data=dict(
-                    game_no=game.id, move_no=0, response="(;W[pq])"
-                ))
+                test_client.post(url_for('play', game_no=game.id),
+                                 data=dict(response="(;W[pq])"))
         self.assertEqual(game.sgf, "(;)")
 
     def test_rejects_missing_args(self):
@@ -396,17 +391,15 @@ class TestPlayIntegrated(TestWithDb):
         self.assertEqual(game.sgf, "(;)")
         with self.set_email('black@black.com') as test_client:
             with self.assert_flashes('invalid'):
-                test_client.post(url_for('play', game_no=game.id), data=dict(
-                    game_no=game.id
-                ), follow_redirects=True)
+                test_client.post(url_for('play', game_no=game.id), data={},
+                                 follow_redirects=True)
         self.assertEqual(game.sgf, "(;)")
 
     def test_works_with_setup_stones(self):
         game = self.add_game("(;AW[ba])")
         with self.set_email('black@black.com') as test_client:
-            test_client.post(url_for('play', game_no=game.id), data=dict(
-                game_no=game.id, move_no=0, response="(;AW[ba]B[bc])"
-            ))
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(response="(;AW[ba]B[bc])"))
         self.assertEqual(game.sgf, "(;AW[ba]B[bc])")
 
     def test_rejects_invalid_move(self):
@@ -415,8 +408,7 @@ class TestPlayIntegrated(TestWithDb):
             with self.assert_flashes('invalid'):
                 response = test_client.post(
                     url_for('play', game_no=game.id),
-                    data=dict(game_no=game.id, move_no=0,
-                              response="(;AW[ba]B[ba])"))
+                    data=dict(response="(;AW[ba]B[ba])"))
         self.assertEqual(game.sgf, "(;AW[ba])")
         self.assert_redirects(response, url_for('game', game_no=game.id))
 
@@ -424,18 +416,17 @@ class TestPlayIntegrated(TestWithDb):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
             with self.patch_render_template():
-                test_client.post(url_for('play', game_no=game.id), data=dict(
-                    game_no=game.id, move_no=0, response="(;)"))
-        # should not raise
+                test_client.post(url_for('play', game_no=game.id),
+                                 data=dict(response="(;)"))  # should not raise
 
     def test_counts_passes_toward_turn_count(self):
         game = self.add_game()
         with self.set_email('black@black.com') as test_client:
-            test_client.post(url_for('play', game_no=game.id), data=dict(
-                game_no=game.id, move_no=0, response="(;B[])"))
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(response="(;B[])"))
         with self.set_email('white@white.com') as test_client:
-            test_client.post(url_for('play', game_no=game.id), data=dict(
-                game_no=game.id, move_no=1, response="(;B[];W[pp])"))
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(response="(;B[];W[pp])"))
         self.assertEqual(game.sgf, "(;B[];W[pp])")
 
     @unittest.skip(
