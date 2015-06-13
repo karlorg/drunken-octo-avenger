@@ -102,7 +102,11 @@ class TestNextColor(unittest.TestCase):
              ("(;AB[ab])", black),
              ("(;AB[ab]B[bc])", white),
              ("(;SZ[2];B[ab];W[];B[])", white),
-             ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", black)]
+             ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", black),
+             ("(;SZ[2];B[ab];W[];B[];TCRESUME[])", white),
+             ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb];TCRESUME[])", white),
+             ("(;SZ[2];B[];W[];TCRESUME[])", black),
+             ("(;SZ[2];B[];W[];TB[aa][ab][ba][bb];TCRESUME[])", black)]
         for sgf, no in e:
             actual = next_color(sgf)
             msg = "next_color('{sgf}') was {a}, should be {e}".format(

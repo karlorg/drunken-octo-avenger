@@ -84,9 +84,20 @@ def next_color(sgf):
 
     nodes = _GameTree.from_sgf(sgf).main_line
     next_ = Color.black
-    for node in nodes:
-        if _is_action(node):
+    for index, node in enumerate(nodes):
+        if node.is_move or node.is_pass or node.is_mark:
             next_ = opponent(next_)
+        elif node.is_resumption:
+            last_pass = None
+            for node in reversed(nodes[:index-1]):
+                if node.is_move:
+                    break
+                elif node.is_pass:
+                    last_pass = node.color
+            if not last_pass:
+                raise ValidationException(
+                    "resumption without preceding passes", move_no=index)
+            next_ = last_pass
     return next_
 
 def next_move_no(sgf):

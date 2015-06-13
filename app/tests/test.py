@@ -330,51 +330,6 @@ class TestGameIntegrated(TestWithDb):
         self.assertEqual(kwargs['with_scoring'], True)
 
 
-class TestResumeGameIntegrated(TestWithDb):
-
-    def setUp(self):
-        super().setUp()
-        self.game = self.add_game()
-        db.session.add(Pass(
-            game_no=self.game.id, move_no=0, color=Move.Color.black))
-        db.session.add(Pass(
-            game_no=self.game.id, move_no=1, color=Move.Color.white))
-        db.session.commit()
-
-    # at the moment, the correct player to resume play is defined as the
-    # opponent of the last player to pass.
-
-    def test_correct_turn_simple(self):
-        """Sets turn to correct player in the most simple case."""
-        with self.set_email('black@black.com') as test_client:
-            test_client.post(url_for('resumegame'), data={
-                'game_no': self.game.id, 'move_no': 2})
-        self.assertEqual(self.game.to_move(), 'black@black.com')
-
-    def test_correct_turn_with_mark_stones(self):
-        """Sets turn to correct player when stones have been marked once.
-
-        That is, the opponent of the last player to pass has marked dead stones
-        and submitted that proposal, and the last player to pass wishes to
-        resume."""
-        # we use the actual mark stones view function for this, because its
-        # behaviour needs to match up with ours.
-        with self.set_email('black@black.com') as test_client:
-            test_client.post(url_for('markdead'), data={
-                'game_no': self.game.id, 'move_no': 2, 'response': '(;)'})
-        with self.set_email('white@white.com') as test_client:
-            test_client.post(url_for('resumegame'), data={
-                'game_no': self.game.id, 'move_no': 3})
-        self.assertEqual(self.game.to_move(), 'black@black.com')
-
-    def test_removes_dead_stone_marks(self):
-        db.session.add(DeadStone(self.game.id, 1, 1))
-        with self.set_email('black@black.com') as test_client:
-            test_client.post(url_for('resumegame'), data={
-                'game_no': self.game.id, 'move_no': 2})
-        self.assertEqual(len(self.game.dead_stones), 0)
-
-
 class TestResignIntegrated(TestWithDb):
 
     def test_sets_winner(self):
