@@ -8,8 +8,8 @@ import unittest
 
 from .. import go
 from ..go import (_Board, Color, _Coord, _GameNode, ValidationException,
-                  check_continuation, is_sgf_passed_twice, next_color,
-                  next_move_no)
+                  check_continuation, ends_by_agreement,
+                  is_sgf_passed_twice, next_color, next_move_no)
 from app import sgftools
 
 empty = Color.empty
@@ -78,6 +78,23 @@ class TestCheckContinuation(unittest.TestCase):
                        should_msg(expected)).format(o=old_sgf, n=new_sgf)
                 self.assertIs(expected[0], True, msg)
 
+class TestEndsByAgreement(unittest.TestCase):
+
+    def test_various_cases(self):
+        e = [("(;)", False),
+             ("(;SZ[2];B[aa];W[];B[])", False),
+             ("(;SZ[2];B[aa];W[];B[];TB[ab][ba][bb])", False),
+             ("(;SZ[2];B[aa];W[];B[];TB[ab][ba][bb];TB[ab][ba][bb])", True),
+             ("(;SZ[2];B[aa];W[];B[];TB[ab][ba][bb];TW[aa][ab][ba][bb])",
+              False),
+             ]
+        for sgf, result in e:
+            actual = ends_by_agreement(sgf)
+            msg = "ends_by_agreement('{sgf}') was {a}, should be {e}".format(
+                sgf=sgf, a=actual, e=result)
+            self.assertEqual(actual, result, msg)
+
+
 class TestNextMoveNo(unittest.TestCase):
 
     def test_various_cases(self):
@@ -104,6 +121,7 @@ class TestNextColor(unittest.TestCase):
              ("(;SZ[2];B[ab];W[];B[])", white),
              ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb])", black),
              ("(;SZ[2];B[ab];W[];B[];TCRESUME[])", white),
+             ("(;SZ[2];B[ab];W[];B[];TCRESUME[];W[bb])", black),
              ("(;SZ[2];B[ab];W[];B[];TB[aa][ba][bb];TCRESUME[])", white),
              ("(;SZ[2];B[];W[];TCRESUME[])", black),
              ("(;SZ[2];B[];W[];TB[aa][ab][ba][bb];TCRESUME[])", black)]

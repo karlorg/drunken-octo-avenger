@@ -429,6 +429,41 @@ class TestPlayIntegrated(TestWithDb):
                              data=dict(response="(;B[];W[pp])"))
         self.assertEqual(game.sgf, "(;B[];W[pp])")
 
+    def test_two_identical_deadstones_end_game(self):
+        tw = 'TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]'
+        old_sgf = '(;SZ[3];B[];W[];{})'.format(tw)
+        new_sgf = '(;SZ[3];B[];W[];{};{})'.format(tw, tw)
+        game = self.add_game(old_sgf)
+        self.assertFalse(game.finished,
+                         "game is not initially finished")
+
+        with self.set_email('white@white.com') as test_client:
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(response=new_sgf))
+
+        new_game = db.session.query(Game).filter_by(id=game.id).one()
+        self.assertEqual(new_game.sgf, new_sgf)
+        self.assertTrue(new_game.finished,
+                        "game is over after second identical submission")
+
+    def test_two_different_deadstones_do_not_end_game(self):
+        tw0 = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
+        tw1 = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cd]"
+        old_sgf = '(;SZ[3];B[];W[];{})'.format(tw0)
+        new_sgf = '(;SZ[3];B[];W[];{};{})'.format(tw0, tw1)
+        game = self.add_game(old_sgf)
+        self.assertFalse(game.finished,
+                         "game is not initially finished")
+
+        with self.set_email('white@white.com') as test_client:
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(response=new_sgf))
+
+        new_game = db.session.query(Game).filter_by(id=game.id).one()
+        self.assertEqual(new_game.sgf, new_sgf)
+        self.assertFalse(new_game.finished,
+                         "game is not over after different submission")
+
     @unittest.skip(
             """haven't decided yet what should be returned after a move is
             played""")
@@ -442,112 +477,6 @@ class TestPlayIntegrated(TestWithDb):
                     '/game?game_no={game}&move_no=0&row=16&column=15'
                     .format(game=game.id))
         assert 'move_no=' not in str(response.get_data())
-
-
-class TestMarkDeadIntegrated(TestWithDb):
-
-    def setUp(self):
-        super().setUp()
-        game = self.add_game(['.b.w',
-                              '.b.w',
-                              'bb.w',
-                              'wwww'])
-        db.session.add(Pass(game_no=game.id, move_no=0,
-                            color=Move.Color.black))
-        db.session.add(Pass(game_no=game.id, move_no=1,
-                            color=Move.Color.white))
-        db.session.commit()
-        self.game = game
-        self.sgf_prefix = ("(;AB[ba][bb][bc][ac]" +
-                           "AW[da][db][dc][dd][cd][bd][ad]" +
-                           ";B[];W[];")
-        self.sgf_suffix = ")"
-
-    def coord_set(self):
-        db_objs = DeadStone.query.filter(
-                DeadStone.game_no == self.game.id).all()
-        return set(map(lambda dead: (dead.column, dead.row,), db_objs))
-
-    def do_post(self, territory_sgf, move_no=None):
-        game = self.game
-        if move_no is None:
-            move_no = game.move_no
-        response = self.sgf_prefix + territory_sgf + self.sgf_suffix
-        with self.set_email(game.to_move()) as test_client:
-            with self.patch_render_template():
-                test_client.post(url_for('markdead'),
-                                 data={'game_no': game.id,
-                                       'move_no': move_no,
-                                       'response': response})
-
-    def test_advances_turn(self):
-        original_turn = self.game.to_move()
-        self.do_post('')
-        self.assertNotEqual(original_turn, self.game.to_move())
-
-    def test_records_dead_stones_in_db(self):
-        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
-
-        self.do_post(territory)
-
-        coords = self.coord_set()
-        self.assertIn((1, 0), coords)
-        self.assertIn((1, 1), coords)
-        self.assertIn((1, 2), coords)
-        self.assertIn((0, 2), coords)
-
-    def test_new_proposal_erases_old(self):
-        first_territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
-        second_live_stones_coords = [[1, 0], [1, 1], [1, 2], [0, 2]]
-        second_territory = "TB"
-        for y in range(19):
-            for x in range(19):
-                if [x, y] not in second_live_stones_coords:
-                    second_territory += "[" + sgftools.encode_coord(x, y) + "]"
-
-        self.do_post(first_territory)
-        self.do_post(second_territory)
-
-        coords = self.coord_set()
-        self.assertNotIn((1, 0), coords)
-        self.assertIn((3, 3), coords)
-
-    def test_two_identical_proposals_end_game(self):
-        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
-        self.do_post(territory)
-        self.assertIsNone(self.game.winner,
-                          "game is not over after one submission")
-
-        self.do_post(territory)
-
-        self.assertIsNotNone(self.game.winner,
-                             "game is over after second identical submission")
-
-    def test_two_different_proposals_do_not_end_game(self):
-        first_territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
-        second_territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cd]"
-
-        self.do_post(first_territory)
-        self.do_post(second_territory)
-
-        self.assertIsNone(self.game.winner,
-                          "game is not over after second different submission")
-
-    def test_bad_move_no_does_nothing(self):
-        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
-        self.do_post(territory, move_no=42)
-        self.assertNotIn((1, 0), self.coord_set())
-
-    def test_malformed_sgf_does_nothing(self):
-        territory = "TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]"
-        bad_territory = "TW[;]"
-        self.do_post(territory)
-        original_turn = self.game.to_move()
-
-        self.do_post(bad_territory)
-
-        self.assertEqual(original_turn, self.game.to_move())
-        self.assertIn((1, 0), self.coord_set())
 
 
 class TestStorage(TestWithDb):

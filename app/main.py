@@ -95,8 +95,14 @@ def play(game_no):
         flash("Invalid request.")
         return redirect(url_for('game', game_no=game_no))
     game.sgf = arguments['response']
+    _check_gameover_and_update(game)
     db.session.commit()
     return ''
+
+def _check_gameover_and_update(game):
+    """If game is over, update the appropriate fields."""
+    if go.ends_by_agreement(game.sgf):
+        game.finished = True
 
 @app.route('/resign', methods=['POST'])
 def resign():
@@ -452,6 +458,7 @@ class Game(db.Model):
     black = db.Column(db.String(length=254))
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
+    finished = db.Column(db.Boolean())
 
 
 # forms

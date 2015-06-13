@@ -75,6 +75,22 @@ def _is_continuation(old_sgf, new_sgf):
                                   move_no=0)
     return True
 
+def ends_by_agreement(sgf):
+    """True if sgf ends with two identical territory proposals."""
+    previous_proposal = None
+    for node in reversed(_GameTree.from_sgf(sgf).main_line):
+        if not node.is_mark:
+            return False
+        prop = (node.black_coords, node.white_coords)
+        if previous_proposal:
+            if previous_proposal == prop:
+                return True
+            else:
+                return False
+        else:
+            previous_proposal = prop
+    return False
+
 def next_color(sgf):
     """Return the color that is next to move in sgf."""
 
