@@ -22,15 +22,15 @@ class SgfTree(object):
         if nodes is None:
             nodes = []
         self.nodes = nodes
-
-    def main_line(self):
-        """Return a list of nodes on the main branch of the game."""
-        return self.nodes
+        self.main_line = nodes
 
 
 def generate(sgf_tree):
+    nodes = sgf_tree.nodes
+    if nodes == []:
+        nodes = [{}]
     sgf = '('
-    for node in sgf_tree.nodes:
+    for node in nodes:
         sgf += ';'
         for tag, values in node.items():
             if not values:
@@ -75,7 +75,8 @@ def parse(sgf):
 
     def expect(char):
         if not accept(char):
-            raise ParseError()
+            raise ParseError("expected '{}' at '|' sign in '{}|{}'".format(
+                char, sgf[:len(sgf)-len(d['rest'])], d['rest']))
 
     def sequence():
         expect('(')
@@ -103,12 +104,16 @@ def parse(sgf):
         result = []
         while True:
             value = accept_re(r"\[([^]]*)\]")
-            if not value:
+            if value is None:
                 break
             result.append(value)
         return result
 
-    return sequence()
+    result = sequence()
+    if result.nodes == [{}]:
+        return SgfTree([])
+    else:
+        return result
 
 _ord_a = ord('a')
 

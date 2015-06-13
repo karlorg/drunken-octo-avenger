@@ -13,6 +13,7 @@ game_basic = tesuji_charm.game_basic
 smartgame = tesuji_charm.smartgame
 game_common = tesuji_charm.game_common
 getInputSgf = game_common.getInputSgf
+setResponseSgf = game_common.setResponseSgf
 go_rules = tesuji_charm.go_rules
 
 
@@ -24,13 +25,13 @@ newStoneColor = null
 game_basic.initialize = ->
 
   if getInputSgf()
-    sgf_object = smartgame.parse getInputSgf()
+    sgfObject = smartgame.parse getInputSgf()
   else
-    sgf_object = smartgame.parse '(;)'
-  game_common.initialize(sgf_object)
+    sgfObject = smartgame.parse '(;)'
+  game_common.initialize(sgfObject)
   initialBoardState = game_common.readBoardState()
 
-  newStoneColor = nextPlayerInSgfObject sgf_object
+  newStoneColor = nextPlayerInSgfObject sgfObject
 
   $('button.confirm_button').prop 'disabled', true
 
@@ -48,34 +49,70 @@ game_basic.initialize = ->
         throw error
     game_common.updateBoard newBoardState
 
-    sgfTag = switch newStoneColor
-      when 'black' then 'B'
-      when 'white' then 'W'
-      else throw Error "invalid new stone color"
-    encodedCoords = game_common.encodeSgfCoord col, row
-    newMove = {}
-    newMove[sgfTag] = encodedCoords
+    newSgfObject = sgfObjectWithMoveAdded sgfObject, col, row
+    setResponseSgf smartgame.generate(newSgfObject)
 
-    sgfObjectCopy = game_common.cloneSgfObject sgf_object
-    nodes = sgfObjectCopy.gameTrees[0].nodes
-    if nodes.length == 1 and jQuery.isEmptyObject nodes[0]
-      nodes[0] = newMove
-    else
-      nodes.push newMove
-
-    $('input#response').val smartgame.generate(sgfObjectCopy)
     $('button.confirm_button').prop 'disabled', false
+
+  $('.pass_button').click ->
+    passSgfObject = sgfObjectWithMoveAdded sgfObject
+    setResponseSgf smartgame.generate(passSgfObject)
+    $('#main_form').get(0).submit()
 
 # to facilitate testing, export a function to reload our internal state from
 # the page
 game_basic._reloadBoard = ->
   initialBoardState = game_common.readBoardState()
 
-nextPlayerInSgfObject = (sgf_object) ->
-  nodes = sgf_object.gameTrees[0].nodes
-  for node in nodes.slice(0).reverse()  # slice(0) copies
-    if node.B
+nextPlayerInSgfObject = (sgfObject) ->
+  nodes = sgfObject.gameTrees[0].nodes
+  reversedNodes = nodes.slice(0).reverse()  # slice(0) copies
+  for node, index in reversedNodes
+    if 'B' of node
       return 'white'
-    else if node.W
+    else if 'W' of node
       return 'black'
+    else if 'TCRESUME' of node
+      # next to move is the first to pass before this resumption
+      return _lastPassInRun reversedNodes.slice(index + 1)
   return 'black'
+
+_lastPassInRun = (reversedNodes) ->
+  lastPass = null
+  for node in reversedNodes
+    if 'B' of node
+      if node.B
+        return lastPass
+      else
+        lastPass = 'black'
+    else if 'W' of node
+      if node.W
+        return lastPass
+      else
+        lastPass = 'white'
+  unless lastPass
+    throw new Error("no pass found before TCRESUME")
+  return lastPass
+
+sgfObjectWithMoveAdded = (sgfObject, col=null, row=null) ->
+  if col != null and row != null
+    coordStr = game_common.encodeSgfCoord col, row
+  else
+    coordStr = ''
+
+  sgfTag = switch newStoneColor
+    when 'black' then 'B'
+    when 'white' then 'W'
+    else throw Error "invalid new stone color"
+
+  newMove = {}
+  newMove[sgfTag] = coordStr
+
+  sgfObjectCopy = game_common.cloneSgfObject sgfObject
+  nodes = sgfObjectCopy.gameTrees[0].nodes
+  if nodes.length == 1 and jQuery.isEmptyObject nodes[0]
+    nodes[0] = newMove
+  else
+    nodes.push newMove
+
+  return sgfObjectCopy

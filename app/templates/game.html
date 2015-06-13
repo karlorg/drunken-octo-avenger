@@ -3,42 +3,30 @@
 {% block content %}
 <div id="content"></div>
 
-{% if with_scoring %}
-<form method="POST" action="{{ url_for('markdead') }}">
-    {{ form.hidden_tag() }}
-    <button type="submit"
-            class="confirm_button" name='confirm_button'>Confirm</button>
-</form>
-<form method="POST" action="{{ url_for('resumegame') }}">
-    {{ form.hidden_tag() }}
-    <button type="submit"
-            class="resume_button" name='resume_button'>Resume</button>
-</form>
-
-{% else %}
 {% if on_turn %}
-<form method="POST" action="{{ url_for('playstone') }}">
+<form id="main_form"
+      method="POST" action="{{ url_for('play', game_no=game_no) }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
-</form>
-<form method="POST" action="{{ url_for('playpass') }}">
-    {{ form.hidden_tag() }}
-    <button type="submit"
-            class="pass_button" name='pass_button'>Pass</button>
-</form>
-<form method="POST" action="{{ url_for('resign') }}">
-    {{ form.hidden_tag() }}
+
+    {% if with_scoring %}
+    <button type="button"
+            class="resume_button" name='resume_button'>Resume</button>
+    {% else %}  <!-- if with_scoring -->
+    <button type="button"
+            class="pass_button"  name='pass_button'>Pass</button>
     <button type="submit"
             class="resign_button" name='resign_button'>Resign</button>
+    {% endif %}  <!-- if with_scoring -->
+
 </form>
-{% else %}
+{% else %}  <!-- if on_turn -->
 <form method="POST" action="/404">
     <!-- provide a form to supply the hidden data field -->
     {{ form.hidden_tag() }}
 </form>
-{% endif %}  <!-- end on_turn -->
-{% endif %}  <!-- end not with_scoring -->
+{% endif %}  <!-- if on_turn -->
 
 {% endblock %}
 
@@ -46,21 +34,21 @@
 <script src="/static/compiled-js/go_rules.js"></script>
 <script src="/static/compiled-js/smartgame.js"></script>
 <script src="/static/compiled-js/game_common.js"></script>
+{% if on_turn %}
 {% if with_scoring %}
 <script src="/static/compiled-js/game_marking.js"></script>
 <script>
 window.tesuji_charm.game_marking.initialize();
 </script>
-{% else %}
-{% if on_turn %}
+{% else %}  <!-- if with_scoring -->
 <script src="/static/compiled-js/game_basic.js"></script>
 <script>
 window.tesuji_charm.game_basic.initialize();
 </script>
-{% else %}
+{% endif %} <!-- if with_scoring -->
+{% else %}  <!-- if on_turn -->
 <script>
  window.tesuji_charm.game_common.initialize();
 </script>
-{% endif %} <!-- end if on_turn-->
-{% endif %} <!-- end if with_scoring -->
+{% endif %} <!-- if on_turn-->
 {% endblock %}

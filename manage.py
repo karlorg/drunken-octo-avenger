@@ -9,7 +9,7 @@ import os
 from flask.ext.script import Manager
 
 from app import main
-from app.main import Move, Pass, app, db
+from app.main import app, db
 import config
 
 manager = Manager(app)
@@ -139,12 +139,9 @@ def setup_finished_game(black_email, white_email):
               '.bbbwbbbwbbbwwbwb..',
               '...bbw.bwb..bbbb...',
               '...................']
-    game = main.create_game_internal(black_email, white_email, stones=stones)
-    db.session.add(Pass(game_no=game.id, move_no=0,
-                        color=Move.Color.black))
-    db.session.add(Pass(game_no=game.id, move_no=1,
-                        color=Move.Color.white))
-    db.session.commit()
+    sgf = main.sgf_from_text_map(stones)
+    passed_sgf = sgf[:-1] + 'B[];W[])'
+    main.create_game_internal(black_email, white_email, sgf=passed_sgf)
 
 if __name__ == "__main__":
     manager.run()
