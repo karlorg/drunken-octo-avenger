@@ -168,6 +168,8 @@ updateForm = ->
           tb.push (game_common.encodeSgfCoord x, y)
         else if $pointAt(x, y).hasClass 'whitescore'
           tw.push (game_common.encodeSgfCoord x, y)
+  unless tb.length then delete new_node.TB
+  unless tw.length then delete new_node.TW
   sgf = smartgame.generate sgfObject
   $('input#response').val sgf
   return

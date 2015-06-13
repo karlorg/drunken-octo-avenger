@@ -304,8 +304,10 @@ test "Form is updated with current dead stones", (assert) ->
     .*              # (don't check white setup as we can't guarantee the order)
     TW(\[\w\w]){8}  # white territory has 8 coords
     ///
+  tbPattern = /// TB\[ ///
   actual = $('input#response').val()
   assert.ok actual.match(expected), "correct number of TW coords"
+  assert.notOk actual.match(tbPattern), "no TB property in SGF"
 
   # here we check for a specific coord
   $pointAt(2, 2).click()
