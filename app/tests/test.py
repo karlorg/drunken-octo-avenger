@@ -332,13 +332,25 @@ class TestGameIntegrated(TestWithDb):
 
 class TestResignIntegrated(TestWithDb):
 
-    def test_sets_winner(self):
+    def test_sets_finished(self):
         game = self.add_game()
-        self.assertEqual(game.winner, None, "winner should be initially unset")
+        self.assertFalse(game.finished,
+                         "game should not initially be finished")
         with self.set_email(game.black) as test_client:
-            test_client.post(url_for('resign'), data=dict(
-                game_no=game.id, move_no=0, color=Move.Color.black))
-        self.assertEqual(game.winner, game.white)
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(resign_button='resign'))
+        self.assertTrue(game.finished,
+                        "game should be finished after resign posted")
+
+    def test_nothing_happens_off_turn(self):
+        game = self.add_game()
+        self.assertFalse(game.finished,
+                         "game should not initially be finished")
+        with self.set_email(game.white) as test_client:
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(resign_button='resign'))
+        self.assertFalse(game.finished,
+                         "game should not be finished")
 
 
 class TestPlayIntegrated(TestWithDb):
@@ -491,7 +503,7 @@ class TestStorage(TestWithDb):
                      sgf=test_sgf)
         db.session.add(saved)
         db.session.commit()
-        returned = db.query(Game).filter_by(id=saved.id).one()
+        returned = db.session.query(Game).filter_by(id=saved.id).one()
         self.assertEqual(returned.sgf, saved.sgf)
 
 

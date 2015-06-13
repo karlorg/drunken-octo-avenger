@@ -84,6 +84,9 @@ def play(game_no):
         flash("It's not your turn in that game.")
         return redirect('/')
     arguments = request.form.to_dict()
+    if 'resign_button' in arguments:
+        game.finished = True
+        return ''
     try:
         go.check_continuation(old_sgf=game.sgf,
                               new_sgf=arguments['response'],
