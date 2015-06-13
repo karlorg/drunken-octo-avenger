@@ -161,7 +161,7 @@ test 'Confirm button disabled until stone placed', ->
     'enabled after stone placed'
 
 test 'Pass button sets data and submits', ->
-  setInputSgf '(;)'
+  setInputSgf '(;SZ[3])'
   tesuji_charm.game_basic.initialize()
   form = $('#main_form').get(0)
   oldSubmit = form.submit
@@ -170,12 +170,12 @@ test 'Pass button sets data and submits', ->
 
   $('.pass_button').click()
 
-  equal getResponseSgf(), '(;B[])', "pass button sets SGF in response"
+  equal getResponseSgf(), '(;SZ[3];B[])', "pass button sets SGF in response"
   ok submitCalled, "form submit function called"
   form.submit = oldSubmit
 
 test 'Pass move is for correct color', ->
-  setInputSgf '(;B[])'
+  setInputSgf '(;SZ[3];B[])'
   tesuji_charm.game_basic.initialize()
   form = $('#main_form').get(0)
   oldSubmit = form.submit
@@ -183,7 +183,7 @@ test 'Pass move is for correct color', ->
 
   $('.pass_button').click()
 
-  equal getResponseSgf(), '(;B[];W[])', "white pass added after black"
+  equal getResponseSgf(), '(;SZ[3];B[];W[])', "white pass added after black"
   form.submit = oldSubmit
 
 test "clicking a pre-existing stone does nothing", (assert) ->
