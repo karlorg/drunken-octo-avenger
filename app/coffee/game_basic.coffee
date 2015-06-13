@@ -66,12 +66,33 @@ game_basic._reloadBoard = ->
 
 nextPlayerInSgfObject = (sgfObject) ->
   nodes = sgfObject.gameTrees[0].nodes
-  for node in nodes.slice(0).reverse()  # slice(0) copies
+  reversedNodes = nodes.slice(0).reverse()  # slice(0) copies
+  for node, index in reversedNodes
     if 'B' of node
       return 'white'
     else if 'W' of node
       return 'black'
+    else if 'TCRESUME' of node
+      # next to move is the first to pass before this resumption
+      return _lastPassInRun reversedNodes.slice(index + 1)
   return 'black'
+
+_lastPassInRun = (reversedNodes) ->
+  lastPass = null
+  for node in reversedNodes
+    if 'B' of node
+      if node.B
+        return lastPass
+      else
+        lastPass = 'black'
+    else if 'W' of node
+      if node.W
+        return lastPass
+      else
+        lastPass = 'white'
+  unless lastPass
+    throw new Error("no pass found before TCRESUME")
+  return lastPass
 
 sgfObjectWithMoveAdded = (sgfObject, col=null, row=null) ->
   if col != null and row != null

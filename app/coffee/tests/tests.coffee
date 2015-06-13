@@ -203,6 +203,34 @@ test "captured stones are removed from the board", (assert) ->
   # corner should be blank now
   assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
 
+test "correct color after resume with two passes (black first)", (assert) ->
+  setInputSgf '(;SZ[3];B[];W[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointBlack($point)
+
+test "correct color after resume with three passes (black first)", (assert) ->
+  setInputSgf '(;SZ[3];B[];W[];B[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointBlack($point)
+
+test "correct color after resume with two passes (white first)", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[];B[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointWhite($point)
+
+test "correct color after resume with three passes (white first)", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[];B[];W[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointWhite($point)
+
 
 # ============================================================================
 
@@ -314,6 +342,21 @@ test "Form is updated with current dead stones", (assert) ->
   expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
+
+test "Resume button updates response and submits", (assert) ->
+  setInputSgf '(;SZ[3];B[];W[])'
+  tesuji_charm.game_marking.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  submitCalled = false
+  form.submit = -> submitCalled = true
+
+  $('.resume_button').click()
+
+  equal getResponseSgf(), '(;SZ[3];B[];W[];TCRESUME[])',
+    "resume button sets SGF in response"
+  ok submitCalled, "form submit function called"
+  form.submit = oldSubmit
 
 
 # ============================================================================

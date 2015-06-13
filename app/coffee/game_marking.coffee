@@ -11,12 +11,17 @@ smartgame = tesuji_charm.smartgame
 game_common = tesuji_charm.game_common
 $pointAt = game_common.$pointAt
 getInputSgf = game_common.getInputSgf
+setResponseSgf = game_common.setResponseSgf
 
 go_rules = tesuji_charm.go_rules
 
 
+originalSgfObject = null
+
+
 game_marking.initialize = ->
   sgfObject = smartgame.parse (getInputSgf() or '(;)')
+  originalSgfObject = game_common.cloneSgfObject sgfObject
   game_common.initialize sgfObject
   setInitialDead sgfObject
   setupScoring()
@@ -26,6 +31,13 @@ game_marking.initialize = ->
     [row, col] = game_common.parseCoordClass $(this)
     markStonesAround col, row
     setupScoring()
+
+  $('.resume_button').click ->
+    resumeSgfObject = game_common.cloneSgfObject originalSgfObject
+    resumeNode = { TCRESUME: [] }
+    resumeSgfObject.gameTrees[0].nodes.push resumeNode
+    setResponseSgf smartgame.generate(resumeSgfObject)
+    $('#main_form').submit()
 
 # setInitialDead
 
