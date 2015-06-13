@@ -62,9 +62,10 @@ test 'init function sets request and logout callbacks', ->
 
 # ============================================================================
 
-# helper for game page tests
+# helpers for game page tests
 
 setInputSgf = (sgf) -> $('input#data').val sgf
+getResponseSgf = -> $('input#response').val()
 
 # ============================================================================
 
@@ -145,12 +146,11 @@ test 'clicking multiple points updates hidden form', ->
   tesuji_charm.game_basic.initialize()
   $point1 = $pointAt 0, 0
   $point2 = $pointAt 1, 2
-  $response = $('input#response')
 
   $point1.click()
-  equal $response.val(), '(;B[aa])', "first stone sets correct SGF"
+  equal getResponseSgf(), '(;B[aa])', "first stone sets correct SGF"
   $point2.click()
-  equal $response.val(), '(;B[bc])', "second stone sets correct SGF"
+  equal getResponseSgf(), '(;B[bc])', "second stone sets correct SGF"
 
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
@@ -159,6 +159,32 @@ test 'Confirm button disabled until stone placed', ->
   $('table.goban td').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'
+
+test 'Pass button sets data and submits', ->
+  setInputSgf '(;SZ[3])'
+  tesuji_charm.game_basic.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  submitCalled = false
+  form.submit = -> submitCalled = true
+
+  $('.pass_button').click()
+
+  equal getResponseSgf(), '(;SZ[3];B[])', "pass button sets SGF in response"
+  ok submitCalled, "form submit function called"
+  form.submit = oldSubmit
+
+test 'Pass move is for correct color', ->
+  setInputSgf '(;SZ[3];B[])'
+  tesuji_charm.game_basic.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  form.submit = ->
+
+  $('.pass_button').click()
+
+  equal getResponseSgf(), '(;SZ[3];B[];W[])', "white pass added after black"
+  form.submit = oldSubmit
 
 test "clicking a pre-existing stone does nothing", (assert) ->
   setInputSgf '(;SZ[3];AW[bb])'
@@ -176,6 +202,34 @@ test "captured stones are removed from the board", (assert) ->
   $pointAt(0, 1).click()
   # corner should be blank now
   assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
+
+test "correct color after resume with two passes (black first)", (assert) ->
+  setInputSgf '(;SZ[3];B[];W[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointBlack($point)
+
+test "correct color after resume with three passes (black first)", (assert) ->
+  setInputSgf '(;SZ[3];B[];W[];B[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointBlack($point)
+
+test "correct color after resume with two passes (white first)", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[];B[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointWhite($point)
+
+test "correct color after resume with three passes (white first)", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[];B[];W[];TCRESUME[])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.ok isPointWhite($point)
 
 
 # ============================================================================
@@ -278,14 +332,31 @@ test "Form is updated with current dead stones", (assert) ->
     .*              # (don't check white setup as we can't guarantee the order)
     TW(\[\w\w]){8}  # white territory has 8 coords
     ///
+  tbPattern = /// TB\[ ///
   actual = $('input#response').val()
   assert.ok actual.match(expected), "correct number of TW coords"
+  assert.notOk actual.match(tbPattern), "no TB property in SGF"
 
   # here we check for a specific coord
   $pointAt(2, 2).click()
   expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
+
+test "Resume button updates response and submits", (assert) ->
+  setInputSgf '(;SZ[3];B[];W[])'
+  tesuji_charm.game_marking.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  submitCalled = false
+  form.submit = -> submitCalled = true
+
+  $('.resume_button').click()
+
+  equal getResponseSgf(), '(;SZ[3];B[];W[];TCRESUME[])',
+    "resume button sets SGF in response"
+  ok submitCalled, "form submit function called"
+  form.submit = oldSubmit
 
 
 # ============================================================================

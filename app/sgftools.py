@@ -75,7 +75,8 @@ def parse(sgf):
 
     def expect(char):
         if not accept(char):
-            raise ParseError()
+            raise ParseError("expected '{}' at '|' sign in '{}|{}'".format(
+                char, sgf[:len(sgf)-len(d['rest'])], d['rest']))
 
     def sequence():
         expect('(')

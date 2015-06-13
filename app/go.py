@@ -75,6 +75,47 @@ def _is_continuation(old_sgf, new_sgf):
                                   move_no=0)
     return True
 
+def ends_by_agreement(sgf):
+    """True if sgf ends with two identical territory proposals."""
+    previous_proposal = None
+    for node in reversed(_GameTree.from_sgf(sgf).main_line):
+        if not node.is_mark:
+            return False
+        prop = (node.black_coords, node.white_coords)
+        if previous_proposal:
+            if previous_proposal == prop:
+                return True
+            else:
+                return False
+        else:
+            previous_proposal = prop
+    return False
+
+def next_color(sgf):
+    """Return the color that is next to move in sgf."""
+
+    def opponent(color):
+        return {Color.black: Color.white,
+                Color.white: Color.black}[color]
+
+    nodes = _GameTree.from_sgf(sgf).main_line
+    next_ = Color.black
+    for index, node in enumerate(nodes):
+        if node.is_move or node.is_pass or node.is_mark:
+            next_ = opponent(next_)
+        elif node.is_resumption:
+            last_pass = None
+            for node in reversed(nodes[:index-1]):
+                if node.is_move:
+                    break
+                elif node.is_pass:
+                    last_pass = node.color
+            if not last_pass:
+                raise ValidationException(
+                    "resumption without preceding passes", move_no=index)
+            next_ = last_pass
+    return next_
+
 def next_move_no(sgf):
     """Return the number of the next move to be played on sgf."""
     game_tree = _GameTree.from_sgf(sgf)
