@@ -19,7 +19,7 @@ import itertools
 import jinja2
 import json
 import requests
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, not_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from wtforms import HiddenField, IntegerField, StringField
 from wtforms.validators import DataRequired, Email
@@ -152,10 +152,7 @@ def get_player_games(player_email):
 
     Accesses database.
     """
-    unfinished_predicate = True
-    # unfinished_predicate = Game.winner == None  # noqa
-    # ORM doesn't accept 'is None', linter doesn't like '== None'
-    games = Game.query.filter(and_(unfinished_predicate,
+    games = Game.query.filter(and_(not_(Game.finished),
                                    or_(Game.black == player_email,
                                        Game.white == player_email))).all()
     return games
@@ -177,6 +174,8 @@ def email_to_move_in_game(game):
 
     Accesses database.  Return None if game is finished.
     """
+    if game.finished:
+        return None
     black_or_white = go.next_color(game.sgf)
     next_in_game = {go.Color.black: game.black,
                     go.Color.white: game.white}[black_or_white]
@@ -458,7 +457,11 @@ class Game(db.Model):
     black = db.Column(db.String(length=254))
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
-    finished = db.Column(db.Boolean())
+    finished = db.Column(db.Boolean(), default=False)
+
+    def __repr__(self):
+        return "<Game {no}, {b} vs. {w}>".format(
+            no=self.id, b=self.black, w=self.white)
 
 
 # forms

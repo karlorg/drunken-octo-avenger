@@ -234,8 +234,8 @@ class TestStatusIntegrated(TestWithDb):
                               sgf="(;B[jj])")
         game5 = self.add_game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL,
                               sgf="(;B[])")
-        game6 = self.add_game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1,
-                              sgf="(;RE[W+R])")
+        game6 = self.add_game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1)
+        game6.finished = True
         return (game1, game2, game3, game4, game5, game6,)
 
     def test_anonymous_users_redirected_to_front(self):
