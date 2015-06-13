@@ -204,18 +204,14 @@ class TestChallengeIntegrated(TestWithDb):
 
     def test_good_post_creates_game(self):
         assert Game.query.all() == []
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                session['email'] = 'player1@gofan.com'
-
+        with self.set_email('white@white.com') as test_client:
             test_client.post('/challenge', data=dict(
-                opponent_email='player2@gofan.com'))
-
-        games = Game.query.all()
-        assert len(games) == 1
-        game = games[0]
-        assert game.white == 'player1@gofan.com'
-        assert game.black == 'player2@gofan.com'
+                opponent_email='black@black.com'))
+        game = db.session.query(Game).one()
+        self.assertEqual(game.white, 'white@white.com')
+        self.assertEqual(game.black, 'black@black.com')
+        self.assertEqual(game.sgf, "(;)")
+        self.assertFalse(game.finished)
 
 
 class TestStatusIntegrated(TestWithDb):

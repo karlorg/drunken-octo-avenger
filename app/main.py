@@ -115,9 +115,9 @@ def resign():
 def challenge():
     form = ChallengeForm()
     if form.validate_on_submit():
-        game = Game()
-        game.black = form.opponent_email.data
-        game.white = logged_in_email()
+        game = Game(black=form.opponent_email.data,
+                    white=logged_in_email(),
+                    sgf="(;)")
         db.session.add(game)
         db.session.commit()
         return redirect(url_for('status'))
