@@ -81,6 +81,12 @@ game_common.updateBoard = updateBoard = (state) ->
       setPointColor ($pointAt col, row), color
   return
 
+isHandicapPoint = (size, row, column) ->
+  switch size
+    when 19 then row in [3,9,15] and column in [3,9,15]
+    when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
+    when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
+
 game_common.initialize = (sgf_object) ->
   $('.goban').remove()
   $('#content').append '<div class="goban"></div>'
@@ -112,6 +118,8 @@ game_common.initialize = (sgf_object) ->
         point_element += left_horizontal
       if i < size - 1
         point_element += right_horizontal
+      if isHandicapPoint(size, j, i)
+        point_element += "<div class='handicappoint'></div>"
       point_element += "</div>"
       row_element += point_element
     row_element += "</div>"
