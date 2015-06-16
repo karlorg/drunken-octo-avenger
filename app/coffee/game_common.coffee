@@ -17,7 +17,8 @@ game_common.setResponseSgf = setResponseSgf = (sgf) ->
 # setPointColor and helpers
 
 game_common.setPointColor = setPointColor = ($td, color) ->
-  # TODO: Should remove any current stone or territory child elements
+  $('.stone', $td).remove()
+  $('.territory', $td).remove()
   [stoneclass, territoryclass] = switch color
     when 'empty' then ['', '']
     when 'black' then ['stone black', '']
@@ -34,12 +35,7 @@ game_common.setPointColor = setPointColor = ($td, color) ->
     territoryElement = document.createElement 'div'
     territoryElement.className = territoryclass
     $td.append territoryElement
-  # setStoneClass $td, stoneclass
 
-setStoneClass = ($td, stoneclass) ->
-  $td.removeClass('blackstone whitestone nostone
-                   blackdead whitedead blackscore whitescore'
-  ).addClass(stoneclass)
 
 # end of setPointColor helpers
 
