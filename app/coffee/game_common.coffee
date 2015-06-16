@@ -17,15 +17,24 @@ game_common.setResponseSgf = setResponseSgf = (sgf) ->
 # setPointColor and helpers
 
 game_common.setPointColor = setPointColor = ($td, color) ->
-  stoneclass = switch color
-    when 'empty' then 'nostone'
-    when 'black' then 'blackstone'
-    when 'white' then 'whitestone'
-    when 'blackdead' then 'blackdead whitescore'
-    when 'whitedead' then 'whitedead blackscore'
-    when 'blackscore' then 'blackscore nostone'
-    when 'whitescore' then 'whitescore nostone'
-  setStoneClass $td, stoneclass
+  # TODO: Should remove any current stone or territory child elements
+  [stoneclass, territoryclass] = switch color
+    when 'empty' then ['', '']
+    when 'black' then ['stone black', '']
+    when 'white' then ['stone white', '']
+    when 'blackdead' then ['stone black dead', 'territory white']
+    when 'whitedead' then ['stone white dead', 'territory black']
+    when 'blackscore' then ['', 'territory black']
+    when 'whitescore' then ['', 'territory white']
+  if stoneclass
+    stoneElement = document.createElement 'div'
+    stoneElement.className = stoneclass
+    $td.append stoneElement
+  if territoryclass
+    territoryElement = document.createElement 'div'
+    territoryElement.className = territoryclass
+    $td.append territoryElement
+  # setStoneClass $td, stoneclass
 
 setStoneClass = ($td, stoneclass) ->
   $td.removeClass('blackstone whitestone nostone
@@ -94,7 +103,7 @@ game_common.initialize = (sgf_object) ->
   for j in [0...size]
     row_element = "<div class='goban-row'>"
     for i in [0...size]
-      point_element = "<div class='gopoint row-#{j} col-#{i} nostone'>"
+      point_element = "<div class='gopoint row-#{j} col-#{i}'>"
       if j > 0
         point_element += top_vertical
       if j < size - 1
