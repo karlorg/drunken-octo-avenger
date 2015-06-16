@@ -74,7 +74,7 @@ game_common.updateBoard = updateBoard = (state) ->
 
 game_common.initialize = (sgf_object) ->
   $('.goban').remove()
-  $('#content').append '<table class="goban"></table>'
+  $('#content').append '<div class="goban"></div>'
 
   unless sgf_object
     if getInputSgf() != ''
@@ -84,14 +84,29 @@ game_common.initialize = (sgf_object) ->
          then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
          else 19
 
+  top_vertical = '<div class="board_line board_line_vertical"></div>'
+  bottom_vertical = '<div class="board_line board_line_vertical board_line_bottom_vertical"></div>'
+  left_horizontal = '<div class="board_line board_line_horizontal"></div>'
+  right_horizontal = '<div class="board_line board_line_horizontal board_line_right_horizontal"></div>'
+
+
   tableContentsStr = ''
   for j in [0...size]
-    tr = '<tr>'
+    row_element = "<div class='goban-row'>"
     for i in [0...size]
-      tr += "<td class='row-#{j} col-#{i} nostone'>"
-      tr += "</td>"
-    tr += '</tr>'
-    tableContentsStr += tr
+      point_element = "<div class='gopoint row-#{j} col-#{i} nostone'>"
+      if j > 0
+        point_element += top_vertical
+      if j < size - 1
+        point_element += bottom_vertical
+      if i > 0
+        point_element += left_horizontal
+      if i < size - 1
+        point_element += right_horizontal
+      point_element += "</div>"
+      row_element += point_element
+    row_element += "</div>"
+    tableContentsStr += row_element
   $('.goban').append tableContentsStr
 
   if getInputSgf() != ''
