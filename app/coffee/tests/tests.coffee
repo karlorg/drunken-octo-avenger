@@ -3,19 +3,19 @@
 $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 imageSrc = ($point) -> $point.find('img').attr('src')
 
-isPointEmpty = ($point) -> $point.hasClass('nostone')
-isPointBlack = ($point) -> $point.hasClass('blackstone')
-isPointWhite = ($point) -> $point.hasClass('whitestone')
+contains_selector = tesuji_charm.game_common.contains_selector
+
+isPointEmpty = ($point) -> not(contains_selector $point, '.stone,.territory')
+isPointBlack = ($point) -> contains_selector $point, '.stone.black'
+isPointWhite = ($point) -> contains_selector $point, '.stone.white'
 isPointBlackScore = ($point) ->
-  ($point.hasClass('blackscore')) and
-  (not $point.hasClass('whitescore'))
+  (contains_selector $point '.territory.black') and
+  (not (contains_selector $point '.territory.white'))
 isPointWhiteScore = ($point) ->
-  ($point.hasClass('whitescore')) and
-  (not $point.hasClass('blackscore'))
-isPointBlackDead = ($point) ->
-  ($point.hasClass('blackdead'))
-isPointWhiteDead = ($point) ->
-  ($point.hasClass('whitedead'))
+  (contains_selector $point '.territory.white') and
+  (not (contains_selector $point '.territory.black'))
+isPointBlackDead = ($point) -> contains_selector $point, '.stone.black.dead'
+isPointWhiteDead = ($point) -> contains_selector $point, '.stone.white.dead'
 
 
 # ============================================================================

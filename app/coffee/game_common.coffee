@@ -39,13 +39,21 @@ game_common.setPointColor = setPointColor = ($td, color) ->
 
 # end of setPointColor helpers
 
+game_common.contains_selector = contains_selector = ($context, selector) ->
+  "A helper function returns true if the given element/context contains an
+   element that satisfies the selector."
+  return ($context.find selector).length > 0
+
 game_common.colorFromDom = colorFromDom = ($point) ->
   "return the color of the given point based on the DOM status"
-  if $point.hasClass 'blackstone' then return 'black'
-  if $point.hasClass 'whitestone' then return 'white'
-  if $point.hasClass 'blackdead' then return 'blackdead'
-  if $point.hasClass 'whitedead' then return 'whitedead'
-  return 'empty'
+  # We do the dead ones first because a dead stone would still satisfy the
+  # test for a white/black stone.
+  if contains_selector $point, '.stone.black.dead' then return 'blackdead'
+  if contains_selector $point, '.stone.white.dead' then return 'whitedead'
+  if contains_selector $point, '.stone.black' then return 'black'
+  if contains_selector $point, '.stone.white' then return 'white'
+  if not (contains_selector $point, '.stone,.territory') then return 'empty'
+  return null
 
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/
@@ -63,7 +71,7 @@ game_common.parseCoordClass = parseCoordClass = ($obj) ->
 game_common.readBoardState = readBoardState = ->
   "generate a board state object based on the loaded page contents"
   result = []
-  $('.goban td').each ->
+  $('.goban .gopoint').each ->
     $this = $(this)
     [row, col] = parseCoordClass $this
     result[row] ?= []
