@@ -156,7 +156,7 @@ test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
   equal $button.prop('disabled'), true,
     'starts out disabled'
-  $('table.goban td').first().click()
+  $('.goban .gopoint').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'
 

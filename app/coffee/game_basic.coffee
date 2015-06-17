@@ -35,7 +35,7 @@ game_basic.initialize = ->
 
   $('button.confirm_button').prop 'disabled', true
 
-  $('table.goban td').click ->
+  $('.goban .gopoint').click ->
     return unless game_common.hasCoordClass $(this)
     [row, col] = game_common.parseCoordClass $(this)
 
