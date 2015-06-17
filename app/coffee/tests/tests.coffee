@@ -9,11 +9,11 @@ isPointEmpty = ($point) -> not(contains_selector $point, '.stone,.territory')
 isPointBlack = ($point) -> contains_selector $point, '.stone.black'
 isPointWhite = ($point) -> contains_selector $point, '.stone.white'
 isPointBlackScore = ($point) ->
-  (contains_selector $point '.territory.black') and
-  (not (contains_selector $point '.territory.white'))
+  (contains_selector $point, '.territory.black') and
+  (not (contains_selector $point, '.territory.white'))
 isPointWhiteScore = ($point) ->
-  (contains_selector $point '.territory.white') and
-  (not (contains_selector $point '.territory.black'))
+  (contains_selector $point, '.territory.white') and
+  (not (contains_selector $point, '.territory.black'))
 isPointBlackDead = ($point) -> contains_selector $point, '.stone.black.dead'
 isPointWhiteDead = ($point) -> contains_selector $point, '.stone.white.dead'
 

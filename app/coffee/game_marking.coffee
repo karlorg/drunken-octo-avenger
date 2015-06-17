@@ -26,7 +26,7 @@ game_marking.initialize = ->
   setInitialDead sgfObject
   setupScoring()
 
-  $('table.goban td').click ->
+  $('.goban .gopoint').click ->
     return unless game_common.hasCoordClass $(this)
     [row, col] = game_common.parseCoordClass $(this)
     markStonesAround col, row
@@ -176,9 +176,9 @@ updateForm = ->
       else if point == 'whitedead'
         tb.push (game_common.encodeSgfCoord x, y)
       else if point == 'empty'
-        if $pointAt(x, y).hasClass 'blackscore'
+        if game_common.isBlackScore ($pointAt x, y)
           tb.push (game_common.encodeSgfCoord x, y)
-        else if $pointAt(x, y).hasClass 'whitescore'
+        else if game_common.isWhiteScore ($pointAt x, y) 
           tw.push (game_common.encodeSgfCoord x, y)
   unless tb.length then delete new_node.TB
   unless tw.length then delete new_node.TW

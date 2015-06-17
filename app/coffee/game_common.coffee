@@ -52,8 +52,14 @@ game_common.colorFromDom = colorFromDom = ($point) ->
   if contains_selector $point, '.stone.white.dead' then return 'whitedead'
   if contains_selector $point, '.stone.black' then return 'black'
   if contains_selector $point, '.stone.white' then return 'white'
-  if not (contains_selector $point, '.stone,.territory') then return 'empty'
+  if not (contains_selector $point, '.stone') then return 'empty'
   return null
+
+game_common.isBlackScore = ($point) ->
+  return contains_selector $point, '.territory.black'
+
+game_common.isWhiteScore = ($point) ->
+  return contains_selector $point, '.territory.white'
 
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/
