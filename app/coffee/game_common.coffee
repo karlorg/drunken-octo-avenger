@@ -109,10 +109,15 @@ game_common.initialize = (sgf_object) ->
          then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
          else 19
 
+
+  make_div = (classes) ->
+    'div class="' + classes + '"></div>'
   top_vertical = '<div class="board_line board_line_vertical"></div>'
-  bottom_vertical = '<div class="board_line board_line_vertical board_line_bottom_vertical"></div>'
+  bottom_vertical = '<div class="board_line board_line_vertical
+                                 board_line_bottom_vertical"></div>'
   left_horizontal = '<div class="board_line board_line_horizontal"></div>'
-  right_horizontal = '<div class="board_line board_line_horizontal board_line_right_horizontal"></div>'
+  right_horizontal = '<div class="board_line board_line_horizontal
+                                  board_line_right_horizontal"></div>'
 
 
   tableContentsStr = ''

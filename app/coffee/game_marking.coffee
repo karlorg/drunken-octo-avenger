@@ -178,7 +178,7 @@ updateForm = ->
       else if point == 'empty'
         if game_common.isBlackScore ($pointAt x, y)
           tb.push (game_common.encodeSgfCoord x, y)
-        else if game_common.isWhiteScore ($pointAt x, y) 
+        else if game_common.isWhiteScore ($pointAt x, y)
           tw.push (game_common.encodeSgfCoord x, y)
   unless tb.length then delete new_node.TB
   unless tw.length then delete new_node.TW
