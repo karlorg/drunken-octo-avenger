@@ -319,7 +319,7 @@ test "initialization sets initial dead stones from SGF", (assert) ->
   assert.ok isPointWhiteScore($pointAt 1, 1), "(1, 1) scores for White"
 
 test "Form is updated with current dead stones", (assert) ->
-  setInputSgf '(;SZ[3];AB[aa][ac][bb][ac][bc]AW[cc])'
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][ab]AW[cb])'
   # b.b
   # .b.
   # bbw
@@ -338,8 +338,8 @@ test "Form is updated with current dead stones", (assert) ->
   assert.notOk actual.match(tbPattern), "no TB property in SGF"
 
   # here we check for a specific coord
-  $pointAt(2, 2).click()
-  expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
+  $pointAt(2, 1).click()
+  expected = /TB[\]\[\w]*\[bc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
 
