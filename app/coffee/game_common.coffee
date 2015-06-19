@@ -97,7 +97,7 @@ isHandicapPoint = (size, row, column) ->
     when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
     when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
 
-game_common.initialize = (sgf_object) ->
+game_common.initialize = (sgf_object, newStoneColor) ->
   $('.goban').remove()
   $('#content').append '<div class="goban"></div>'
 
@@ -109,15 +109,13 @@ game_common.initialize = (sgf_object) ->
          then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
          else 19
 
-
-  make_div = (classes) ->
-    'div class="' + classes + '"></div>'
   top_vertical = '<div class="board_line board_line_vertical"></div>'
   bottom_vertical = '<div class="board_line board_line_vertical
                                  board_line_bottom_vertical"></div>'
   left_horizontal = '<div class="board_line board_line_horizontal"></div>'
   right_horizontal = '<div class="board_line board_line_horizontal
                                   board_line_right_horizontal"></div>'
+  placement = "<div class='placement " + newStoneColor + "'></div>"
 
 
   tableContentsStr = ''
@@ -135,6 +133,7 @@ game_common.initialize = (sgf_object) ->
         point_element += right_horizontal
       if isHandicapPoint(size, j, i)
         point_element += "<div class='handicappoint'></div>"
+      point_element += placement
       point_element += "</div>"
       row_element += point_element
     row_element += "</div>"
