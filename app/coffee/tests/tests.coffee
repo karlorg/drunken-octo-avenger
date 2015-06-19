@@ -3,19 +3,21 @@
 $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 imageSrc = ($point) -> $point.find('img').attr('src')
 
-isPointEmpty = ($point) -> $point.hasClass('nostone')
-isPointBlack = ($point) -> $point.hasClass('blackstone')
-isPointWhite = ($point) -> $point.hasClass('whitestone')
+contains_selector = tesuji_charm.game_common.contains_selector
+
+isPointEmpty = ($point) -> not(contains_selector $point, '.stone,.territory')
+isPointBlack = ($point) -> contains_selector $point, '.stone.black'
+isPointWhite = ($point) -> contains_selector $point, '.stone.white'
 isPointBlackScore = ($point) ->
-  ($point.hasClass('blackscore')) and
-  (not $point.hasClass('whitescore'))
+  (contains_selector $point, '.territory.black') and
+  (not (contains_selector $point, '.territory.white'))
 isPointWhiteScore = ($point) ->
-  ($point.hasClass('whitescore')) and
-  (not $point.hasClass('blackscore'))
-isPointBlackDead = ($point) ->
-  ($point.hasClass('blackdead'))
-isPointWhiteDead = ($point) ->
-  ($point.hasClass('whitedead'))
+  (contains_selector $point, '.territory.white') and
+  (not (contains_selector $point, '.territory.black'))
+isPointDame = ($point) ->
+  contains_selector $point, '.territory.neutral'
+isPointBlackDead = ($point) -> contains_selector $point, '.stone.black.dead'
+isPointWhiteDead = ($point) -> contains_selector $point, '.stone.white.dead'
 
 
 # ============================================================================
@@ -156,7 +158,7 @@ test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
   equal $button.prop('disabled'), true,
     'starts out disabled'
-  $('table.goban td').first().click()
+  $('.goban .gopoint').first().click()
   equal $button.prop('disabled'), false,
     'enabled after stone placed'
 
@@ -245,9 +247,9 @@ module 'Game page with marking interface',
 test "clicking empty points in marking mode does nothing", (assert) ->
   tesuji_charm.game_marking.initialize()
   $point = $pointAt(1, 1)
-  assert.ok isPointEmpty($point), "centre point starts empty"
+  assert.ok isPointDame($point), "centre point starts dame"
   $point.click()
-  assert.ok isPointEmpty($point), "still empty after click"
+  assert.ok isPointDame($point), "still dame after click"
 
 test "mixed scoring board", (assert) ->
   setInputSgf '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc])'
@@ -319,7 +321,7 @@ test "initialization sets initial dead stones from SGF", (assert) ->
   assert.ok isPointWhiteScore($pointAt 1, 1), "(1, 1) scores for White"
 
 test "Form is updated with current dead stones", (assert) ->
-  setInputSgf '(;SZ[3];AB[aa][ac][bb][ac][bc]AW[cc])'
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][ab]AW[cb])'
   # b.b
   # .b.
   # bbw
@@ -338,8 +340,8 @@ test "Form is updated with current dead stones", (assert) ->
   assert.notOk actual.match(tbPattern), "no TB property in SGF"
 
   # here we check for a specific coord
-  $pointAt(2, 2).click()
-  expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
+  $pointAt(2, 1).click()
+  expected = /TB[\]\[\w]*\[bc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
 

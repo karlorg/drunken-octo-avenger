@@ -1,6 +1,140 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+{% if size is undefined %}
+    {% set size = 19 %}
+{% endif %}
+
+<style>
+
+.goban {
+    width: {{20 * size}}px;
+    height: {{20 * size}}px;
+    margin: 10px;
+    border: 2px solid;
+    padding: 10px;
+    resize: both;
+    overflow: auto;
+}
+
+.goban-row{
+    margin: 0;
+    height: {{100.0 / size}}%;
+    width: 100%;
+}
+
+.gopoint {
+   float: left;
+   background: #CB9546;
+   height: 100%;
+   width: {{100.0 / size}}%;
+   position: relative;
+   /* z-index: 500; the stack order: foreground */
+   margin: 0;
+}
+
+.board_line {
+    background: #000000;
+}
+
+.board_line_vertical{
+    left: 45%;
+    position: absolute;
+    height: 55%;
+    width: 10%;
+}
+
+.board_line_bottom_vertical{
+    top: 45%;
+}
+
+.board_line_horizontal{
+    top: 45%;
+    position: absolute;
+    height: 10%;
+    width: 55%;
+}
+
+.board_line_right_horizontal{
+    left: 50%;
+}
+
+.stone {
+  width: 80%;
+  height:80%;
+  border: 2px solid #ddd;
+  border-radius: 80%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+.placement {
+  /* This kind of needs to be width and height 100% so that hovering anywhere
+     within the point works, otherwise the placement element has no width or
+     height and hence is never hovered over. We also require it to have zero
+     opacity so that the actual go point behind it (the color of the go board
+     itself) is visible.
+  */
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+}
+.placement:hover {
+  opacity: 0.7;
+  width: 80%;
+  height:80%;
+  border: 2px solid #ddd;
+  border-radius: 80%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+.dead{
+    opacity: 0.5;
+}
+
+.black{
+    background: #000000;
+}
+
+.white{
+    background: #ffffff;
+}
+
+.neutral{
+    background: #f52712;
+}
+
+.territory{
+    width: 30%;
+    height: 30%;
+    position: absolute;
+    left:35%;
+    top:35%;
+}
+
+.handicappoint {
+  width: 30%;
+  height:30%;
+  background: #000000;
+  border-radius: 100%;
+  position: absolute;
+  left: 35%;
+  top: 35%;
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+</style>
+
+
 <div id="content"></div>
 
 {% if on_turn %}

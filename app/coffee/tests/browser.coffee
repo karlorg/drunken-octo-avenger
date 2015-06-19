@@ -13,6 +13,11 @@ unless (host.match /localhost/) or (host.match /staging/)
 serverUrl = "#{host}#{portString}"
 casper.echo "Testing against server at #{serverUrl}"
 
+debug_dump_html = () ->
+  "Occasionally can be useful during debugging just to dump the current HTML."
+  casper.echo (casper.getHTML())
+
+
 # test inventory management
 
 testObjectsByName = {}
@@ -88,28 +93,53 @@ class BrowserTest
       $("td.row-#{y}.col-#{x}").css('background-image')),
         x, y
 
+  numberJQSelector: (selector) ->
+    " Caspers test.assertExist is great but only works with CSS selectors,
+      not JQuery selectors, hence this helper function, which can be used with
+      assertEqual"
+    casper.evaluate ((selector) ->
+      $(selector).length),
+      selector
+
+  assertPointIs: (test, x, y, property, message) ->
+    selector = ".goban " + pointSelector(x,y) + property
+    num_matching_points = @numberJQSelector selector
+    test.assertEqual num_matching_points, 1, message
+
   assertPointIsBlack: (test, x, y) ->
-    test.assertExists pointSelector(x,y) + ".blackstone",
-                      'There is a black stone at the expected point'
+    @assertPointIs test, x, y, ":has(.stone.black:not(dead))",
+                   'There is a black stone at the expected point'
 
   assertPointIsWhite: (test, x, y) ->
-    test.assertExists pointSelector(x,y) + ".whitestone",
-                      'There is a white stone at the expected point'
+    @assertPointIs test, x, y, ":has(.stone.white:not(dead))",
+                   'There is a white stone at the expected point'
 
   assertPointIsEmpty: (test, x, y) ->
-    test.assertExists pointSelector(x,y) + ".nostone",
-                      'The specified point is empty as expected'
+    @assertPointIs test, x, y, ":not(:has(.stone))",
+                   'The specified point is empty as expected'
+
+  assertPointIsDeadBlack: (test, x, y) ->
+    @assertPointIs test, x, y, ":has(.stone.black.dead)",
+                   'There is a dead black stone at the expected point'
+
+  assertPointIsDeadWhite: (test, x, y) ->
+    @assertPointIs test, x, y, ":has(.stone.white.dead)",
+                   'There is a white dead stone at the expected point'
+
+  assertPointIsWhiteTerritory: (test, x, y) ->
+    @assertPointIs test, x, y, ":has(.territory.white)",
+                   'There is a white territory at the expected point'
 
   countStonesAndPoints: ->
     casper.evaluate ->
-      'empty':      $('.goban .nostone').length
-      'black':      $('.goban .blackstone').length
-      'white':      $('.goban .whitestone').length
-      'blackscore': $('.goban .blackscore').length
-      'whitescore': $('.goban .whitescore').length
-      'blackdead':  $('.goban .blackdead').length
-      'whitedead':  $('.goban .whitedead').length
-      'noscore':    $('.goban td:not(.blackscore):not(.whitescore)').length
+      'empty':      $('.goban .gopoint:not(:has(.stone))').length
+      'black':      $('.goban .stone.black:not(.dead)').length
+      'white':      $('.goban .stone.white:not(.dead)').length
+      'blackscore': $('.goban .territory.black').length
+      'whitescore': $('.goban .territory.white').length
+      'blackdead':  $('.goban .stone.black.dead').length
+      'whitedead':  $('.goban .stone.white.dead').length
+      'dame':    $('.goban .territory.neutral').length
 
   assertGeneralPointCounts: (test, expected) =>
     "Run multiple assertions on the number of points with certain contents.
@@ -284,7 +314,7 @@ class PlaceStonesTest extends BrowserTest
     # select the most recent game
     casper.thenClick (@lastGameSelector true), =>
       # on the game page is a table with class 'goban'
-      test.assertExists 'table.goban', 'The Go board does exist.'
+      test.assertExists '.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
       @assertStonePointCounts test, initialEmptyCount, 3, 1,
@@ -334,7 +364,7 @@ class GameInterfaceTest extends BrowserTest
     # select the most recent game
     casper.thenClick (@lastGameSelector true), =>
       # on the game page is a table with class 'goban'
-      test.assertExists 'table.goban', 'The Go board does exist.'
+      test.assertExists '.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
       @assertStonePointCounts test, initialEmptyCount, 2, 2,
@@ -425,7 +455,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 29
+  numTests: 34
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -459,15 +489,15 @@ class PassAndScoringTest extends BrowserTest
     casper.thenClick '.pass_button'
 
     # black opens the game and is invited to mark dead stones
-    originalImageSrc11 = null
-    originalImageSrc22 = null
     goToGame BLACK_EMAIL, =>
-      test.assertExists 'table.goban'
-      originalImageSrc11 = @imageSrc 1, 1
-      originalImageSrc22 = @imageSrc 2, 2
+      test.assertExists '.goban'
+      @assertPointIsBlack test, 1, 1
+      @assertPointIsEmpty test, 2, 2
       @assertGeneralPointCounts test,
         label: "initial marking layout"
-        noscore: 3 + 5 + 7 + 9  # black group, dame, white group, black group
+        dame: 5
+        black: 3 + 9
+        white: 7
         blackscore: 19*19 - 25 + 1
         whitescore: 0
     # clicking an empty point does nothing
@@ -479,15 +509,12 @@ class PassAndScoringTest extends BrowserTest
     # we click the top left black group; the stones change appearance to show
     # they are considered dead, and the scores change
     casper.thenClick (pointSelector 1, 0), =>
-      imageSrc11 = @imageSrc 1, 1
-      test.assertNotEquals imageSrc11, originalImageSrc11,
-        "black stone image source is not still #{originalImageSrc11}"
-      imageSrc22 = @imageSrc 2, 2
-      test.assertNotEquals imageSrc22, originalImageSrc22,
-        "empty point image source is not still #{originalImageSrc22}"
+      @assertPointIsDeadBlack test, 1, 1
+      @assertPointIsWhiteTerritory test, 2, 2
       @assertGeneralPointCounts test,
         label: "black stones marked dead"
-        noscore: 7 + 9  # just white and black stones at the border
+        white: 7
+        dame: 0
         blackscore: 19*19 - 25
         whitescore: 9
         blackdead: 3
@@ -500,7 +527,7 @@ class PassAndScoringTest extends BrowserTest
         label: "white stones marked dead"
         black: 12
         blackdead: 0
-        noscore: 12
+        dame: 0
         blackscore: 19*19 - 12
         whitescore: 0
     # Black confirms this pleasing result

@@ -28,14 +28,15 @@ game_basic.initialize = ->
     sgfObject = smartgame.parse getInputSgf()
   else
     sgfObject = smartgame.parse '(;)'
-  game_common.initialize(sgfObject)
-  initialBoardState = game_common.readBoardState()
 
   newStoneColor = nextPlayerInSgfObject sgfObject
 
+  game_common.initialize(sgfObject, newStoneColor)
+  initialBoardState = game_common.readBoardState()
+
   $('button.confirm_button').prop 'disabled', true
 
-  $('table.goban td').click ->
+  $('.goban .gopoint').click ->
     return unless game_common.hasCoordClass $(this)
     [row, col] = game_common.parseCoordClass $(this)
 
