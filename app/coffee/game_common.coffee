@@ -116,6 +116,7 @@ game_common.initialize = (sgf_object, newStoneColor) ->
   right_horizontal = '<div class="board_line board_line_horizontal
                                   board_line_right_horizontal"></div>'
   placement = "<div class='placement " + newStoneColor + "'></div>"
+  placement = if newStoneColor in ['black', 'white'] then placement else ""
 
 
   tableContentsStr = ''
