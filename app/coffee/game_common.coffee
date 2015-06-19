@@ -21,6 +21,7 @@ game_common.setPointColor = setPointColor = ($td, color) ->
   $('.territory', $td).remove()
   [stoneclass, territoryclass] = switch color
     when 'empty' then ['', '']
+    when 'dame' then ['', 'territory neutral']
     when 'black' then ['stone black', '']
     when 'white' then ['stone white', '']
     when 'blackdead' then ['stone black dead', 'territory white']

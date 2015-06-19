@@ -67,7 +67,7 @@ setupScoring = ->
     setRegionScores region, switch boundary
       when 'black' then 'blackscore'
       when 'white' then 'whitescore'
-      when 'neither' then 'empty'
+      when 'neither' then 'dame'
       else throw new Error "invalid boundary color: '#{boundary}'"
   updateForm()
   return

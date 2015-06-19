@@ -139,7 +139,7 @@ class BrowserTest
       'whitescore': $('.goban .territory.white').length
       'blackdead':  $('.goban .stone.black.dead').length
       'whitedead':  $('.goban .stone.white.dead').length
-      'noscore':    $('.goban .gopoint:not(:has(.territory))').length
+      'dame':    $('.goban .territory.neutral').length
 
   assertGeneralPointCounts: (test, expected) =>
     "Run multiple assertions on the number of points with certain contents.
@@ -455,7 +455,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 31
+  numTests: 34
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -495,7 +495,9 @@ class PassAndScoringTest extends BrowserTest
       @assertPointIsEmpty test, 2, 2
       @assertGeneralPointCounts test,
         label: "initial marking layout"
-        noscore: 3 + 5 + 7 + 9  # black group, dame, white group, black group
+        dame: 5
+        black: 3 + 9
+        white: 7
         blackscore: 19*19 - 25 + 1
         whitescore: 0
     # clicking an empty point does nothing
@@ -511,7 +513,8 @@ class PassAndScoringTest extends BrowserTest
       @assertPointIsWhiteTerritory test, 2, 2
       @assertGeneralPointCounts test,
         label: "black stones marked dead"
-        noscore: 7 + 9  # just white and black stones at the border
+        white: 7
+        dame: 0
         blackscore: 19*19 - 25
         whitescore: 9
         blackdead: 3
@@ -524,7 +527,7 @@ class PassAndScoringTest extends BrowserTest
         label: "white stones marked dead"
         black: 12
         blackdead: 0
-        noscore: 12
+        dame: 0
         blackscore: 19*19 - 12
         whitescore: 0
     # Black confirms this pleasing result

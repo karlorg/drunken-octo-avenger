@@ -14,6 +14,8 @@ isPointBlackScore = ($point) ->
 isPointWhiteScore = ($point) ->
   (contains_selector $point, '.territory.white') and
   (not (contains_selector $point, '.territory.black'))
+isPointDame = ($point) ->
+  contains_selector $point, '.territory.neutral'
 isPointBlackDead = ($point) -> contains_selector $point, '.stone.black.dead'
 isPointWhiteDead = ($point) -> contains_selector $point, '.stone.white.dead'
 
@@ -245,9 +247,9 @@ module 'Game page with marking interface',
 test "clicking empty points in marking mode does nothing", (assert) ->
   tesuji_charm.game_marking.initialize()
   $point = $pointAt(1, 1)
-  assert.ok isPointEmpty($point), "centre point starts empty"
+  assert.ok isPointDame($point), "centre point starts dame"
   $point.click()
-  assert.ok isPointEmpty($point), "still empty after click"
+  assert.ok isPointDame($point), "still dame after click"
 
 test "mixed scoring board", (assert) ->
   setInputSgf '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc])'
