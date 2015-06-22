@@ -6,6 +6,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 
 import os
 
+from flask.ext.migrate import Migrate, MigrateCommand
 from flask.ext.script import Manager
 
 from app import main
@@ -13,6 +14,9 @@ from app.main import app, db
 import config
 
 manager = Manager(app)
+
+Migrate(app, db)
+manager.add_command('db', MigrateCommand)
 
 @manager.command
 def remake_db():
