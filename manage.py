@@ -19,9 +19,17 @@ Migrate(app, db)
 manager.add_command('db', MigrateCommand)
 
 @manager.command
-def remake_db():
-    db.drop_all()
-    db.create_all()
+def remake_db(really=False):
+    if not really:
+        print("You should probably use 'python manage.py db upgrade' instead.")
+        print("If you really want to use remake_db, provide option --really.")
+        print("")
+        print("(See https://flask-migrate.readthedocs.org/en/latest/ for"
+              " details.)")
+        return 0
+    else:
+        db.drop_all()
+        db.create_all()
 
 def run_command(command):
     """ We frequently inspect the return result of a command so this is just
