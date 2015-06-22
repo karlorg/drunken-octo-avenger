@@ -169,6 +169,14 @@ class BrowserTest
   assertEmptyBoard: (test) =>
     @assertStonePointCounts test, 19*19, 0, 0
 
+  assertPrisoners: (test, counts) ->
+    for color, count of counts
+      actualCount = parseInt casper.evaluate(
+        (color) -> $(".prisoners.#{color}").val(),
+        color)
+      test.assertEqual actualCount, count,
+        "#{color} prisoners should be #{count}, is #{actualCount}"
+
 
 class ClientSideJsTest extends BrowserTest
   names: ['ClientSideJsTest', 'qunit', 'client']
@@ -460,7 +468,7 @@ class PassAndScoringTest extends BrowserTest
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
     clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
-    createGame BLACK_EMAIL, WHITE_EMAIL, ['.b.wb',
+    createGame BLACK_EMAIL, WHITE_EMAIL, ['....b',
                                           'bb.wb',
                                           '...wb',
                                           'wwwwb',
@@ -471,6 +479,28 @@ class PassAndScoringTest extends BrowserTest
       createLoginSession email
       casper.thenOpen serverUrl
       casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
+
+    # Black passes
+    goToGame BLACK_EMAIL
+    casper.thenClick '.pass_button'
+    # White plays (0,0)
+    goToGame WHITE_EMAIL
+    casper.thenClick pointSelector(0, 0)
+    casper.thenClick '.confirm_button'
+    # Black opens the game
+    goToGame BLACK_EMAIL, =>
+      # there are currently no prisoners
+      @assertPrisoners test, { black: 0, white: 0 }
+    casper.thenClick pointSelector(1, 0), ->
+      # the captured white stone is reflected in the prisoner counts
+      @assertPrisoners test, { black: 0, white: 1 }
+    casper.thenClick '.confirm_button'
+
+    # White plays one more stone (to get the game back to the state in which
+    # this test was originally written)
+    goToGame WHITE_EMAIL
+    casper.thenClick pointSelector(3, 0)
+    casper.thenClick '.confirm_button'
 
     # black opens the game and passes
     # (it should be black's turn since there are no actual moves in this game,
