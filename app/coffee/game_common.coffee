@@ -142,15 +142,10 @@ game_common.initialize = (sgf_object, newStoneColor) ->
     tableContentsStr += row_element
   $('.goban').append tableContentsStr
 
+  prisoners = { black: 0, white: 0 }
   if getInputSgf() != ''
     board_state = (('empty' for i in [0...size]) for j in [0...size])
     for node in sgf_object.gameTrees[0].nodes
-      if node.B
-        [x, y] = decodeSgfCoord node.B
-        board_state = go_rules.getNewState 'black', x, y, board_state
-      if node.W
-        [x, y] = decodeSgfCoord node.W
-        board_state = go_rules.getNewState 'white', x, y, board_state
       if node.AB
         coords = if Array.isArray(node.AB) then node.AB else [node.AB]
         for coordStr in coords
@@ -161,14 +156,26 @@ game_common.initialize = (sgf_object, newStoneColor) ->
         for coordStr in coords
           [x, y] = decodeSgfCoord coordStr
           board_state[y][x] = 'white'
+      if node.B
+        [x, y] = decodeSgfCoord node.B
+        result = go_rules.getNewStateAndCaptures('black', x, y, board_state)
+        board_state = result.state
+        prisoners.black += result.captures.black
+        prisoners.white += result.captures.white
+      if node.W
+        [x, y] = decodeSgfCoord node.W
+        result = go_rules.getNewStateAndCaptures('white', x, y, board_state)
+        board_state = result.state
+        prisoners.black += result.captures.black
+        prisoners.white += result.captures.white
     updateBoard board_state
 
   $('.score_block').empty().remove()
   $scoreBlock = $('<div class="score_block"></div>')
   $scoreBlock.append ('<div>Black prisoners: ' +
-    '<span class="prisoners black">0</span></div>')
+    '<span class="prisoners black">' + prisoners.black + '</span></div>')
   $scoreBlock.append ('<div>White prisoners: ' +
-    '<span class="prisoners white">0</span></div>')
+    '<span class="prisoners white">' + prisoners.white + '</span></div>')
   $('#content').append $scoreBlock
 
   return

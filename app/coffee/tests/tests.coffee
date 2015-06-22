@@ -107,7 +107,7 @@ test "prisoner counts set from SGF", (assert) ->
     assert.equal parseInt(actualBlack), black,
       "Black prisoners should be #{black}, is #{actualBlack}"
     actualWhite = $('.prisoners.white').text()
-    assert.equal parseInt(actualBlack), white,
+    assert.equal parseInt(actualWhite), white,
       "White prisoners should be #{white}, is #{actualWhite}"
 
   testSgf '(;SZ[3];AW[ab]B[aa])', 0, 0
@@ -400,6 +400,12 @@ QUnit.assert.illegal = (color, x, y, state, message) ->
       return
   @push false, true, false, message ? "move is illegal"
 
+QUnit.assert.captures = (color, x, y, state, black, white, message) ->
+  message or= "move makes capture"
+  {_, captures} = go_rules.getNewStateAndCaptures(color, x, y, state)
+  @equal captures.black, black, message + ": black"
+  @equal captures.white, white, message + ": white"
+
 test "playing on an existing stone is illegal", (assert) ->
   board = [ ['empty', 'black'], ['empty', 'empty'] ]
   assert.legal('white', 0, 1, board)
@@ -466,6 +472,13 @@ test "capturing with own last liberty does not remove own stones", (assert) ->
   ]
   b1 = go_rules.getNewState('white', 1, 2, board)
   assert.deepEqual(b1, expected, "group capture succeeded")
+
+test "capture counts are reported correctly", (assert) ->
+  board = [ ['black', 'black'], ['empty', 'white'] ]
+  assert.captures('black', 0, 1, board, 0, 1,
+    "Black captures one white stone")
+  assert.captures('white', 0, 1, board, 2, 0,
+    "White captures two black stones")
 
 test "helper function neighboringPoints", (assert) ->
   board = [

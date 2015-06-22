@@ -172,7 +172,7 @@ class BrowserTest
   assertPrisoners: (test, counts) ->
     for color, count of counts
       actualCount = parseInt casper.evaluate(
-        (color) -> $(".prisoners.#{color}").val(),
+        (color) -> $(".prisoners.#{color}").text(),
         color)
       test.assertEqual actualCount, count,
         "#{color} prisoners should be #{count}, is #{actualCount}"
@@ -491,7 +491,7 @@ class PassAndScoringTest extends BrowserTest
     goToGame BLACK_EMAIL, =>
       # there are currently no prisoners
       @assertPrisoners test, { black: 0, white: 0 }
-    casper.thenClick pointSelector(1, 0), ->
+    casper.thenClick pointSelector(1, 0), =>
       # the captured white stone is reflected in the prisoner counts
       @assertPrisoners test, { black: 0, white: 1 }
     casper.thenClick '.confirm_button'
