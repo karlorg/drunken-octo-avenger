@@ -338,6 +338,34 @@ class PlaceStonesTest extends BrowserTest
 
 registerTest new PlaceStonesTest
 
+class BasicChatTest extends BrowserTest
+  names: ['BasicChatTest']
+  description: "Very basic chat functionality test"
+  numTests: 2
+  testBody: (test) =>
+    ONE_EMAIL = 'player@one.com'
+    TWO_EMAIL = 'playa@dos.es'
+
+    clearGamesForPlayer ONE_EMAIL
+    clearGamesForPlayer TWO_EMAIL
+    createGame ONE_EMAIL, TWO_EMAIL
+
+    # -- PLAYER ONE
+    # player one logs in and gets the front page;
+    # should see a page listing games
+    createLoginSession ONE_EMAIL
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 1, 0
+
+    # select the most recent game
+    casper.thenClick (@lastGameSelector true), =>
+      # on the game page is a table with class 'goban'
+      test.assertExists '.game-chat', 'The game chat does exist.'
+
+registerTest new BasicChatTest
+
+
+
 class GameInterfaceTest extends BrowserTest
   names: ['GameInterfaceTest', 'game']
   description: "Game interface"
