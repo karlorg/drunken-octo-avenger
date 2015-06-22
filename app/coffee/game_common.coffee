@@ -163,6 +163,14 @@ game_common.initialize = (sgf_object, newStoneColor) ->
           board_state[y][x] = 'white'
     updateBoard board_state
 
+  $('.score_block').empty().remove()
+  $scoreBlock = $('<div class="score_block"></div>')
+  $scoreBlock.append ('<div>Black prisoners: ' +
+    '<span class="prisoners black">0</span></div>')
+  $scoreBlock.append ('<div>White prisoners: ' +
+    '<span class="prisoners white">0</span></div>')
+  $('#content').append $scoreBlock
+
   return
 
 aCode = 'a'.charCodeAt(0)

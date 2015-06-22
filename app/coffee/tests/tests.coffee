@@ -99,6 +99,25 @@ test "setup stones in SGF (tags AB & AW)", (assert) ->
                [ 'empty', 'black', 'empty' ] ]
   assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
 
+test "prisoner counts set from SGF", (assert) ->
+  testSgf = (sgf, black, white) ->
+    setInputSgf sgf
+    tesuji_charm.game_common.initialize()
+    actualBlack = $('.prisoners.black').text()
+    assert.equal parseInt(actualBlack), black,
+      "Black prisoners should be #{black}, is #{actualBlack}"
+    actualWhite = $('.prisoners.white').text()
+    assert.equal parseInt(actualBlack), white,
+      "White prisoners should be #{white}, is #{actualWhite}"
+
+  testSgf '(;SZ[3];AW[ab]B[aa])', 0, 0
+  # regression: score elements are not duplicated
+  testSgf '(;SZ[3];AW[ab]B[aa])', 0, 0
+  assert.equal $('.prisoners.black').length, 1,
+    "only one black prisoner element"
+  testSgf '(;SZ[3];AW[ab]B[aa];W[ba])', 1, 0
+  testSgf '(;SZ[3];AW[aa]AB[ba]B[ab])', 0, 1
+
 test "helper function readBoardState", (assert) ->
   setInputSgf '(;SZ[3];B[ca];W[bc])'
   tesuji_charm.game_common.initialize()
