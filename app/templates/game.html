@@ -162,6 +162,20 @@
 </form>
 {% endif %}  <!-- if on_turn -->
 
+
+<div class="game-chat">
+    <div class="comments">
+    </div>
+<form id="chat-form"
+      method="POST" action="{{ url_for('comment', game_no=game_no) }}">
+    {{ chatform.hidden_tag() }}
+    {{ chatform.comment.label }} {{ chatform.comment(size=1000) }}
+    <button type="submit"
+            class="comment_button" name='comment_button'>Comment</button>
+</form>
+
+</div>
+
 {% endblock %}
 
 {% block page_scripts %}

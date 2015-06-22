@@ -68,10 +68,20 @@ def game(game_no):
     move_no = go.next_move_no(sgf)
     form_data = {'game_no': game.id, 'move_no': move_no, 'data': sgf}
     form = PlayStoneForm(data=form_data)
+    chatform = ChatForm(data=form_data)
     return render_template_with_email(
         "game.html",
-        form=form, game_no=game_no,
+        form=form, chatform=chatform, game_no=game_no,
         on_turn=is_your_turn, with_scoring=is_passed_twice)
+
+@app.route('/chat/<int:game_no>', methods=['POST'])
+def comment(game_no):
+    try:
+        game = db.session.query(Game).filter_by(id=game_no).one()
+    except SQLAlchemyError:
+        flash("Game #{} not found".format(game_no))
+        return redirect('/')
+    return ''
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
@@ -481,3 +491,8 @@ class PlayStoneForm(Form):
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
     data = HiddenField("data")
     response = HiddenField("response", validators=[DataRequired()])
+
+class ChatForm(Form):
+    game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    comment = StringField('Comment', validators=[DataRequired()])
