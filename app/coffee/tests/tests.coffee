@@ -69,6 +69,15 @@ test 'init function sets request and logout callbacks', ->
 setInputSgf = (sgf) -> $('input#data').val sgf
 getResponseSgf = -> $('input#response').val()
 
+QUnit.assert.prisonerCounts = (black, white, message = null) ->
+  message = if message then "#{message}: " else ''
+  actualBlack = $('.prisoners.black').text()
+  @equal parseInt(actualBlack), black,
+    "#{message}Black prisoners should be #{black}, is #{actualBlack}"
+  actualWhite = $('.prisoners.white').text()
+  @equal parseInt(actualWhite), white,
+    "#{message}White prisoners should be #{white}, is #{actualWhite}"
+
 # ============================================================================
 
 
@@ -103,12 +112,7 @@ test "prisoner counts set from SGF", (assert) ->
   testSgf = (sgf, black, white) ->
     setInputSgf sgf
     tesuji_charm.game_common.initialize()
-    actualBlack = $('.prisoners.black').text()
-    assert.equal parseInt(actualBlack), black,
-      "Black prisoners should be #{black}, is #{actualBlack}"
-    actualWhite = $('.prisoners.white').text()
-    assert.equal parseInt(actualWhite), white,
-      "White prisoners should be #{white}, is #{actualWhite}"
+    assert.prisonerCounts(black, white)
 
   testSgf '(;SZ[3];AW[ab]B[aa])', 0, 0
   # regression: score elements are not duplicated
@@ -216,13 +220,26 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   assert.notOk $('input#response').val().match(/B\[bb]/),
     "SGF response does not contain black stone"
 
-test "captured stones are removed from the board", (assert) ->
+test "captured stones are removed and prisoner counts updated", (assert) ->
   setInputSgf '(;SZ[3];B[ba];W[aa])'
   tesuji_charm.game_basic.initialize()
+  assert.prisonerCounts 0, 0
   # now make the capture
   $pointAt(0, 1).click()
   # corner should be blank now
   assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
+  assert.prisonerCounts 0, 1
+
+test "prisoner counts with pre-existing prisoners", (assert) ->
+  setInputSgf ('(;SZ[5];AB[ab][ee]AW[aa][de]' +
+               ';B[ba];W[ed]' +
+               ';AB[ce][dd])')
+  tesuji_charm.game_basic.initialize()
+  assert.prisonerCounts 1, 1
+  $pointAt(2, 2).click()
+  assert.prisonerCounts 1, 1
+  $pointAt(4, 4).click()
+  assert.prisonerCounts 1, 2
 
 test "correct color after resume with two passes (black first)", (assert) ->
   setInputSgf '(;SZ[3];B[];W[];TCRESUME[])'

@@ -463,7 +463,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 34
+  numTests: 38
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -503,8 +503,6 @@ class PassAndScoringTest extends BrowserTest
     casper.thenClick '.confirm_button'
 
     # black opens the game and passes
-    # (it should be black's turn since there are no actual moves in this game,
-    # only setup stones)
     goToGame BLACK_EMAIL
     casper.thenClick '.pass_button'
     # for now we're not defining where the player should end up after passing.

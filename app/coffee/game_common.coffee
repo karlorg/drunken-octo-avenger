@@ -73,14 +73,14 @@ game_common.parseCoordClass = parseCoordClass = ($obj) ->
   classStr = $obj.attr "class"
   [_, rowStr] = rowRe.exec classStr
   [_, colStr] = colRe.exec classStr
-  return [parseInt(rowStr, 10), parseInt(colStr, 10)]
+  return [parseInt(colStr, 10), parseInt(rowStr, 10)]
 
 game_common.readBoardState = readBoardState = ->
   "generate a board state object based on the loaded page contents"
   result = []
   $('.goban .gopoint').each ->
     $this = $(this)
-    [row, col] = parseCoordClass $this
+    [col, row] = parseCoordClass $this
     result[row] ?= []
     result[row][col] = colorFromDom $this
   return result

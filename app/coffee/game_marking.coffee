@@ -28,7 +28,7 @@ game_marking.initialize = ->
 
   $('.goban .gopoint').click ->
     return unless game_common.hasCoordClass $(this)
-    [row, col] = game_common.parseCoordClass $(this)
+    [col, row] = game_common.parseCoordClass $(this)
     markStonesAround col, row
     setupScoring()
 

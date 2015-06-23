@@ -20,43 +20,34 @@ go_rules = tesuji_charm.go_rules
 # module variables
 
 initialBoardState = null
+initialSgfObject = null
+initialBlackPrisoners = null
+initialWhitePrisoners = null
 newStoneColor = null
 
 game_basic.initialize = ->
 
   if getInputSgf()
-    sgfObject = smartgame.parse getInputSgf()
+    initialSgfObject = smartgame.parse getInputSgf()
   else
-    sgfObject = smartgame.parse '(;)'
+    initialSgfObject = smartgame.parse '(;)'
 
-  newStoneColor = nextPlayerInSgfObject sgfObject
+  newStoneColor = nextPlayerInSgfObject initialSgfObject
 
-  game_common.initialize(sgfObject, newStoneColor)
+  game_common.initialize(initialSgfObject, newStoneColor)
   initialBoardState = game_common.readBoardState()
+  initialBlackPrisoners = parseInt $('.prisoners.black').text()
+  initialWhitePrisoners = parseInt $('.prisoners.white').text()
 
   $('button.confirm_button').prop 'disabled', true
 
   $('.goban .gopoint').click ->
     return unless game_common.hasCoordClass $(this)
-    [row, col] = game_common.parseCoordClass $(this)
-
-    try
-      newBoardState = go_rules.getNewState(
-        newStoneColor, col, row, initialBoardState)
-    catch error
-      if error.message is 'illegal move'
-        return
-      else
-        throw error
-    game_common.updateBoard newBoardState
-
-    newSgfObject = sgfObjectWithMoveAdded sgfObject, col, row
-    setResponseSgf smartgame.generate(newSgfObject)
-
-    $('button.confirm_button').prop 'disabled', false
+    [col, row] = game_common.parseCoordClass $(this)
+    setNewStoneAt col, row
 
   $('.pass_button').click ->
-    passSgfObject = sgfObjectWithMoveAdded sgfObject
+    passSgfObject = sgfObjectWithMoveAdded initialSgfObject
     setResponseSgf smartgame.generate(passSgfObject)
     $('#main_form').get(0).submit()
 
@@ -94,6 +85,28 @@ _lastPassInRun = (reversedNodes) ->
   unless lastPass
     throw new Error("no pass found before TCRESUME")
   return lastPass
+
+setNewStoneAt = (x, y) ->
+  "update everything necessary for the new stone at (x, y)"
+  try
+    result = go_rules.getNewStateAndCaptures(
+      newStoneColor, x, y, initialBoardState)
+  catch error
+    if error.message is 'illegal move'
+      return
+    else
+      throw error
+  newBoardState = result.state
+  game_common.updateBoard newBoardState
+
+  newSgfObject = sgfObjectWithMoveAdded initialSgfObject, x, y
+  setResponseSgf smartgame.generate(newSgfObject)
+
+  captures = result.captures
+  $('.prisoners.black').text initialBlackPrisoners + captures.black
+  $('.prisoners.white').text initialWhitePrisoners + captures.white
+
+  $('button.confirm_button').prop 'disabled', false
 
 sgfObjectWithMoveAdded = (sgfObject, col=null, row=null) ->
   if col != null and row != null
