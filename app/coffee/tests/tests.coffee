@@ -304,7 +304,11 @@ test "mixed scoring board", (assert) ->
 test "clicking live stones makes them dead, " + \
      "clicking again brings them back", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac])'
+  # b.w
+  # .b.  (white captured at ab)
+  # bbw
   tesuji_charm.game_marking.initialize()
+  assert.prisonerCounts 0, 1, "initial layout"
 
   $pointAt(1, 1).click()
   assert.ok isPointBlackDead($pointAt(1, 1)),
@@ -317,6 +321,7 @@ test "clicking live stones makes them dead, " + \
     "(0, 1) becomes white score with black stones dead"
   assert.ok isPointWhiteScore($pointAt(2, 1)),
     "(2, 1) becomes white score with black stones dead"
+  assert.prisonerCounts 4, 1, "black marked dead"
 
   $pointAt(1, 1).click()
   assert.ok isPointBlack($pointAt(1, 1)),
@@ -329,6 +334,7 @@ test "clicking live stones makes them dead, " + \
     "(0, 1) counts for black again with black stones restored"
   assert.notOk isPointWhiteScore($pointAt(2, 1)),
     "(2, 1) is neutral again with black stones restored"
+  assert.prisonerCounts 0, 1, "black stones revived"
 
 test "killing stones revives neighbouring enemy groups " + \
      "automatically", (assert) ->

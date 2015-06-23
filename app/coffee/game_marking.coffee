@@ -16,13 +16,17 @@ setResponseSgf = game_common.setResponseSgf
 go_rules = tesuji_charm.go_rules
 
 
-originalSgfObject = null
+initialSgfObject = null
+initialBlackPrisoners = null
+initialWhitePrisoners = null
 
 
 game_marking.initialize = ->
   sgfObject = smartgame.parse (getInputSgf() or '(;)')
-  originalSgfObject = game_common.cloneSgfObject sgfObject
+  initialSgfObject = game_common.cloneSgfObject sgfObject
   game_common.initialize sgfObject
+  initialBlackPrisoners = game_common.getBlackPrisoners()
+  initialWhitePrisoners = game_common.getWhitePrisoners()
   setInitialDead sgfObject
   setupScoring()
 
@@ -33,7 +37,7 @@ game_marking.initialize = ->
     setupScoring()
 
   $('.resume_button').click ->
-    resumeSgfObject = game_common.cloneSgfObject originalSgfObject
+    resumeSgfObject = game_common.cloneSgfObject initialSgfObject
     resumeNode = { TCRESUME: [] }
     resumeSgfObject.gameTrees[0].nodes.push resumeNode
     setResponseSgf smartgame.generate(resumeSgfObject)
@@ -58,17 +62,21 @@ setInitialDead = (sgfObject) ->
 # setupScoring and its helpers
 
 setupScoring = ->
-  "set/remove scoring classes on the DOM based on current live/dead state of
-  all stones"
+  "set/remove scoring classes and prisoner counts on the DOM, and
+  response SGF, based on current live/dead state of all stones"
   state = game_common.readBoardState()
   for region in getEmptyRegions state
-    [col, row] = region[0]
     boundary = go_rules.boundingColor region, state
     setRegionScores region, switch boundary
       when 'black' then 'blackscore'
       when 'white' then 'whitescore'
       when 'neither' then 'dame'
       else throw new Error "invalid boundary color: '#{boundary}'"
+
+  prisoners = countPrisoners state
+  game_common.setBlackPrisoners (initialBlackPrisoners + prisoners.black)
+  game_common.setWhitePrisoners (initialWhitePrisoners + prisoners.white)
+
   updateForm()
   return
 
@@ -95,6 +103,17 @@ setRegionScores = (region, scoreColor) ->
     if game_common.colorFromDom($point) == 'empty'
       game_common.setPointColor $point, scoreColor
   return
+
+countPrisoners = (state) ->
+  black = 0
+  white = 0
+  for rowArray in state
+    for color in rowArray
+      if color is 'blackdead'
+        black += 1
+      else if color is 'whitedead'
+        white += 1
+  return black: black, white: white
 
 # markStonesAround and its helpers
 
