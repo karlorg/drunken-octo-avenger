@@ -100,7 +100,7 @@ isHandicapPoint = (size, row, column) ->
 
 game_common.initialize = (sgf_object, newStoneColor) ->
   $('.goban').remove()
-  $('#content').append '<div class="goban"></div>'
+  $('#board').append '<div class="goban"></div>'
 
   unless sgf_object
     if getInputSgf() != ''

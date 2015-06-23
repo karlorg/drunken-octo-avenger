@@ -132,11 +132,33 @@
   box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
 }
 
+#board-area{
+   float:left;
+   background: #598385;
+}
+
+.game-chat{
+   width: 50%;
+   float: left;
+   background: #C96253;
+}
+
+.chat-comments{
+    border: 1px solid black;
+}
+
+.chat-comment{
+    border: 1px solid #CFBA48;
+}
+
+#chat-form{
+}
+
 </style>
 
-
-<div id="content"></div>
-
+<div id="content">
+<div id="board-area">
+<div id="board"></div>
 {% if on_turn %}
 <form id="main_form"
       method="POST" action="{{ url_for('play', game_no=game_no) }}">
@@ -162,6 +184,7 @@
 </form>
 {% endif %}  <!-- if on_turn -->
 
+</div> <!-- end of board-area -->
 
 <div class="game-chat">
     <div class="chat-comments">
@@ -172,12 +195,13 @@
 <form id="chat-form"
       method="POST" action="{{ url_for('comment', game_no=game_no) }}">
     {{ chatform.hidden_tag() }}
-    {{ chatform.comment.label }} {{ chatform.comment(size=100) }}
+    {{ chatform.comment.label }} {{ chatform.comment() }}
     <button type="submit"
             class="comment_button" name='comment_button'>Comment</button>
 </form>
 
-</div>
+</div><!-- end of game-chat -->
+</div><!-- end of content -->
 
 {% endblock %}
 
