@@ -341,7 +341,7 @@ registerTest new PlaceStonesTest
 class BasicChatTest extends BrowserTest
   names: ['BasicChatTest']
   description: "Very basic chat functionality test"
-  numTests: 5
+  numTests: 11
   testBody: (test) =>
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
@@ -386,7 +386,7 @@ class BasicChatTest extends BrowserTest
 
 registerTest new BasicChatTest
 
-
+# TODO A test which attempts a XSS attack, the script should be escaped.
 
 class GameInterfaceTest extends BrowserTest
   names: ['GameInterfaceTest', 'game']

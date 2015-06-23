@@ -8,6 +8,7 @@ from collections import namedtuple
 import logging
 import time
 import multiprocessing
+from datetime import datetime
 
 from flask import (
         Flask, abort, flash, redirect, render_template, request,
@@ -62,6 +63,7 @@ def game(game_no):
         flash("Game #{} not found".format(game_no))
         return redirect('/')
     sgf = game.sgf
+    comments = game.comments
     is_your_turn = is_players_turn_in_game(game)
     is_passed_twice = go.is_sgf_passed_twice(sgf)
     # TODO: eliminate move_no once the client can work that out from sgf
@@ -72,7 +74,7 @@ def game(game_no):
     return render_template_with_email(
         "game.html",
         form=form, chatform=chatform, game_no=game_no,
-        on_turn=is_your_turn, with_scoring=is_passed_twice)
+        on_turn=is_your_turn, with_scoring=is_passed_twice, comments=comments)
 
 @app.route('/chat/<int:game_no>', methods=['POST'])
 def comment(game_no):
@@ -81,7 +83,15 @@ def comment(game_no):
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
-    return ''
+    form = ChatForm()
+    if form.validate_on_submit():
+        comment = GameComment(game, form.comment.data)
+        db.session.add(comment)
+        db.session.commit()
+        return redirect(url_for('status'))
+    flash("Comment not validated!")
+    print(form.errors)
+    return redirect(url_for('challenge'))
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
@@ -476,6 +486,18 @@ class Game(db.Model):
         return "<Game {no}, {b} vs. {w}>".format(
             no=self.id, b=self.black, w=self.white)
 
+class GameComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pub_date = db.Column(db.DateTime)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
+    game = db.relationship('Game', 
+                           backref=db.backref('comments', lazy='dynamic'))
+    content = db.Column(db.Text())
+
+    def __init__(self, game, content, pub_date=None):
+        self.game = game
+        self.content = content
+        self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
 
 # forms
 
@@ -494,5 +516,6 @@ class PlayStoneForm(Form):
 
 class ChatForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
-    move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    # move_no = HiddenInteger("move_no", validators=[DataRequired()])
     comment = StringField('Comment', validators=[DataRequired()])
+    # created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)

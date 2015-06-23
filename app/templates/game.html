@@ -164,12 +164,15 @@
 
 
 <div class="game-chat">
-    <div class="comments">
+    <div class="chat-comments">
+      {% for comment in comments %}
+        <div class="chat-comment">{{comment.content}}</div>
+      {% endfor %}
     </div>
 <form id="chat-form"
       method="POST" action="{{ url_for('comment', game_no=game_no) }}">
     {{ chatform.hidden_tag() }}
-    {{ chatform.comment.label }} {{ chatform.comment(size=1000) }}
+    {{ chatform.comment.label }} {{ chatform.comment(size=100) }}
     <button type="submit"
             class="comment_button" name='comment_button'>Comment</button>
 </form>
