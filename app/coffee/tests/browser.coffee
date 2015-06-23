@@ -628,8 +628,6 @@ class PassAndScoringTest extends BrowserTest
       test.assertDoesntExist (@lastGameSelector true)
       test.assertDoesntExist (@lastGameSelector false)
 
-    # TODO: add ability to view finished games, verify scores, winner etc.
-
 registerTest new PassAndScoringTest
 
 
@@ -658,6 +656,41 @@ class ResignTest extends BrowserTest
 registerTest new ResignTest
 
 
+class FinishedGamesTest extends BrowserTest
+  names: ['FinishedGamesTest', 'finished', 'fin']
+  description: "finished games page"
+  numTests: 4
+  testBody: (test) =>
+    BLACK_EMAIL = "black@black.com"
+    WHITE_EMAIL = "white@white.com"
+    clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
+    setupFinishedGame BLACK_EMAIL, WHITE_EMAIL
+
+    goToGame = (email, thenFn=(->)) =>
+      createLoginSession email
+      casper.thenOpen serverUrl
+      casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
+
+    # mark dead stones and finish game
+    goToGame BLACK_EMAIL
+    casper.thenClick pointSelector(1, 2)
+    casper.thenClick pointSelector(12, 2)
+    casper.thenClick pointSelector(7, 7)
+    casper.thenClick pointSelector(12, 8)
+    casper.thenClick pointSelector(8, 17), =>
+    # check scores to make sure we hit the right points there
+      @assertPrisoners test, black: 14, white: 18
+      @assertScores test, black: 117, white: 89
+    casper.thenClick '.confirm_button'
+    goToGame WHITE_EMAIL
+    casper.thenClick '.confirm_button'
+
+    casper.thenOpen serverUrl
+    casper.thenClick '.finished_games_link'
+
+registerTest new FinishedGamesTest
+
+
 # helper functions
 
 clearGamesForPlayer = (email) ->
@@ -673,6 +706,13 @@ createGame = (black_email, white_email, stones=[]) ->
       'black_email': black_email
       'white_email': white_email
       'stones': JSON.stringify stones
+
+setupFinishedGame = (blackEmail, whiteEmail) ->
+  casper.thenOpen "#{serverUrl}/testing_setup_finished_game",
+    method: 'post'
+    data:
+      black_email: blackEmail
+      white_email: whiteEmail
 
 createLoginSession = (email) ->
   "Add steps to the stack to create a login session on the server."
