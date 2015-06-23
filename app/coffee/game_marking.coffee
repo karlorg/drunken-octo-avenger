@@ -25,6 +25,8 @@ game_marking.initialize = ->
   sgfObject = smartgame.parse (getInputSgf() or '(;)')
   initialSgfObject = game_common.cloneSgfObject sgfObject
   game_common.initialize sgfObject
+  addScoresToDom()
+
   initialBlackPrisoners = game_common.getBlackPrisoners()
   initialWhitePrisoners = game_common.getWhitePrisoners()
   setInitialDead sgfObject
@@ -42,6 +44,18 @@ game_marking.initialize = ->
     resumeSgfObject.gameTrees[0].nodes.push resumeNode
     setResponseSgf smartgame.generate(resumeSgfObject)
     $('#main_form').submit()
+
+addScoresToDom = ->
+  $('.score_block').append(
+    '<div>Black score: <span class="score black" /></div>')
+  $('.score_block').append(
+    '<div>White score: <span class="score white" /></div>')
+  return
+
+setBlackScore = (score) ->
+  $('.score.black').text score
+setWhiteScore = (score) ->
+  $('.score.white').text score
 
 # setInitialDead
 
@@ -62,7 +76,7 @@ setInitialDead = (sgfObject) ->
 # setupScoring and its helpers
 
 setupScoring = ->
-  "set/remove scoring classes and prisoner counts on the DOM, and
+  "set/remove scoring classes and score counts on the DOM, and
   response SGF, based on current live/dead state of all stones"
   state = game_common.readBoardState()
   for region in getEmptyRegions state
@@ -74,8 +88,13 @@ setupScoring = ->
       else throw new Error "invalid boundary color: '#{boundary}'"
 
   prisoners = countPrisoners state
-  game_common.setBlackPrisoners (initialBlackPrisoners + prisoners.black)
-  game_common.setWhitePrisoners (initialWhitePrisoners + prisoners.white)
+  totalBlackPrisoners = initialBlackPrisoners + prisoners.black
+  totalWhitePrisoners = initialWhitePrisoners + prisoners.white
+  game_common.setBlackPrisoners totalBlackPrisoners
+  game_common.setWhitePrisoners totalWhitePrisoners
+  territories = countTerritories()
+  setBlackScore territories.black + totalWhitePrisoners
+  setWhiteScore territories.white + totalBlackPrisoners
 
   updateForm()
   return
@@ -113,6 +132,16 @@ countPrisoners = (state) ->
         black += 1
       else if color is 'whitedead'
         white += 1
+  return black: black, white: white
+
+countTerritories = ->
+  black = 0
+  white = 0
+  $('.gopoint').each ->
+    if game_common.isBlackScore($(this))
+      black += 1
+    else if game_common.isWhiteScore($(this))
+      white += 1
   return black: black, white: white
 
 # markStonesAround and its helpers

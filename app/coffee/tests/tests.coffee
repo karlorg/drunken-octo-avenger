@@ -78,6 +78,15 @@ QUnit.assert.prisonerCounts = (black, white, message = null) ->
   @equal parseInt(actualWhite), white,
     "#{message}White prisoners should be #{white}, is #{actualWhite}"
 
+QUnit.assert.scores = (black, white, message = null) ->
+  message = if message then "#{message}: " else ''
+  actualBlack = $('.score.black').text()
+  @equal parseInt(actualBlack), black,
+    "#{message}Black score should be #{black}, is #{actualBlack}"
+  actualWhite = $('.score.white').text()
+  @equal parseInt(actualWhite), white,
+    "#{message}White score should be #{white}, is #{actualWhite}"
+
 # ============================================================================
 
 
@@ -309,6 +318,7 @@ test "clicking live stones makes them dead, " + \
   # bbw
   tesuji_charm.game_marking.initialize()
   assert.prisonerCounts 0, 1, "initial layout"
+  assert.scores 2, 0, "initial layout"
 
   $pointAt(1, 1).click()
   assert.ok isPointBlackDead($pointAt(1, 1)),
@@ -322,6 +332,7 @@ test "clicking live stones makes them dead, " + \
   assert.ok isPointWhiteScore($pointAt(2, 1)),
     "(2, 1) becomes white score with black stones dead"
   assert.prisonerCounts 4, 1, "black marked dead"
+  assert.scores 1, 11, "black marked dead"
 
   $pointAt(1, 1).click()
   assert.ok isPointBlack($pointAt(1, 1)),
@@ -335,6 +346,7 @@ test "clicking live stones makes them dead, " + \
   assert.notOk isPointWhiteScore($pointAt(2, 1)),
     "(2, 1) is neutral again with black stones restored"
   assert.prisonerCounts 0, 1, "black stones revived"
+  assert.scores 2, 0, "black stones revived"
 
 test "killing stones revives neighbouring enemy groups " + \
      "automatically", (assert) ->

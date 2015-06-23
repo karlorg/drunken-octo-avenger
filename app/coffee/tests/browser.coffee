@@ -177,6 +177,14 @@ class BrowserTest
       test.assertEqual actualCount, count,
         "#{color} prisoners should be #{count}, is #{actualCount}"
 
+  assertScores: (test, scores) ->
+    for color, score of scores
+      actualScore = parseInt casper.evaluate(
+        (color) -> $(".score.#{color}").text(),
+        color)
+      test.assertEqual actualScore, score,
+        "#{color} score should be #{score}, is #{actualScore}"
+
 
 class ClientSideJsTest extends BrowserTest
   names: ['ClientSideJsTest', 'qunit', 'client']
@@ -529,6 +537,7 @@ class PassAndScoringTest extends BrowserTest
         blackscore: 19*19 - 25 + 1
         whitescore: 0
       @assertPrisoners test, black: 0, white: 1
+      @assertScores test, black: 19*19 - 25 + 2, white: 0
     # clicking an empty point does nothing
     casper.thenClick (pointSelector 0, 0), =>
       @assertGeneralPointCounts test,
@@ -549,6 +558,7 @@ class PassAndScoringTest extends BrowserTest
         blackdead: 3
         black: 9
       @assertPrisoners test, black: 3, white: 1
+      @assertScores test, black: 19*19 - 25 + 1, white: 12
 
     # we click the white group; the neighbouring dead black stones are restored
     # automatically
