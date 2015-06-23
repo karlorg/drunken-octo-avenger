@@ -36,8 +36,8 @@ game_basic.initialize = ->
 
   game_common.initialize(initialSgfObject, newStoneColor)
   initialBoardState = game_common.readBoardState()
-  initialBlackPrisoners = parseInt $('.prisoners.black').text()
-  initialWhitePrisoners = parseInt $('.prisoners.white').text()
+  initialBlackPrisoners = game_common.getBlackPrisoners()
+  initialWhitePrisoners = game_common.getWhitePrisoners()
 
   $('button.confirm_button').prop 'disabled', true
 
@@ -103,8 +103,8 @@ setNewStoneAt = (x, y) ->
   setResponseSgf smartgame.generate(newSgfObject)
 
   captures = result.captures
-  $('.prisoners.black').text initialBlackPrisoners + captures.black
-  $('.prisoners.white').text initialWhitePrisoners + captures.white
+  game_common.setBlackPrisoners (initialBlackPrisoners + captures.black)
+  game_common.setWhitePrisoners (initialWhitePrisoners + captures.white)
 
   $('button.confirm_button').prop 'disabled', false
 

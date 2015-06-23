@@ -14,6 +14,13 @@ game_common.getInputSgf = getInputSgf = -> $('input#data').val()
 game_common.setResponseSgf = setResponseSgf = (sgf) ->
   $('#response').val sgf
 
+game_common.getBlackPrisoners = -> parseInt($('.prisoners.black').text())
+game_common.getWhitePrisoners = -> parseInt($('.prisoners.white').text())
+game_common.setBlackPrisoners = setBlackPrisoners = (count) ->
+  $('.prisoners.black').text count
+game_common.setWhitePrisoners = setWhitePrisoners = (count) ->
+  $('.prisoners.white').text count
+
 # setPointColor and helpers
 
 game_common.setPointColor = setPointColor = ($td, color) ->
@@ -184,8 +191,8 @@ setupState = (sgf_object) ->
       prisoners.white += result.captures.white
   updateBoard board_state
 
-  $('.prisoners.black').text(prisoners.black)
-  $('.prisoners.white').text(prisoners.white)
+  setBlackPrisoners prisoners.black
+  setWhitePrisoners prisoners.white
   return
 
 aCode = 'a'.charCodeAt(0)
