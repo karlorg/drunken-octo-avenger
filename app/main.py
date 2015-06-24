@@ -43,6 +43,15 @@ if app.debug:
 db = SQLAlchemy(app)
 
 
+def redirect_url(default='front_page'):
+    """ A simple helper function to redirect the user back to where they came
+        from. See: http://flask.pocoo.org/docs/0.10/reqcontext/ and also
+        here: http://stackoverflow.com/questions/14277067/redirect-back-in-flask
+    """
+    return request.args.get('next') or \
+           request.referrer or \
+           url_for(default)
+
 # Views
 #
 # Since view functions tend to have side-effects and to depend on global state,
@@ -88,10 +97,9 @@ def comment(game_no):
         comment = GameComment(game, form.comment.data)
         db.session.add(comment)
         db.session.commit()
-        return redirect(url_for('status'))
+        return redirect(redirect_url())
     flash("Comment not validated!")
-    print(form.errors)
-    return redirect(url_for('challenge'))
+    return redirect(redirect_url())
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
@@ -106,7 +114,7 @@ def play(game_no):
     arguments = request.form.to_dict()
     if 'resign_button' in arguments:
         game.finished = True
-        return ''
+        return redirect(redirect_url())
     try:
         go.check_continuation(old_sgf=game.sgf,
                               new_sgf=arguments['response'],
@@ -120,7 +128,7 @@ def play(game_no):
     game.sgf = arguments['response']
     _check_gameover_and_update(game)
     db.session.commit()
-    return ''
+    return redirect(redirect_url())
 
 def _check_gameover_and_update(game):
     """If game is over, update the appropriate fields."""
