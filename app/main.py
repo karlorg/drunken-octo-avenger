@@ -82,8 +82,11 @@ def game(game_no):
     chatform = ChatForm(data=form_data)
     return render_template_with_email(
         "game.html",
+        black_email=game.black,
+        white_email=game.white,
         form=form, chatform=chatform, game_no=game_no,
-        on_turn=is_your_turn, with_scoring=is_passed_twice, comments=comments)
+        on_turn=is_your_turn, with_scoring=is_passed_twice,
+        comments=comments)
 
 @app.route('/chat/<int:game_no>', methods=['POST'])
 def comment(game_no):
@@ -92,9 +95,15 @@ def comment(game_no):
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
+    try:
+        current_email = logged_in_email()
+    except NoLoggedInPlayerException:
+        flash("You must be logged in to comment.")
+        return redirect(redirect_url())
+
     form = ChatForm()
     if form.validate_on_submit():
-        comment = GameComment(game, form.comment.data)
+        comment = GameComment(game, form.comment.data, current_email)
         db.session.add(comment)
         db.session.commit()
         return redirect(redirect_url())
@@ -497,14 +506,16 @@ class Game(db.Model):
 class GameComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pub_date = db.Column(db.DateTime)
+    speaker = db.Column(db.String(length=254))
     game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
     game = db.relationship('Game', 
                            backref=db.backref('comments', lazy='dynamic'))
     content = db.Column(db.Text())
 
-    def __init__(self, game, content, pub_date=None):
+    def __init__(self, game, content, speaker, pub_date=None):
         self.game = game
         self.content = content
+        self.speaker = speaker
         self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
 
 # forms
@@ -526,4 +537,3 @@ class ChatForm(Form):
     game_no = HiddenInteger("game_no", validators=[DataRequired()])
     # move_no = HiddenInteger("move_no", validators=[DataRequired()])
     comment = StringField('Comment', validators=[DataRequired()])
-    # created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)

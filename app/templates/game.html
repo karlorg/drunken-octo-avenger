@@ -147,8 +147,23 @@
     border: 1px solid black;
 }
 
-.chat-comment{
+.chat-comment-anonymous{
     border: 1px solid #CFBA48;
+    color: #5F215A;
+    background: #FFEE91;
+
+}
+
+.chat-comment-black{
+    border: 1px solid #CFBA48;
+    color: #952D2D;
+    background: #B0E1DF;
+}
+
+.chat-comment-white{
+    border: 1px solid #CFBA48;
+    color: #B0E1DF;
+    background: #952D2D;
 }
 
 #chat-form{
@@ -189,7 +204,14 @@
 <div class="game-chat">
     <div class="chat-comments">
       {% for comment in comments %}
-        <div class="chat-comment">{{comment.content}}</div>
+        {% if comment.speaker == black_email %}
+           <div class="chat-comment-black">
+        {% elif comment.speaker == white_email %}
+           <div class="chat-comment-white">
+        {% else %}
+           <div class="chat-comment-anonymous">
+        {% endif %}
+        {{comment.content}}</div>
       {% endfor %}
     </div>
 <form id="chat-form"
