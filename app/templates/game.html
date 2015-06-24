@@ -1,51 +1,229 @@
 {% extends "base.html" %}
 
 {% block content %}
-<table class="goban">
-    {% for row in goban %}
-    <tr>
-        {% set rowloop = loop %}
-        {% for point in row %}
-        <td class="{{ point['classes'] }}">
-            {% if on_turn %}
-            <a href="#"><img src="{{ point['img'] }}" /></a>
-            {% else %}
-            <img src="{{ point['img'] }}" />
-            {% endif %}
-        </td>
-        {% endfor %}
-    </tr>
-    {% endfor %}
-</table>
-<form method="POST" action="{{ url_for('playstone') }}">
+
+{% if size is undefined %}
+    {% set size = 19 %}
+{% endif %}
+
+<style>
+
+.goban {
+    width: {{20 * size}}px;
+    height: {{20 * size}}px;
+    margin: 10px;
+    border: 2px solid;
+    padding: 10px;
+    resize: both;
+    overflow: auto;
+}
+
+.goban-row{
+    margin: 0;
+    height: {{100.0 / size}}%;
+    width: 100%;
+}
+
+.gopoint {
+   float: left;
+   background: #CB9546;
+   height: 100%;
+   width: {{100.0 / size}}%;
+   position: relative;
+   /* z-index: 500; the stack order: foreground */
+   margin: 0;
+}
+
+.board_line {
+    background: #000000;
+}
+
+.board_line_vertical{
+    left: 45%;
+    position: absolute;
+    height: 55%;
+    width: 10%;
+}
+
+.board_line_bottom_vertical{
+    top: 45%;
+}
+
+.board_line_horizontal{
+    top: 45%;
+    position: absolute;
+    height: 10%;
+    width: 55%;
+}
+
+.board_line_right_horizontal{
+    left: 50%;
+}
+
+.stone {
+  width: 80%;
+  height:80%;
+  border: 2px solid #ddd;
+  border-radius: 80%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+.placement {
+  /* This kind of needs to be width and height 100% so that hovering anywhere
+     within the point works, otherwise the placement element has no width or
+     height and hence is never hovered over. We also require it to have zero
+     opacity so that the actual go point behind it (the color of the go board
+     itself) is visible.
+  */
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+}
+.placement:hover {
+  opacity: 0.7;
+  width: 80%;
+  height:80%;
+  border: 2px solid #ddd;
+  border-radius: 80%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+.dead{
+    opacity: 0.5;
+}
+
+.black{
+    background: #000000;
+}
+
+.white{
+    background: #ffffff;
+}
+
+.neutral{
+    background: #f52712;
+}
+
+.territory{
+    width: 30%;
+    height: 30%;
+    position: absolute;
+    left:35%;
+    top:35%;
+}
+
+.handicappoint {
+  width: 30%;
+  height:30%;
+  background: #000000;
+  border-radius: 100%;
+  position: absolute;
+  left: 35%;
+  top: 35%;
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+#board-area{
+   float:left;
+   background: #598385;
+}
+
+.game-chat{
+   width: 50%;
+   float: left;
+   background: #C96253;
+}
+
+.chat-comments{
+    border: 1px solid black;
+}
+
+.chat-comment{
+    border: 1px solid #CFBA48;
+}
+
+#chat-form{
+}
+
+</style>
+
+<div id="content">
+<div id="board-area">
+<div id="board"></div>
+{% if on_turn %}
+<form id="main_form"
+      method="POST" action="{{ url_for('play', game_no=game_no) }}">
     {{ form.hidden_tag() }}
     <button type="submit"
             class="confirm_button" name='confirm_button'>Confirm</button>
-</form>
-{% if on_turn %}
-<form method="POST" action="{{ url_for('playpass') }}">
-    {{ form.hidden_tag() }}
+
+    {% if with_scoring %}
+    <button type="button"
+            class="resume_button" name='resume_button'>Resume</button>
+    {% else %}  <!-- if with_scoring -->
+    <button type="button"
+            class="pass_button"  name='pass_button'>Pass</button>
     <button type="submit"
-            class="pass_button" name='pass_button'>Pass</button>
+            class="resign_button" name='resign_button'>Resign</button>
+    {% endif %}  <!-- if with_scoring -->
+
 </form>
-{% endif %}
-{% if with_scoring %}
-<div id="with_scoring" class="with_scoring" style="display: none;" />
-{% endif %}
+{% else %}  <!-- if on_turn -->
+<form method="POST" action="/404">
+    <!-- provide a form to supply the hidden data field -->
+    {{ form.hidden_tag() }}
+</form>
+{% endif %}  <!-- if on_turn -->
+
+</div> <!-- end of board-area -->
+
+<div class="game-chat">
+    <div class="chat-comments">
+      {% for comment in comments %}
+        <div class="chat-comment">{{comment.content}}</div>
+      {% endfor %}
+    </div>
+<form id="chat-form"
+      method="POST" action="{{ url_for('comment', game_no=game_no) }}">
+    {{ chatform.hidden_tag() }}
+    {{ chatform.comment.label }} {{ chatform.comment() }}
+    <button type="submit"
+            class="comment_button" name='comment_button'>Comment</button>
+</form>
+
+</div><!-- end of game-chat -->
+</div><!-- end of content -->
+
 {% endblock %}
 
 {% block page_scripts %}
-<script src="/static/go_rules.js"></script>
-<script src="/static/game_common.js"></script>
+<script src="/static/compiled-js/go_rules.js"></script>
+<script src="/static/compiled-js/smartgame.js"></script>
+<script src="/static/compiled-js/game_common.js"></script>
+{% if on_turn %}
 {% if with_scoring %}
-<script src="/static/game_marking.js"></script>
+<script src="/static/compiled-js/game_marking.js"></script>
 <script>
 window.tesuji_charm.game_marking.initialize();
 </script>
-{% else %}
-<script src="/static/game_basic.js"></script>
+{% else %}  <!-- if with_scoring -->
+<script src="/static/compiled-js/game_basic.js"></script>
 <script>
 window.tesuji_charm.game_basic.initialize();
 </script>
-{% endif %}
+{% endif %} <!-- if with_scoring -->
+{% else %}  <!-- if on_turn -->
+<script>
+ window.tesuji_charm.game_common.initialize();
+</script>
+{% endif %} <!-- if on_turn-->
 {% endblock %}

@@ -13,6 +13,11 @@ unless (host.match /localhost/) or (host.match /staging/)
 serverUrl = "#{host}#{portString}"
 casper.echo "Testing against server at #{serverUrl}"
 
+debug_dump_html = () ->
+  "Occasionally can be useful during debugging just to dump the current HTML."
+  casper.echo (casper.getHTML())
+
+
 # test inventory management
 
 testObjectsByName = {}
@@ -84,58 +89,85 @@ class BrowserTest
     casper.evaluate evaluate_fun, @lastGameSelector(your_turn)
 
   imageSrc: (x, y) ->
-    casper.evaluate ((x, y) -> $(".row-#{y}.col-#{x} img").attr('src')),
-      x, y
+    casper.evaluate ((x, y) ->
+      $("td.row-#{y}.col-#{x}").css('background-image')),
+        x, y
 
-  assertEmptyBoard: (test) =>
-    @assertStonePointCounts test, 19*19, 0, 0
+  numberJQSelector: (selector) ->
+    " Caspers test.assertExist is great but only works with CSS selectors,
+      not JQuery selectors, hence this helper function, which can be used with
+      assertEqual"
+    casper.evaluate ((selector) ->
+      $(selector).length),
+      selector
+
+  assertPointIs: (test, x, y, property, message) ->
+    selector = ".goban " + pointSelector(x,y) + property
+    num_matching_points = @numberJQSelector selector
+    test.assertEqual num_matching_points, 1, message
 
   assertPointIsBlack: (test, x, y) ->
-    test.assertExists pointSelector(x,y) + ".blackstone",
-                      'There is a black stone at the expected point'
+    @assertPointIs test, x, y, ":has(.stone.black:not(dead))",
+                   'There is a black stone at the expected point'
 
   assertPointIsWhite: (test, x, y) ->
-    test.assertExists pointSelector(x,y) + ".whitestone",
-                      'There is a white stone at the expected point'
+    @assertPointIs test, x, y, ":has(.stone.white:not(dead))",
+                   'There is a white stone at the expected point'
 
   assertPointIsEmpty: (test, x, y) ->
-    test.assertExists pointSelector(x,y) + ".nostone",
-                      'The specified point is empty as expected'
+    @assertPointIs test, x, y, ":not(:has(.stone))",
+                   'The specified point is empty as expected'
+
+  assertPointIsDeadBlack: (test, x, y) ->
+    @assertPointIs test, x, y, ":has(.stone.black.dead)",
+                   'There is a dead black stone at the expected point'
+
+  assertPointIsDeadWhite: (test, x, y) ->
+    @assertPointIs test, x, y, ":has(.stone.white.dead)",
+                   'There is a white dead stone at the expected point'
+
+  assertPointIsWhiteTerritory: (test, x, y) ->
+    @assertPointIs test, x, y, ":has(.territory.white)",
+                   'There is a white territory at the expected point'
 
   countStonesAndPoints: ->
-    counts = casper.evaluate () ->
-      emptyStones = $('.goban .nostone').length
-      blackStones = $('.goban .blackstone').length
-      whiteStones = $('.goban .whitestone').length
-      blackScore = $('.goban .blackscore').length
-      whiteScore = $('.goban .whitescore').length
-      blackDead = $('.goban .blackdead').length
-      whiteDead = $('.goban .whitedead').length
-      noScore = $('.goban td').length - blackScore - whiteScore
-      counts =
-        'empty': emptyStones
-        'black': blackStones
-        'white': whiteStones
-        'blackscore': blackScore
-        'whitescore': whiteScore
-        'blackdead': blackDead
-        'whitedead': whiteDead
-        'noscore': noScore
-      return counts
-    return counts
+    casper.evaluate ->
+      'empty':      $('.goban .gopoint:not(:has(.stone))').length
+      'black':      $('.goban .stone.black:not(.dead)').length
+      'white':      $('.goban .stone.white:not(.dead)').length
+      'blackscore': $('.goban .territory.black').length
+      'whitescore': $('.goban .territory.white').length
+      'blackdead':  $('.goban .stone.black.dead').length
+      'whitedead':  $('.goban .stone.white.dead').length
+      'dame':    $('.goban .territory.neutral').length
+
   assertGeneralPointCounts: (test, expected) =>
+    "Run multiple assertions on the number of points with certain contents.
+
+    expected should be an object mapping the names of point types from
+    countStonesAndPoints above to expected counts.  You only need to supply the
+    counts you're interested in; no assertions will be run for missing counts.
+
+    The name 'label' in expected is special, providing a string to show in the
+    test output against these results, for readability."
     label = expected.label ? "unlabeled"
     delete expected.label
     counts = @countStonesAndPoints()
     for own type, count of expected
       test.assertEqual counts[type], count,
           "in #{label}: #{type} should be #{count}, was #{counts[type]}"
-  assertStonePointCounts: (test, nostone, black, white) =>
+    return
+
+  assertStonePointCounts: (test, nostone, black, white, label=null) =>
     counts = @countStonesAndPoints()
     @assertGeneralPointCounts test,
+      'label': label
       'empty': nostone
       'black': black
       'white': white
+
+  assertEmptyBoard: (test) =>
+    @assertStonePointCounts test, 19*19, 0, 0
 
 
 class ClientSideJsTest extends BrowserTest
@@ -150,8 +182,11 @@ class ClientSideJsTest extends BrowserTest
         if casper.exists '.qunit-pass'
           test.pass 'Qunit tests passed'
         else if casper.exists '.qunit-fail'
-          test.fail 'Qunit tests failed'
-      timeoutFunc = -> test.fail "Couldn't detect pass or fail for Qunit tests"
+          test.fail "Qunit tests failed.  " +
+                    "Load the test page in your browser for details."
+      timeoutFunc = ->
+        test.fail "Couldn't detect pass or fail for Qunit tests.  " +
+                  "Load the test page in your browser for details."
       casper.waitFor predicate, foundFunc, timeoutFunc, 5000
 
 registerTest new ClientSideJsTest
@@ -279,10 +314,11 @@ class PlaceStonesTest extends BrowserTest
     # select the most recent game
     casper.thenClick (@lastGameSelector true), =>
       # on the game page is a table with class 'goban'
-      test.assertExists 'table.goban', 'The Go board does exist.'
+      test.assertExists '.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
-      @assertStonePointCounts test, initialEmptyCount, 3, 1
+      @assertStonePointCounts test, initialEmptyCount, 3, 1,
+        "Black opens the game"
       # no (usable) confirm button appears yet
       test.assertDoesntExist '.confirm_button:enabled',
                              'no usable confirm button appears'
@@ -302,10 +338,60 @@ class PlaceStonesTest extends BrowserTest
 
 registerTest new PlaceStonesTest
 
+class BasicChatTest extends BrowserTest
+  names: ['BasicChatTest']
+  description: "Very basic chat functionality test"
+  numTests: 11
+  testBody: (test) =>
+    ONE_EMAIL = 'player@one.com'
+    TWO_EMAIL = 'playa@dos.es'
+
+    MY_CHAT = ['Are you dancing?', 'Are you asking?',
+               "I'm asking", "I'm dancing"]
+
+    clearGamesForPlayer ONE_EMAIL
+    clearGamesForPlayer TWO_EMAIL
+    createGame ONE_EMAIL, TWO_EMAIL
+
+    # -- PLAYER ONE
+    # player one logs in and gets the front page;
+    # should see a page listing games
+    createLoginSession ONE_EMAIL
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 1, 0
+
+    # select the most recent game
+    casper.thenClick (@lastGameSelector true), ->
+      # on the game page is a game chat.
+      test.assertExists '.game-chat', 'The game chat does exist.'
+      form_values = 'input[name="comment"]' : MY_CHAT[0]
+      # The final 'true' argument means that the form is submitted.
+      @fillSelectors 'form#chat-form', form_values, true
+
+    createLoginSession TWO_EMAIL
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 0, 1
+
+    casper.thenClick (@lastGameSelector false), ->
+      # on the game page is a game chat.
+      test.assertExists '.game-chat', 'The game chat does exist.'
+      comments_selector = '.game-chat .chat-comments .chat-comment'
+      comments = test.assertSelectorHasText comments_selector, MY_CHAT[0],
+                 "Player one's comment has appeared in the chat area."
+
+      form_values = 'input[name="comment"]' : MY_CHAT[1]
+      # The final 'true' argument means that the form is submitted.
+      @fillSelectors 'form#chat-form', form_values, true
+
+
+registerTest new BasicChatTest
+
+# TODO A test which attempts a XSS attack, the script should be escaped.
+
 class GameInterfaceTest extends BrowserTest
   names: ['GameInterfaceTest', 'game']
   description: "Game interface"
-  numTests: 43
+  numTests: 46
   testBody: (test) =>
 
     ONE_EMAIL = 'player@one.com'
@@ -328,10 +414,11 @@ class GameInterfaceTest extends BrowserTest
     # select the most recent game
     casper.thenClick (@lastGameSelector true), =>
       # on the game page is a table with class 'goban'
-      test.assertExists 'table.goban', 'The Go board does exist.'
+      test.assertExists '.goban', 'The Go board does exist.'
       # on the game page are 19*19 points, most of which should be empty but
       # there are the initial stones set in 'createGame'
-      @assertStonePointCounts test, initialEmptyCount, 2, 2
+      @assertStonePointCounts test, initialEmptyCount, 2, 2,
+        "initial board layout"
       # check one of those images can be loaded
       test.assertTrue (casper.evaluate ->
         result = false
@@ -346,26 +433,37 @@ class GameInterfaceTest extends BrowserTest
     # user clicks an empty spot, which is a link
     casper.thenClick pointSelector(1, 1), =>
       # the board updates to show a stone there and other stones captured
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "Black places a stone capturing two white stones"
       # a confirm button is now available
       test.assertExists '.confirm_button:enabled'
 
     # we click a different point
     casper.thenClick pointSelector(15, 3), =>
       # now the capture is undone
-      @assertStonePointCounts test, initialEmptyCount-1, 3, 2
+      @assertStonePointCounts test, initialEmptyCount-1, 3, 2,
+        "Black clicks another point, capture is undone"
       @assertPointIsEmpty test, 1, 1
       @assertPointIsWhite test, 1, 0
 
     # we click the capturing point again, as we'll want to see what happens when
     # we confirm a capturing move
     casper.thenClick pointSelector(1, 1), =>
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "Black clicks capture for second time"
 
     # we confirm this new move
     casper.thenClick '.confirm_button', =>
       # now we're taken back to the status page
       @assertNumGames test, 1, 1
+
+    # opening the game from 'not your turn' list, Black can no longer
+    # place stones
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector false)  # false = not our turn
+    casper.thenClick (pointSelector 3, 3), =>
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "Black attempts to place a stone off-turn"
 
     # -- PLAYER TWO
     # now the white player logs in and visits the same game
@@ -376,22 +474,26 @@ class GameInterfaceTest extends BrowserTest
     # It should be the only game in player two's 'your_turn' games
     casper.thenClick (@lastGameSelector true), =>
       # the captured stones are still captured
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "White opens the board, white stones still captured"
 
     # clicking the point with a black stone does nothing
     casper.thenClick pointSelector(1, 1), =>
-      @assertStonePointCounts test, initialEmptyCount+1, 3, 0
+      @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
+        "White clicks a black stone, nothing happens"
 
     # user clicks an empty spot
     casper.thenClick pointSelector(3, 3), =>
       # a white stone is placed, reduces the empty count by 1 and increments
       # the count of white stones
-      @assertStonePointCounts test, initialEmptyCount, 3, 1
+      @assertStonePointCounts test, initialEmptyCount, 3, 1,
+        "White clicks an empty point, white stone appears"
 
     # confirm move
     casper.thenClick '.confirm_button'
     # reload front page and get the other game
     # (it should be the first listed under 'not your turn')
+    casper.thenOpen serverUrl
     casper.thenClick '#not_your_turn_games li:first-child a', =>
       # we should be back to an empty board
       test.assertExists '.goban', 'The Go board still exists.'
@@ -403,7 +505,7 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 13
+  numTests: 34
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
@@ -414,12 +516,16 @@ class PassAndScoringTest extends BrowserTest
                                           'wwwwb',
                                           'bbbbb']
 
+    # convenience function
+    goToGame = (email, thenFn=(->)) =>
+      createLoginSession email
+      casper.thenOpen serverUrl
+      casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
+
     # black opens the game and passes
     # (it should be black's turn since there are no actual moves in this game,
     # only setup stones)
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick @lastGameSelector true  # our turn
+    goToGame BLACK_EMAIL
     casper.thenClick '.pass_button'
     # for now we're not defining where the player should end up after passing.
     # navigate back to the game; it should not be our turn and there should no
@@ -429,23 +535,19 @@ class PassAndScoringTest extends BrowserTest
       test.assertDoesntExist '.pass_button:enabled'
 
     # white opens the game and passes
-    createLoginSession WHITE_EMAIL
-    casper.thenOpen serverUrl
-    casper.thenClick @lastGameSelector true  # our turn
+    goToGame WHITE_EMAIL
     casper.thenClick '.pass_button'
 
     # black opens the game and is invited to mark dead stones
-    createLoginSession BLACK_EMAIL
-    casper.thenOpen serverUrl
-    originalImageSrc11 = null
-    originalImageSrc22 = null
-    casper.thenClick (@lastGameSelector true), =>  # our turn
-      test.assertExists 'table.goban'
-      originalImageSrc11 = @imageSrc 1, 1
-      originalImageSrc22 = @imageSrc 2, 2
+    goToGame BLACK_EMAIL, =>
+      test.assertExists '.goban'
+      @assertPointIsBlack test, 1, 1
+      @assertPointIsEmpty test, 2, 2
       @assertGeneralPointCounts test,
         label: "initial marking layout"
-        noscore: 3 + 5 + 7 + 9  # black group, dame, white group, black group
+        dame: 5
+        black: 3 + 9
+        white: 7
         blackscore: 19*19 - 25 + 1
         whitescore: 0
     # clicking an empty point does nothing
@@ -453,24 +555,117 @@ class PassAndScoringTest extends BrowserTest
       @assertGeneralPointCounts test,
         label: "after clicking empty point"
         empty: 19*19 - 3 - 7 - 9
+
     # we click the top left black group; the stones change appearance to show
     # they are considered dead, and the scores change
     casper.thenClick (pointSelector 1, 0), =>
-      imageSrc11 = @imageSrc 1, 1
-      test.assertNotEquals imageSrc11, originalImageSrc11,
-        "black stone image source is not still #{originalImageSrc11}"
-      imageSrc22 = @imageSrc 2, 2
-      test.assertNotEquals imageSrc22, originalImageSrc22,
-        "empty point image source is not still #{originalImageSrc22}"
+      @assertPointIsDeadBlack test, 1, 1
+      @assertPointIsWhiteTerritory test, 2, 2
       @assertGeneralPointCounts test,
         label: "black stones marked dead"
-        noscore: 7 + 9  # just white and black stones at the border
+        white: 7
+        dame: 0
         blackscore: 19*19 - 25
         whitescore: 9
         blackdead: 3
         black: 9
 
+    # we click the white group; the neighbouring dead black stones are restored
+    # automatically
+    casper.thenClick (pointSelector 3, 3), =>
+      @assertGeneralPointCounts test,
+        label: "white stones marked dead"
+        black: 12
+        blackdead: 0
+        dame: 0
+        blackscore: 19*19 - 12
+        whitescore: 0
+    # Black confirms this pleasing result
+    casper.thenClick '.confirm_button'
+
+    # White then logs in and opens the game
+    goToGame WHITE_EMAIL, =>
+      # we are in marking mode and the white stones are already marked dead
+      @assertGeneralPointCounts test,
+        label: "White views Black's proposal"
+        black: 12
+        white: 0
+        whitedead: 7
+        blackscore: 19*19 - 12
+    # White prepares a counter-proposal, and sends it back to Black
+    casper.thenClick (pointSelector 1, 1)
+    casper.thenClick '.confirm_button'
+
+    # Black logs in and opens the game
+    goToGame BLACK_EMAIL, =>
+      # White's proposed dead stones show correctly
+      @assertGeneralPointCounts test,
+        label: "Black views White's counter-proposal"
+        black: 9
+        white: 7
+        blackdead: 3
+    # Black reverts the proposal and confirms
+    casper.thenClick (pointSelector 3, 1)
+    casper.thenClick '.confirm_button'
+
+    # seeing the reverted proposal, White resumes play
+    goToGame WHITE_EMAIL
+    casper.thenClick '.resume_button'
+
+    # White being the last to pass, Black has the turn
+    goToGame BLACK_EMAIL
+    casper.thenClick (pointSelector 2, 1)
+    casper.thenClick '.confirm_button'
+    # White is ready to give this up
+    goToGame WHITE_EMAIL
+    casper.thenClick '.pass_button'
+    goToGame BLACK_EMAIL
+    casper.thenClick '.pass_button'
+    goToGame WHITE_EMAIL, =>
+      # marked stones have been reverted since the game was resumed
+      @assertGeneralPointCounts test,
+        label: "White is first to mark stones after resumption"
+        black: 4 + 9
+        white: 7
+    casper.thenClick (pointSelector 3, 0)
+    casper.thenClick '.confirm_button'
+    goToGame BLACK_EMAIL
+    # finally, Black accepts White's proposal
+    casper.thenClick '.confirm_button'
+
+    # game is now finished
+    casper.thenOpen serverUrl, =>
+      test.assertDoesntExist (@lastGameSelector true)
+      test.assertDoesntExist (@lastGameSelector false)
+
+    # TODO: add ability to view finished games, verify scores, winner etc.
+
 registerTest new PassAndScoringTest
+
+
+class ResignTest extends BrowserTest
+  names: ['ResignTest', 'resign']
+  description: "resignation"
+  numTests: 2
+  testBody: (test) =>
+    BLACK_EMAIL = "quitter@nomo.re"
+    WHITE_EMAIL = "recipient@easyw.in"
+    clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
+    createGame BLACK_EMAIL, WHITE_EMAIL
+
+    # Black opens the game and, tormented by the blank slate, resigns
+    createLoginSession BLACK_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick (@lastGameSelector true)  # true = our turn
+    casper.thenClick '.resign_button'
+    # the game is no longer visible on Black's status page
+    casper.thenOpen serverUrl, =>
+      test.assertDoesntExist (@lastGameSelector true),
+        "Black no longer sees the resigned game on his status page"
+      test.assertDoesntExist (@lastGameSelector false),
+        "it's not in the off-turn games list either"
+
+registerTest new ResignTest
 
 
 # helper functions

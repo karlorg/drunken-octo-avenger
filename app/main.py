@@ -8,6 +8,7 @@ from collections import namedtuple
 import logging
 import time
 import multiprocessing
+from datetime import datetime
 
 from flask import (
         Flask, abort, flash, redirect, render_template, request,
@@ -15,15 +16,19 @@ from flask import (
 )
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
+import itertools
 import jinja2
 import json
 import requests
-from wtforms import IntegerField, StringField
+from sqlalchemy import and_, not_, or_
+from sqlalchemy.exc import SQLAlchemyError
+from wtforms import HiddenField, IntegerField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
-from app import go_rules
+from app import go
+from app import sgftools
 
 
 IMG_PATH_EMPTY = '/static/images/goban/e.gif'
@@ -37,6 +42,15 @@ if app.debug:
     logging.basicConfig(level=logging.DEBUG)
 db = SQLAlchemy(app)
 
+
+def redirect_url(default='front_page'):
+    """ A simple helper function to redirect the user back to where they came
+        from. See: http://flask.pocoo.org/docs/0.10/reqcontext/ and also
+        here: http://stackoverflow.com/questions/14277067/redirect-back-in-flask
+    """
+    return request.args.get('next') or \
+           request.referrer or \
+           url_for(default)
 
 # Views
 #
@@ -52,99 +66,86 @@ def front_page():
 
 @app.route('/game/<int:game_no>')
 def game(game_no):
-    game = Game.query.filter(Game.id == game_no).first()
-    if game is None:
+    try:
+        game = db.session.query(Game).filter_by(id=game_no).one()
+    except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
-    moves = game.moves
-    passes = game.passes
-    is_passed_twice = check_two_passes(moves, passes)
-    setup_stones = game.setup_stones
+    sgf = game.sgf
+    comments = game.comments
     is_your_turn = is_players_turn_in_game(game)
-    goban = get_goban_from_moves(moves, setup_stones)
-    form = PlayStoneForm(data=dict(
-        game_no=game.id,
-        move_no=game.move_no
-    ))
+    is_passed_twice = go.is_sgf_passed_twice(sgf)
+    # TODO: eliminate move_no once the client can work that out from sgf
+    move_no = go.next_move_no(sgf)
+    form_data = {'game_no': game.id, 'move_no': move_no, 'data': sgf}
+    form = PlayStoneForm(data=form_data)
+    chatform = ChatForm(data=form_data)
     return render_template_with_email(
-            "game.html",
-            form=form, goban=goban,
-            on_turn=is_your_turn, with_scoring=is_passed_twice)
+        "game.html",
+        form=form, chatform=chatform, game_no=game_no,
+        on_turn=is_your_turn, with_scoring=is_passed_twice, comments=comments)
 
-@app.route('/playstone', methods=['POST'])
-def playstone():
-    return play_pass_or_move("move")
-
-@app.route('/playpass', methods=['POST'])
-def playpass():
-    return play_pass_or_move("pass")
-
-def play_pass_or_move(which):
-    arguments = request.form.to_dict()
+@app.route('/chat/<int:game_no>', methods=['POST'])
+def comment(game_no):
     try:
-        game_no = int(arguments['game_no'])
-    except (KeyError, ValueError):
-        flash("Invalid game number")
+        game = db.session.query(Game).filter_by(id=game_no).one()
+    except SQLAlchemyError:
+        flash("Game #{} not found".format(game_no))
         return redirect('/')
-    game = Game.query.filter(Game.id == game_no).first()
-    players_email = session['email']
+    form = ChatForm()
+    if form.validate_on_submit():
+        comment = GameComment(game, form.comment.data)
+        db.session.add(comment)
+        db.session.commit()
+        return redirect(redirect_url())
+    flash("Comment not validated!")
+    return redirect(redirect_url())
 
+@app.route('/play/<int:game_no>', methods=['POST'])
+def play(game_no):
     try:
-        validate_turn_and_record(which, players_email, game, arguments)
-    except go_rules.IllegalMoveException as e:
-        flash("Illegal move received: " + e.args[0])
+        game = db.session.query(Game).filter_by(id=game_no).one()
+    except SQLAlchemyError:
+        flash("Game #{} not found".format(game_no))
+        return redirect('/')
+    if not is_players_turn_in_game(game):
+        flash("It's not your turn in that game.")
+        return redirect('/')
+    arguments = request.form.to_dict()
+    if 'resign_button' in arguments:
+        game.finished = True
+        return redirect(redirect_url())
+    try:
+        go.check_continuation(old_sgf=game.sgf,
+                              new_sgf=arguments['response'],
+                              allowed_new_moves=1)
+    except go.ValidationException as e:
+        flash("Invalid move: {}".format(e.args[0]))
         return redirect(url_for('game', game_no=game_no))
-
-    return redirect(url_for('status'))
-
-def validate_turn_and_record(pass_or_move, player, game, arguments):
-    # First of all validate the turn
-    if game.to_move() != player:
-        raise go_rules.IllegalMoveException("It's not your turn!")
-    try:
-        move_no = int(arguments['move_no'])
-    except (KeyError, ValueError):
-        raise go_rules.IllegalMoveException("Invalid request made.")
-
-    if move_no != game.move_no:
-        message = "Move number supplied not sequential"
-        raise go_rules.IllegalMoveException(message)
-
-    color = game.to_move_color()
-    if pass_or_move == "pass":
-        turn_object = Pass(game_no=game.id, move_no=move_no, color=color)
-    elif pass_or_move == "move":
-        turn_object = create_and_validate_move(move_no, color, game, arguments)
-
-    db.session.add(turn_object)
+    except KeyError:
+        flash("Invalid request.")
+        return redirect(url_for('game', game_no=game_no))
+    game.sgf = arguments['response']
+    _check_gameover_and_update(game)
     db.session.commit()
+    return redirect(redirect_url())
 
+def _check_gameover_and_update(game):
+    """If game is over, update the appropriate fields."""
+    if go.ends_by_agreement(game.sgf):
+        game.finished = True
 
-def create_and_validate_move(move_no, color, game, arguments):
-    try:
-        row = int(arguments['row'])
-        column = int(arguments['column'])
-    except (KeyError, ValueError):
-        raise go_rules.IllegalMoveException("Invalid request made.")
-
-    move = Move(game_no=game.id, move_no=move_no,
-                row=row, column=column, color=color)
-
-    # test legality, if `board.update_with_move` raises an IllegalMoveException
-    # this will be caught above and displayed to the user.
-    board = get_rules_board_from_db_objects(
-                moves=game.moves, setup_stones=game.setup_stones)
-    board.update_with_move(move)
-    # But if no exception is raised then we return the move
-    return move
+@app.route('/resign', methods=['POST'])
+def resign():
+    assert False, "needs implementation"
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
     form = ChallengeForm()
     if form.validate_on_submit():
-        game = Game()
-        game.black = form.opponent_email.data
-        game.white = session['email']
+        game = Game(black=form.opponent_email.data,
+                    white=logged_in_email(),
+                    sgf="(;)")
         db.session.add(game)
         db.session.commit()
         return redirect(url_for('status'))
@@ -152,14 +153,66 @@ def challenge():
 
 @app.route('/status')
 def status():
-    if 'email' not in session:
+    try:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
         return redirect('/')
-    logged_in_email = session['email']
-    your_turn_games, not_your_turn_games = get_status_lists(logged_in_email)
+    your_turn_games, not_your_turn_games = get_status_lists(email)
     return render_template_with_email(
             "status.html",
             your_turn_games=your_turn_games,
             not_your_turn_games=not_your_turn_games)
+
+def get_status_lists(player_email):
+    """Return two lists of games for the player, split by on-turn or not.
+
+    Accesses database.
+    """
+    player_games = get_player_games(player_email)
+
+    your_turn_games = [g for g in player_games
+                       if email_to_move_in_game(g) == player_email]
+    not_your_turn_games = [g for g in player_games
+                           if email_to_move_in_game(g) != player_email]
+    return (your_turn_games, not_your_turn_games)
+
+def get_player_games(player_email):
+    """Returns the list of games in which `player_email` is involved.
+
+    Only includes running games, ie. not finished.
+
+    Accesses database.
+    """
+    games = Game.query.filter(and_(not_(Game.finished),
+                                   or_(Game.black == player_email,
+                                       Game.white == player_email))).all()
+    return games
+
+def is_players_turn_in_game(game):
+    """Test if it's the logged-in player's turn to move in `game`.
+
+    Reads email from the session.
+    """
+    try:
+        current_email = logged_in_email()
+    except NoLoggedInPlayerException:
+        return False
+    next_in_game = email_to_move_in_game(game)
+    return next_in_game == current_email
+
+def email_to_move_in_game(game):
+    """Return the email of the player to move in game.
+
+    Accesses database.  Return None if game is finished.
+    """
+    if game.finished:
+        return None
+    black_or_white = go.next_color(game.sgf)
+    next_in_game = {go.Color.black: game.black,
+                    go.Color.white: game.white}[black_or_white]
+    return next_in_game
+
+
 
 @app.route('/persona/login', methods=['POST'])
 def persona_login():
@@ -251,14 +304,60 @@ def testing_create_game():
     create_game_internal(black_email, white_email, stones)
     return ''
 
-def create_game_internal(black_email, white_email, stones=None):
-    game = Game()
-    game.black = black_email
-    game.white = white_email
+def create_game_internal(black, white,
+                         sgf_or_stones=None,
+                         stones=None, sgf=None):
+    """Create a custom game for testing purposes.
+
+    Can be initialized with an SGF or a 'text map', ie. a list of strings
+    representing setup stones like this:
+
+        ['w.',
+         '.b']
+    """
+    assert sum(1 for x in [sgf_or_stones, stones, sgf]
+               if x is not None) <= 1, \
+        "can't supply more than one initial state to create_game_internal"
+    if sgf_or_stones:
+        if isinstance(sgf_or_stones, str):
+            assert sgf_or_stones[0] == '(', \
+                "invalid SGF passed to create_game_internal; if you meant " \
+                "a text map, make it a list"
+            sgf = sgf_or_stones
+        else:
+            stones = sgf_or_stones
+    if not sgf:
+        if not stones:
+            stones = []
+        sgf = sgf_from_text_map(stones)
+    game = Game(black=black, white=white, sgf=sgf)
     db.session.add(game)
     db.session.commit()
-    if stones is not None:
-        add_stones_from_text_map_to_game(stones, game)
+    return game
+
+def sgf_from_text_map(text_map):
+    assert not isinstance(text_map, str), \
+        "text maps should be lists of strings, not a single string"
+    ab_coords = []
+    aw_coords = []
+    for rowno, row in enumerate(text_map):
+        for colno, char in enumerate(row):
+            if char == 'b':
+                ab_coords.append((colno, rowno))
+            elif char == 'w':
+                aw_coords.append((colno, rowno))
+
+    def sgfify(coords, tag):
+        if not coords:
+            return ''
+        return (tag + '[' +
+                ']['.join(sgftools.encode_coord(x, y)
+                          for (x, y) in coords)
+                + ']')
+    ab_str = sgfify(ab_coords, 'AB')
+    aw_str = sgfify(aw_coords, 'AW')
+    return "(;{ab}{aw})".format(ab=ab_str, aw=aw_str)
+
 
 @app.test_only_route('/testing_clear_games_for_player', methods=['POST'])
 def testing_clear_games_for_player():
@@ -272,17 +371,7 @@ def clear_games_for_player_internal(email):
     games_as_white = Game.query.filter(Game.white == email).all()
     games = games_as_black + games_as_white
     for game in games:
-        delete_game_from_db(game)
-
-def delete_game_from_db(game):
-    moves = Move.query.filter(Move.game == game).all()
-    for move in moves:
-        db.session.delete(move)
-    setup_stones = SetupStone.query.filter(SetupStone.game == game).all()
-    for setup_stone in setup_stones:
-        db.session.delete(setup_stone)
-    db.session.delete(game)
-    db.session.commit()
+        db.session.delete(game)
 
 
 # helper functions
@@ -307,168 +396,18 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
-def get_goban_from_moves(moves, setup_stones=None, with_scoring=False):
-    """Given the moves for a game, return game template data.
+class NoLoggedInPlayerException(Exception):
+    pass
 
-    Pure function.
+def logged_in_email():
+    """Return email of logged in player, or raise NoLoggedInPlayerException.
+
+    Accesses the session.
     """
-    if setup_stones is None:
-        setup_stones = []
-    rules_board = get_rules_board_from_db_objects(moves, setup_stones)
-    goban = get_goban_data_from_rules_board(rules_board, with_scoring)
-    return goban
-
-def get_rules_board_from_db_objects(moves, setup_stones):
-    """Get board layout resulting from given moves and setup stones.
-
-    Pure function.
-    """
-    def place_stones_for_move(n):
-        for stone in filter(lambda s: s.before_move == n, setup_stones):
-            board[stone.row, stone.column] = stone.color
-
-    board = go_rules.Board()
-    for move in sorted(moves, key=lambda m: m.move_no):
-        place_stones_for_move(move.move_no)
-        board.update_with_move(move)
-    max_move_no = max([-1] + [m.move_no for m in moves])
-    place_stones_for_move(max_move_no + 1)
-    return board
-
-def get_goban_data_from_rules_board(rules_board, with_scoring=False):
-    """Transform a dict of {(r,c): color} to a template-ready list of dicts.
-
-    Each output dictionary contains information needed by the game template to
-    render the corresponding board point.
-
-    `classes` contains CSS classes used by the client-side scripts and browser
-    tests to read the board state and locate specific points.  Currently:
-
-    * each point should have classes `row-y` and `col-x` where `y` and `x` are
-      numbers
-
-    * points with stones should have `blackstone` or `whitestone`; empty points
-      should have `nostone`
-
-    * if marking points is enabled, points which can be assigned to one player
-      should have `blackscore` or `whitescore`
-
-    Pure function.
-    """
-    black = go_rules.Color.black
-    white = go_rules.Color.white
-    empty = go_rules.Color.empty
-
-    color_images = {black: IMG_PATH_BLACK,
-                    white: IMG_PATH_WHITE,
-                    empty: IMG_PATH_EMPTY}
-    color_classes = {black: 'blackstone',
-                     white: 'whitestone',
-                     empty: 'nostone'}
-
-    def create_goban_point(row, column, color):
-        classes_template = 'gopoint row-{row} col-{col} {color_class}'
-        classes = classes_template.format(row=str(row),
-                                          col=str(column),
-                                          color_class=color_classes[color])
-        if with_scoring:
-            classes += ' blackscore'
-        return dict(img=color_images[color], classes=classes)
-    goban = [[create_goban_point(j, i, rules_board[j, i])
-              for i in range(19)]
-             for j in range(19)]
-    return goban
-
-def get_status_lists(player_email):
-    """Return two lists of games for the player, split by on-turn or not.
-
-    Accesses database.
-    """
-    player_games = get_player_games(player_email)
-
-    your_turn_games = [g for g in player_games
-                       if g.to_move() == player_email]
-    not_your_turn_games = [g for g in player_games
-                           if g.to_move() != player_email]
-    return (your_turn_games, not_your_turn_games)
-
-def get_player_games(player_email, games=None):
-    """Returns the list of games in which `player_email` is involved.
-
-    If `games` is passed this acts as a pure function, otherwise it reads the
-    list of all games from the database.
-    """
-    if games is None:
-        games = Game.query.all()
-
-    def involved_in_game(game):
-        return (player_email == game.black or player_email == game.white)
-    return list(filter(involved_in_game, games))
-
-def check_two_passes(moves, passes):
-    """True if last two actions are both passes, false otherwise."""
-    last_move = max([-1] + [m.move_no for m in moves])
-    last_pass = max([-1] + [p.move_no for p in passes])
-    if last_move >= last_pass:
-        return False
-    sorted_passes = sorted(passes, key=lambda p: p.move_no)
     try:
-        if sorted_passes[-2].move_no == last_pass - 1:
-            return True
-        else:
-            return False
-    except IndexError:
-        return False
-
-def is_players_turn_in_game(game, email=None):
-    """Test if it's `email`'s turn to move in `game` given `moves`.
-
-    If `email` is passed, this acts as a pure function; otherwise, it reads
-    email from the session.
-
-    `moves` and `passes` should list moves and passes associated with `game`,
-    since this function won't access the database itself.
-    """
-    if email is None:
-        try:
-            email = session['email']
-        except KeyError:
-            return False
-    return game.to_move() == email
-
-def add_stones_from_text_map_to_game(text_map, game):
-    """Given a list of strings, add setup stones to the given game.
-
-    An example text map is [[".b.","bw.",".b."]]
-    """
-    stones = get_stones_from_text_map(text_map, game)
-    for stone in stones:
-        db.session.add(stone)
-    db.session.commit()
-
-def get_stones_from_text_map(text_map, game):
-    """Given a list of strings, return a list of setup stones for `game`.
-
-    An example text map is [[".b.","bw.",".b."]]
-
-    Pure function; does not commit stones to the database.
-    """
-    stones = []
-    for rowno, row in enumerate(text_map):
-        for colno, stone in enumerate(row):
-            if stone not in ['b', 'w']:
-                continue
-            game_no = game.id
-            before_move = 0
-            color = {
-                    'b': Move.Color.black,
-                    'w': Move.Color.white
-            }[stone]
-            row = rowno
-            column = colno
-            setup_stone = SetupStone(game_no, before_move, row, column, color)
-            stones.append(setup_stone)
-    return stones
+        return session['email']
+    except KeyError:
+        raise NoLoggedInPlayerException()
 
 def render_template_with_email(template_name_or_list, **context):
     """A wrapper around flask.render_template, setting the email.
@@ -476,8 +415,8 @@ def render_template_with_email(template_name_or_list, **context):
     Depends on the session object.
     """
     try:
-        email = session['email']
-    except KeyError:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
         email = ''
     try:
         persona_email = session['persona_email']
@@ -489,102 +428,10 @@ def render_template_with_email(template_name_or_list, **context):
             current_persona_email=persona_email,
             **context)
 
+def max_with_sentinel(sentinel, *iterables):
+    return max(itertools.chain([sentinel], *iterables))
 
-class Game(db.Model):
-    __tablename__ = 'games'
-    id = db.Column(db.Integer, primary_key=True)
-    black = db.Column(db.String(length=254))
-    white = db.Column(db.String(length=254))
-    moves = db.relationship('Move', backref='game')
-    passes = db.relationship('Pass', backref='game')
-    setup_stones = db.relationship('SetupStone', backref='game')
-
-    @property
-    def move_no(self):
-        return len(self.moves) + len(self.passes)
-
-    def to_move(self):
-        move_no = self.move_no
-        return (self.black, self.white)[move_no % 2]
-
-    def to_move_color(self):
-        move_no = self.move_no
-        return (Move.Color.black, Move.Color.white)[move_no % 2]
-
-class Move(db.Model):
-    __tablename__ = 'moves'
-    id = db.Column(db.Integer, primary_key=True)
-    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
-    row = db.Column(db.Integer)
-    column = db.Column(db.Integer)
-    move_no = db.Column(db.Integer)
-
-    Color = go_rules.Color
-    color = db.Column(db.Integer)
-
-    def __init__(self, game_no, move_no, row, column, color):
-        self.game_no = game_no
-        self.move_no = move_no
-        self.row = row
-        self.column = column
-        self.color = color
-
-    def __repr__(self):
-        return '<Move {0}: {1} at ({2},{3})>'.format(
-                self.move_no, Move.Color(self.color).name,
-                self.column, self.row)
-
-class Pass(db.Model):
-    __tablename__ = 'passes'
-    id = db.Column(db.Integer, primary_key=True)
-    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
-    move_no = db.Column(db.Integer)
-    color = db.Column(db.Integer)
-
-    def __init__(self, game_no, move_no, color):
-        self.game_no = game_no
-        self.move_no = move_no
-        self.color = color
-
-    def __repr__(self):
-        return '<Pass {0}: {1}>'.format(
-                self.move_no, Move.Color(self.color).name)
-
-class SetupStone(db.Model):
-    __tablename__ = 'setupstones'
-    id = db.Column(db.Integer, primary_key=True)
-    game_no = db.Column(db.Integer, db.ForeignKey('games.id'))
-    row = db.Column(db.Integer)
-    column = db.Column(db.Integer)
-    before_move = db.Column(db.Integer)
-    color = db.Column(db.Integer)
-
-    def __init__(self, game_no, before_move, row, column, color):
-        self.game_no = game_no
-        self.before_move = before_move
-        self.row = row
-        self.column = column
-        self.color = color
-
-    def __repr__(self):
-        return '<SetupStone {0}: {1} at ({2},{3})>'.format(
-                self.before_move, Move.Color(self.color).name,
-                self.column, self.row)
-
-
-class ChallengeForm(Form):
-    opponent_email = StringField(
-            "Opponent's email", validators=[DataRequired(), Email()])
-
-class HiddenInteger(IntegerField):
-    widget = HiddenInput()
-
-class PlayStoneForm(Form):
-    game_no = HiddenInteger("game_no", validators=[DataRequired()])
-    move_no = HiddenInteger("move_no", validators=[DataRequired()])
-    row = HiddenInteger("row", validators=[DataRequired()])
-    column = HiddenInteger("column", validators=[DataRequired()])
-
+# Server player
 
 class ServerPlayer(object):
     """ A class used to represent server players. The hope is that to create a
@@ -631,3 +478,52 @@ class ServerPlayer(object):
             arguments = {'move_no': game.move_no}
             validate_turn_and_record(
                     "pass", self.player_email, game, arguments)
+
+
+# models
+
+class Game(db.Model):
+    __tablename__ = 'games'
+    id = db.Column(db.Integer, primary_key=True)
+    black = db.Column(db.String(length=254))
+    white = db.Column(db.String(length=254))
+    sgf = db.Column(db.Text())
+    finished = db.Column(db.Boolean(), server_default="0")
+
+    def __repr__(self):
+        return "<Game {no}, {b} vs. {w}>".format(
+            no=self.id, b=self.black, w=self.white)
+
+class GameComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pub_date = db.Column(db.DateTime)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
+    game = db.relationship('Game', 
+                           backref=db.backref('comments', lazy='dynamic'))
+    content = db.Column(db.Text())
+
+    def __init__(self, game, content, pub_date=None):
+        self.game = game
+        self.content = content
+        self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
+
+# forms
+
+class ChallengeForm(Form):
+    opponent_email = StringField(
+            "Opponent's email", validators=[DataRequired(), Email()])
+
+class HiddenInteger(IntegerField):
+    widget = HiddenInput()
+
+class PlayStoneForm(Form):
+    game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    data = HiddenField("data")
+    response = HiddenField("response", validators=[DataRequired()])
+
+class ChatForm(Form):
+    game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    # move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    comment = StringField('Comment', validators=[DataRequired()])
+    # created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)

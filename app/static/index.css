@@ -1,14 +1,42 @@
-table.goban { 
+table.goban {
     border-collapse: collapse;
 }
+
 .goban * {
     padding: 0px;
     margin: 0px;
     border: none;
 }
-.goban img {
+
+.goban td {
     width: 16px;
     height: 16px;
-    display: block;
 }
 
+.nostone {
+    background-image: url(/static/images/goban/e.gif)
+}
+
+.blackstone {
+    background-image: url(/static/images/goban/b.gif)
+}
+
+.whitestone {
+    background-image: url(/static/images/goban/w.gif)
+}
+
+.blackdead.whitescore {
+    background-image: url(/static/images/goban/bdwp.gif)
+}
+
+.whitedead.blackscore {
+    background-image: url(/static/images/goban/wdbp.gif)
+}
+
+.nostone.whitescore {
+    background-image: url(/static/images/goban/wp.gif)
+}
+
+.nostone.blackscore {
+    background-image: url(/static/images/goban/bp.gif)
+}

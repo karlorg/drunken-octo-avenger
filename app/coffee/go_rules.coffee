@@ -22,6 +22,28 @@ go_rules.getNewState = (color, x, y, state) ->
     throw Error 'illegal move'
   return newState
 
+go_rules.groupPoints = groupPoints = (x, y, state, colors=null) ->
+  "Return a list of points in the group around (x, y) from `state`, whether
+  black, white, or empty."
+  if colors == null
+    colors = [state[y][x]]
+  done = []
+  doneState = (('none' for w in [0..state[0].length]) \
+               for h in [0..state.length])
+  new_ = [[x, y]]
+  doneState[y][x] = 'new'
+  while true
+    if new_.length is 0
+      return done
+    [x0, y0] = new_.pop()
+    done.push [x0, y0]
+    doneState[y0][x0] = 'done'
+    for [xn, yn] in neighboringPoints(x0, y0, state)
+      if state[yn][xn] in colors and
+         doneState[yn][xn] is 'none'
+        new_.push [xn, yn]
+        doneState[yn][xn] = 'new'
+
 go_rules.boundingColor = (region, state) ->
   "Return the color surrounding the empty region, or 'neither' if boundary is
   mixed."
@@ -40,16 +62,13 @@ go_rules.boundingColor = (region, state) ->
     seen = 'neither'
   return seen
 
-# ============================================================================
-# helper functions
-
-neighboringPoints = (x, y, state) ->
+go_rules.neighboringPoints = neighboringPoints = (x, y, state) ->
   [x0, y0] \
     for [x0, y0] in [ [x, y-1], [x+1, y], [x, y+1], [x-1, y] ] \
     when state[y0] isnt undefined and state[y0][x0] isnt undefined
 
-# export for testing
-go_rules._neighbouringPoints = neighboringPoints
+# ============================================================================
+# helper functions
 
 enemyColor = (color) -> switch color
   when 'black' then 'white'
@@ -73,27 +92,3 @@ countLiberties = (x, y, state) ->
 
 # export for testing
 go_rules._countLiberties = countLiberties
-
-groupPoints = (x, y, state, colors=null) ->
-  "Return a list of points in the group around (x, y) from `state`, whether
-  black, white, or empty."
-  if colors == null
-    colors = [state[y][x]]
-  done = []
-  doneState = (('none' for w in [0..state[0].length]) \
-               for h in [0..state.length])
-  new_ = [[x, y]]
-  doneState[y][x] = 'new'
-  while true
-    if new_.length is 0
-      return done
-    [x0, y0] = new_.pop()
-    done.push [x0, y0]
-    doneState[y0][x0] = 'done'
-    for [xn, yn] in neighboringPoints(x0, y0, state)
-      if state[yn][xn] in colors and
-         doneState[yn][xn] is 'none'
-        new_.push [xn, yn]
-        doneState[yn][xn] = 'new'
-
-go_rules.groupPoints = groupPoints

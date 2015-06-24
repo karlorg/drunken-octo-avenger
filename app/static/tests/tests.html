@@ -12,42 +12,36 @@
     <a id="persona_login" href="#">Login link</a>
     <a id="logout" href="#">Logout link</a>
 
-    <table class="goban">
-        <tr>
-            <td class="row-0 col-0 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-0 col-1 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-0 col-2 nostone"><img src="/static/images/goban/e.gif" /></td>
-        </tr>
-        <tr>
-            <td class="row-1 col-0 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-1 col-1 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-1 col-2 nostone"><img src="/static/images/goban/e.gif" /></td>
-        </tr>
-        <tr>
-            <td class="row-2 col-0 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-2 col-1 nostone"><img src="/static/images/goban/e.gif" /></td>
-            <td class="row-2 col-2 nostone"><img src="/static/images/goban/e.gif" /></td>
-        </tr>
-    </table>
-    <form method="POST" action="/playstone">
-        <input type="hidden" id="move_no"></input>
-        <input type="hidden" id="row"></input>
-        <input type="hidden" id="column"></input>
-        <button type="submit"
-                class="confirm_button" name='confirm_button'>Confirm</button>
-        <button type="submit"
-                class="pass_button" name='pass_button'>Confirm</button>
-    </form>
+    <div id="content">
+        <div id="board-area">
+            <div id="board">
+                <form id="main_form" method="POST" action="/play/0">
+                    <input type="hidden" id="data"></input>
+                    <input type="hidden" id="response"></input>
+                    <button type="submit"
+                            class="confirm_button" name='confirm_button'>Confirm</button>
+                    <button type="button"
+                            class="pass_button" name='pass_button'>Pass</button>
+                    <button type="button"
+                            class="resign" name='resign_button'>Resign</button>
+                    <button type="button"
+                            class="resume_button" name='resume_button'>Resume</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+
 <script src="../jquery.js"></script>
-<script src="../persona.js" data-cover></script>
-<script src="../go_rules.js" data-cover></script>
-<script src="../game_common.js" data-cover></script>
-<script src="../game_basic.js" data-cover></script>
-<script src="../game_marking.js" data-cover></script>
+<script src="../compiled-js/persona.js" data-cover></script>
+<script src="../compiled-js/smartgame.js" data-cover></script>
+<script src="../compiled-js/go_rules.js" data-cover></script>
+<script src="../compiled-js/game_common.js" data-cover></script>
+<script src="../compiled-js/game_basic.js" data-cover></script>
+<script src="../compiled-js/game_marking.js" data-cover></script>
 <script src="qunit.js"></script>
 <script src="blanket.js"></script>
-<script src="tests.js"></script>
+<script src="../compiled-js/tests/tests.js"></script>
 
 </body>
 </html>

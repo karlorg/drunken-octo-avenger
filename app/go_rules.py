@@ -4,6 +4,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 
+from collections import namedtuple
 from enum import IntEnum
 
 class Color(IntEnum):
@@ -11,19 +12,24 @@ class Color(IntEnum):
     black = 1
     white = 2
 
+Coord = namedtuple("Coord", ["x", "y"])
+
 class Board(object):
+    """Emulates a dict mapping `Coord`s to `Color`s."""
+
     def __init__(self, size=19):
-        self._points = {(r, c): Color.empty
-                        for r in range(size)
-                        for c in range(size)}
+        self._points = {Coord(x, y): Color.empty
+                        for x in range(size)
+                        for y in range(size)}
 
-    def __getitem__(self, coords):
-        """ Coords should be a pair consisting of row and column numbers """
-        return self._points[coords]
+    def __getitem__(self, coord):
+        return self._points[coord]
 
-    def __setitem__(self, coords, color):
-        """ As above, coords should be a pair consisting of row and column """
-        self._points[coords] = color
+    def __setitem__(self, coord, color):
+        self._points[coord] = color
+
+    def __iter__(self):
+        return self._points.__iter__()
 
     def items(self):
         return self._points.items()
@@ -32,6 +38,9 @@ class Board(object):
         """Update board to the state it should be in after the move is played.
 
         Modifies self.
+
+        :param move: an object with column, row, and color attributes.
+                     color is an instance of the Color enum.
         """
         try:
             enemy = {Color.white: Color.black,
@@ -39,72 +48,72 @@ class Board(object):
         except:  # pragma: no cover
             assert False, "attempted board update with invalid color"
 
-        def process_captures(r, c):
-            for (r0, c0) in self._get_neighbours(r, c):
-                if self._points[(r0, c0)] == enemy:
-                    if self._count_liberties(r0, c0) == 0:
-                        for p in self._get_group(r0, c0):
-                            self._points[p] = Color.empty
+        def process_captures(coord):
+            for n_coord in self._get_neighbours(coord):
+                if self[n_coord] == enemy:
+                    if self._count_liberties(n_coord) == 0:
+                        for p in self.get_group(n_coord):
+                            self[p] = Color.empty
 
-        if self._points[(move.row, move.column)] == Color.empty:
-            self._points[(move.row, move.column)] = move.color
+        move_coord = Coord(x=move.column, y=move.row)
+        if self[move_coord] == Color.empty:
+            self[move_coord] = move.color
         else:
             raise IllegalMoveException("point already occupied", move.move_no)
-        process_captures(move.row, move.column)
+        process_captures(move_coord)
 
-        if self._count_liberties(move.row, move.column) == 0:
+        if self._count_liberties(move_coord) == 0:
             # thankfully, if we still have no liberties then no captures have
             # occurred, so we can revert the board position simply by removing
             # the stone we just played
-            self._points[(move.row, move.column)] = Color.empty
-            raise IllegalMoveException(
-                    "playing into no liberties", move.move_no)
+            self[move_coord] = Color.empty
+            raise IllegalMoveException("playing into no liberties",
+                                       move.move_no)
 
-    def _get_group(self, r, c):
-        """Return the group of the stone at (r,c) as an iterable of coords.
+    def get_group(self, coord, include=None):
+        """Return the group of the stone at coord as an iterable of coords.
 
         Pure function.
         """
-        ally = self._points[(r, c)]
-        if ally is Color.empty:
-            raise EmptyPointGroupException
+        if include is None:
+            include = [self[coord]]
+            if include[0] is Color.empty:
+                raise EmptyPointGroupException
 
-        def get_group_recursive(r, c, group_so_far):
+        def get_group_recursive(coord, group_so_far):
             # group_so_far is a set
-            group_so_far |= set([(r, c)])
-            neighbours_to_recurse = filter(
-                lambda p: self._points[p] is ally and p not in group_so_far,
-                self._get_neighbours(r, c)
-            )
-            for (r0, c0) in neighbours_to_recurse:
-                group_so_far |= get_group_recursive(r0, c0, group_so_far)
+            group_so_far |= set([coord])
+            neighbours_to_recurse = (
+                n for n in self._get_neighbours(coord)
+                if self[n] in include and n not in group_so_far)
+            for n_coord in neighbours_to_recurse:
+                group_so_far |= get_group_recursive(n_coord, group_so_far)
             return group_so_far
 
-        return get_group_recursive(r, c, set())
+        return get_group_recursive(coord, set())
 
-    def _get_neighbours(self, r, c):
-        """Return the neighbouring points of (r,c) as an iterable of coords.
+    def _get_neighbours(self, coord):
+        """Return the neighbouring points of coord as an iterable of coords.
 
         Pure function.
         """
-        return filter(lambda p: p in self._points,
-                      ((r-1, c), (r, c+1), (r+1, c), (r, c-1)))
+        x = coord.x
+        y = coord.y
+        return (Coord(x=x0, y=y0)
+                for x0, y0 in ((x, y-1), (x+1, y), (x, y+1), (x-1, y))
+                if Coord(x=x0, y=y0) in self)
 
-    def _count_liberties(self, r, c):
+    def _count_liberties(self, coord):
         """Count the liberties of the group containing the stone (r,c).
 
         Pure function.
         """
-        if self._points[(r, c)] is Color.empty:
+        if self[coord] is Color.empty:
             raise EmptyPointLibertiesException
-
         liberties = set()
-        for (r0, c0) in self._get_group(r, c):
-            liberties |= set(filter(
-                    lambda p: self._points[p] == Color.empty,
-                    self._get_neighbours(r0, c0)
-            ))
-
+        for g_coord in self.get_group(coord):
+            liberties |= set(n for n in self._get_neighbours(g_coord)
+                             if self[n] == Color.empty)
         return len(liberties)
 
 
