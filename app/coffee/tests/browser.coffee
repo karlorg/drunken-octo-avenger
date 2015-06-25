@@ -375,7 +375,7 @@ class BasicChatTest extends BrowserTest
     casper.thenClick (@lastGameSelector false), ->
       # on the game page is a game chat.
       test.assertExists '.game-chat', 'The game chat does exist.'
-      comments_selector = '.game-chat .chat-comments .chat-comment'
+      comments_selector = '.game-chat .chat-comments .chat-comment-black'
       comments = test.assertSelectorHasText comments_selector, MY_CHAT[0],
                  "Player one's comment has appeared in the chat area."
 
