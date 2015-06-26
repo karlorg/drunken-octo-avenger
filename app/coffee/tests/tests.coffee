@@ -147,6 +147,7 @@ module 'Basic game page',
   setup: ->
     setInputSgf '(;SZ[3])'
     $('input#response').val ''
+    tesuji_charm.onTurn = true
     tesuji_charm.game_basic.initialize()
 
 test 'clicking multiple points moves black stone', ->

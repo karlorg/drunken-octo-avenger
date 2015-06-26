@@ -41,15 +41,16 @@ game_basic.initialize = ->
 
   $('button.confirm_button').prop 'disabled', true
 
-  $('.goban .gopoint').click ->
-    return unless game_common.hasCoordClass $(this)
-    [col, row] = game_common.parseCoordClass $(this)
-    setNewStoneAt col, row
+  if tesuji_charm.onTurn
+    $('.goban .gopoint').click ->
+      return unless game_common.hasCoordClass $(this)
+      [col, row] = game_common.parseCoordClass $(this)
+      setNewStoneAt col, row
 
-  $('.pass_button').click ->
-    passSgfObject = sgfObjectWithMoveAdded initialSgfObject
-    setResponseSgf smartgame.generate(passSgfObject)
-    $('#main_form').get(0).submit()
+    $('.pass_button').click ->
+      passSgfObject = sgfObjectWithMoveAdded initialSgfObject
+      setResponseSgf smartgame.generate(passSgfObject)
+      $('#main_form').get(0).submit()
 
 # to facilitate testing, export a function to reload our internal state from
 # the page

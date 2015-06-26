@@ -32,18 +32,19 @@ game_marking.initialize = ->
   setInitialDead sgfObject
   setupScoring()
 
-  $('.goban .gopoint').click ->
-    return unless game_common.hasCoordClass $(this)
-    [col, row] = game_common.parseCoordClass $(this)
-    markStonesAround col, row
-    setupScoring()
+  if tesuji_charm.onTurn
+    $('.goban .gopoint').click ->
+      return unless game_common.hasCoordClass $(this)
+      [col, row] = game_common.parseCoordClass $(this)
+      markStonesAround col, row
+      setupScoring()
 
-  $('.resume_button').click ->
-    resumeSgfObject = game_common.cloneSgfObject initialSgfObject
-    resumeNode = { TCRESUME: [] }
-    resumeSgfObject.gameTrees[0].nodes.push resumeNode
-    setResponseSgf smartgame.generate(resumeSgfObject)
-    $('#main_form').submit()
+    $('.resume_button').click ->
+      resumeSgfObject = game_common.cloneSgfObject initialSgfObject
+      resumeNode = { TCRESUME: [] }
+      resumeSgfObject.gameTrees[0].nodes.push resumeNode
+      setResponseSgf smartgame.generate(resumeSgfObject)
+      $('#main_form').submit()
 
 addScoresToDom = ->
   $('.score_block').append(
