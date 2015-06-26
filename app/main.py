@@ -8,6 +8,7 @@ from collections import namedtuple
 import logging
 import time
 import multiprocessing
+from datetime import datetime
 
 from flask import (
         Flask, abort, flash, redirect, render_template, request,
@@ -42,6 +43,15 @@ if app.debug:
 db = SQLAlchemy(app)
 
 
+def redirect_url(default='front_page'):
+    """ A simple helper function to redirect the user back to where they came
+        from. See: http://flask.pocoo.org/docs/0.10/reqcontext/ and also
+        here: http://stackoverflow.com/questions/14277067/redirect-back-in-flask
+    """
+    return request.args.get('next') or \
+           request.referrer or \
+           url_for(default)
+
 # Views
 #
 # Since view functions tend to have side-effects and to depend on global state,
@@ -62,16 +72,43 @@ def game(game_no):
         flash("Game #{} not found".format(game_no))
         return redirect('/')
     sgf = game.sgf
+    comments = game.comments
     is_your_turn = is_players_turn_in_game(game)
     is_passed_twice = go.is_sgf_passed_twice(sgf)
     # TODO: eliminate move_no once the client can work that out from sgf
     move_no = go.next_move_no(sgf)
     form_data = {'game_no': game.id, 'move_no': move_no, 'data': sgf}
     form = PlayStoneForm(data=form_data)
+    chatform = ChatForm(data=form_data)
     return render_template_with_email(
         "game.html",
-        form=form, game_no=game_no,
-        on_turn=is_your_turn, with_scoring=is_passed_twice)
+        black_email=game.black,
+        white_email=game.white,
+        form=form, chatform=chatform, game_no=game_no,
+        on_turn=is_your_turn, with_scoring=is_passed_twice,
+        comments=comments)
+
+@app.route('/chat/<int:game_no>', methods=['POST'])
+def comment(game_no):
+    try:
+        game = db.session.query(Game).filter_by(id=game_no).one()
+    except SQLAlchemyError:
+        flash("Game #{} not found".format(game_no))
+        return redirect('/')
+    try:
+        current_email = logged_in_email()
+    except NoLoggedInPlayerException:
+        flash("You must be logged in to comment.")
+        return redirect(redirect_url())
+
+    form = ChatForm()
+    if form.validate_on_submit():
+        comment = GameComment(game, form.comment.data, current_email)
+        db.session.add(comment)
+        db.session.commit()
+        return redirect(redirect_url())
+    flash("Comment not validated!")
+    return redirect(redirect_url())
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
@@ -86,7 +123,7 @@ def play(game_no):
     arguments = request.form.to_dict()
     if 'resign_button' in arguments:
         game.finished = True
-        return ''
+        return redirect(redirect_url())
     try:
         go.check_continuation(old_sgf=game.sgf,
                               new_sgf=arguments['response'],
@@ -100,7 +137,7 @@ def play(game_no):
     game.sgf = arguments['response']
     _check_gameover_and_update(game)
     db.session.commit()
-    return ''
+    return redirect(redirect_url())
 
 def _check_gameover_and_update(game):
     """If game is over, update the appropriate fields."""
@@ -514,6 +551,20 @@ class Game(db.Model):
         return "<Game {no}, {b} vs. {w}>".format(
             no=self.id, b=self.black, w=self.white)
 
+class GameComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pub_date = db.Column(db.DateTime)
+    speaker = db.Column(db.String(length=254))
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
+    game = db.relationship('Game', 
+                           backref=db.backref('comments', lazy='dynamic'))
+    content = db.Column(db.Text())
+
+    def __init__(self, game, content, speaker, pub_date=None):
+        self.game = game
+        self.content = content
+        self.speaker = speaker
+        self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
 
 # forms
 
@@ -529,3 +580,8 @@ class PlayStoneForm(Form):
     move_no = HiddenInteger("move_no", validators=[DataRequired()])
     data = HiddenField("data")
     response = HiddenField("response", validators=[DataRequired()])
+
+class ChatForm(Form):
+    game_no = HiddenInteger("game_no", validators=[DataRequired()])
+    # move_no = HiddenInteger("move_no", validators=[DataRequired()])
+    comment = StringField('Comment', validators=[DataRequired()])

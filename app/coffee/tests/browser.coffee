@@ -358,6 +358,56 @@ class PlaceStonesTest extends BrowserTest
 
 registerTest new PlaceStonesTest
 
+class BasicChatTest extends BrowserTest
+  names: ['BasicChatTest']
+  description: "Very basic chat functionality test"
+  numTests: 11
+  testBody: (test) =>
+    ONE_EMAIL = 'player@one.com'
+    TWO_EMAIL = 'playa@dos.es'
+
+    MY_CHAT = ['Are you dancing?', 'Are you asking?',
+               "I'm asking", "I'm dancing"]
+
+    clearGamesForPlayer ONE_EMAIL
+    clearGamesForPlayer TWO_EMAIL
+    createGame ONE_EMAIL, TWO_EMAIL
+
+    # -- PLAYER ONE
+    # player one logs in and gets the front page;
+    # should see a page listing games
+    createLoginSession ONE_EMAIL
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 1, 0
+
+    # select the most recent game
+    casper.thenClick (@lastGameSelector true), ->
+      # on the game page is a game chat.
+      test.assertExists '.game-chat', 'The game chat does exist.'
+      form_values = 'input[name="comment"]' : MY_CHAT[0]
+      # The final 'true' argument means that the form is submitted.
+      @fillSelectors 'form#chat-form', form_values, true
+
+    createLoginSession TWO_EMAIL
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 0, 1
+
+    casper.thenClick (@lastGameSelector false), ->
+      # on the game page is a game chat.
+      test.assertExists '.game-chat', 'The game chat does exist.'
+      comments_selector = '.game-chat .chat-comments .chat-comment-black'
+      comments = test.assertSelectorHasText comments_selector, MY_CHAT[0],
+                 "Player one's comment has appeared in the chat area."
+
+      form_values = 'input[name="comment"]' : MY_CHAT[1]
+      # The final 'true' argument means that the form is submitted.
+      @fillSelectors 'form#chat-form', form_values, true
+
+
+registerTest new BasicChatTest
+
+# TODO A test which attempts a XSS attack, the script should be escaped.
+
 class GameInterfaceTest extends BrowserTest
   names: ['GameInterfaceTest', 'game']
   description: "Game interface"

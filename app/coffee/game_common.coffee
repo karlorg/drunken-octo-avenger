@@ -147,7 +147,7 @@ createBoardDom = (size, newStoneColor = null) ->
     tableContentsStr += row_element
 
   $('.goban').remove()
-  $('#content').append '<div class="goban">' + tableContentsStr + '</div>'
+  $('#board').append '<div class="goban">' + tableContentsStr + '</div>'
   return
 
 createScoringDom = ->
@@ -157,7 +157,7 @@ createScoringDom = ->
     '<span class="prisoners black"></span></div>')
   $scoreBlock.append ('<div>White prisoners: ' +
     '<span class="prisoners white"></span></div>')
-  $('#content').append $scoreBlock
+  $('#board').append $scoreBlock
   return
 
 setupState = (sgf_object) ->

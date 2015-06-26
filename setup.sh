@@ -14,7 +14,7 @@ if [ $# -gt 1 ]
 then
     VENV="../$2"
 else
-    VENV="../tmpvenv"
+    VENV="../venv$PYTHONVERSION"
 fi
 
 # Creating a virtual environment and which requirements file to use depends
@@ -22,19 +22,33 @@ fi
 if [ $(echo "$PYTHONVERSION < 3.0" | bc) -ne 0 ] 
 then
     REQUIREMENTS=requirements.txt
+    PYVENV="virtualenv -p python${PYTHONVERSION}"
 else
     REQUIREMENTS=p3req.txt
+    PYVENV="pyvenv-${PYTHONVERSION}"
 fi
-PYVENV="virtualenv -p python${PYTHONVERSION}"
+
 
 # Finally we can go about creating the virtual environment and installing
 # all of the dependencies.
 ${PYVENV} ${VENV}
-source ${VENV}/bin/activate
+
+# This will activate the python virtual environment as well as add the
+# node_modules/ directory to the path so that we can use the node stuff that
+# we install, such as coffee-script.
+source develop.sh ${VENV}
+
+# Then we have to install the python requirements.
+pip install -r ${REQUIREMENTS}
+
 
 # This essentially writes a small sitecustomize.py file into the virtual
 # environment, this is required for coverage to work with subprocesses.
 SITECUSTOMIZE="${VENV}/lib/python${PYTHONVERSION}/site-packages/sitecustomize.py"
 echo import coverage >> ${SITECUSTOMIZE}
 echo "coverage.process_startup()" >> ${SITECUSTOMIZE}
-pip install -r ${REQUIREMENTS}
+
+# Finally we have to install the node modules that we require, so for this
+# you will need to have 'npm' installed.
+npm install coffee-script
+echo "To run the tests you will need to run 'npm install casperjs'"

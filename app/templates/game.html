@@ -132,11 +132,48 @@
   box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
 }
 
+#board-area{
+   float:left;
+   background: #598385;
+}
+
+.game-chat{
+   width: 50%;
+   float: left;
+   background: #C96253;
+}
+
+.chat-comments{
+    border: 1px solid black;
+}
+
+.chat-comment-anonymous{
+    border: 1px solid #CFBA48;
+    color: #5F215A;
+    background: #FFEE91;
+
+}
+
+.chat-comment-black{
+    border: 1px solid #CFBA48;
+    color: #952D2D;
+    background: #B0E1DF;
+}
+
+.chat-comment-white{
+    border: 1px solid #CFBA48;
+    color: #B0E1DF;
+    background: #952D2D;
+}
+
+#chat-form{
+}
+
 </style>
 
-
-<div id="content"></div>
-
+<div id="content">
+<div id="board-area">
+<div id="board"></div>
 {% if on_turn %}
 <form id="main_form"
       method="POST" action="{{ url_for('play', game_no=game_no) }}">
@@ -161,6 +198,32 @@
     {{ form.hidden_tag() }}
 </form>
 {% endif %}  <!-- if on_turn -->
+
+</div> <!-- end of board-area -->
+
+<div class="game-chat">
+    <div class="chat-comments">
+      {% for comment in comments %}
+        {% if comment.speaker == black_email %}
+           <div class="chat-comment-black">
+        {% elif comment.speaker == white_email %}
+           <div class="chat-comment-white">
+        {% else %}
+           <div class="chat-comment-anonymous">
+        {% endif %}
+        {{comment.content}}</div>
+      {% endfor %}
+    </div>
+<form id="chat-form"
+      method="POST" action="{{ url_for('comment', game_no=game_no) }}">
+    {{ chatform.hidden_tag() }}
+    {{ chatform.comment.label }} {{ chatform.comment() }}
+    <button type="submit"
+            class="comment_button" name='comment_button'>Comment</button>
+</form>
+
+</div><!-- end of game-chat -->
+</div><!-- end of content -->
 
 {% endblock %}
 
