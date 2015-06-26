@@ -206,12 +206,22 @@
 </style>
 
 <div id="match-info">
-       <span style="color:black;">{{black_email}}<span>
+       {% if color_turn == 'black' %}
+            {% set black_text_property = 'underline' %}
+            {% set white_text_property = 'none' %}
+       {% elif color_turn == 'white' %}
+            {% set black_text_property = 'none' %}
+            {% set white_text_property = 'underline' %}
+       {% else %}
+            {% set black_text_property = 'none' %}
+            {% set white_text_property = 'none' %}
+       {% endif %}
+       <span style="color:black; text-decoration:{{black_text_property}};">{{black_email}}</span>
        <div style="display:inline"><div class="stone-image" style="background:#000000"></div>
                                    <span style="color:#f52712;"> VS </span>
                                    <div class="stone-image" style="background:#ffffff"></div>
        </div>
-       <span style="color:white;">{{white_email}}</span>
+       <span style="color:white; text-decoration:{{white_text_property}};">{{white_email}}</span>
 </div><!-- end of match info -->
 
 <div id="content">

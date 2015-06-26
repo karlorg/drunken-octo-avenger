@@ -73,6 +73,7 @@ def game(game_no):
         return redirect('/')
     sgf = game.sgf
     comments = game.comments
+    color_turn = go.next_color(sgf).name
     is_your_turn = is_players_turn_in_game(game)
     is_passed_twice = go.is_sgf_passed_twice(sgf)
     # TODO: eliminate move_no once the client can work that out from sgf
@@ -84,6 +85,7 @@ def game(game_no):
         "game.html",
         black_email=game.black,
         white_email=game.white,
+        color_turn=color_turn,
         form=form, chatform=chatform, game_no=game_no,
         on_turn=is_your_turn, with_scoring=is_passed_twice,
         comments=comments)
