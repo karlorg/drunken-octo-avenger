@@ -37,6 +37,10 @@ game_common.setPointColor = setPointColor = ($td, color) ->
     territoryElement.className = territoryclass
     $td.append territoryElement
 
+game_common.setLastPlayed = setLastPlayed = ($point) ->
+  lastPlayedElement = document.createElement 'div'
+  lastPlayedElement.className = 'last-played'
+  $point.append lastPlayedElement
 
 # end of setPointColor helpers
 
@@ -162,6 +166,8 @@ game_common.initialize = (sgf_object, newStoneColor) ->
           [x, y] = decodeSgfCoord coordStr
           board_state[y][x] = 'white'
     updateBoard board_state
+    if x? and y?
+      setLastPlayed ($pointAt x, y)
 
   return
 

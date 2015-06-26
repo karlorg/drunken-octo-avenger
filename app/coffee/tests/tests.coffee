@@ -18,6 +18,7 @@ isPointDame = ($point) ->
   contains_selector $point, '.territory.neutral'
 isPointBlackDead = ($point) -> contains_selector $point, '.stone.black.dead'
 isPointWhiteDead = ($point) -> contains_selector $point, '.stone.white.dead'
+isPointLastPlayed = ($point) -> contains_selector $point, '.last-played'
 
 
 # ============================================================================
@@ -135,6 +136,12 @@ test "white stones play correctly", ->
   $point = $pointAt 1, 1
   $point.click()
   ok isPointWhite($point), 'second player should be White'
+
+test "last move correctly indicated", ->
+  setInputSgf '(;SZ[3];B[ab])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 0, 1
+  ok isPointLastPlayed($point), 'last placed stone indicated'
 
 test "next player correctly determined with info node", ->
   setInputSgf '(;SZ[3])'
