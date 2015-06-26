@@ -4,12 +4,13 @@ tesuji_charm = window.tesuji_charm
 tesuji_charm.go_rules ?= {}
 go_rules = tesuji_charm.go_rules
 
-go_rules.getNewState = (color, x, y, state) ->
+go_rules.getNewStateAndCaptures = (color, x, y, state) ->
   # given a color stone to play at (x,y), return the new board state
   if state[y][x] isnt 'empty'
     throw Error 'illegal move'
   newState = $.extend(true, [], state)  # deep copy
   newState[y][x] = color
+  captures = { black: 0, white: 0 }
 
   # process captures
   for [xn, yn] in neighboringPoints(x, y, newState)
@@ -17,10 +18,14 @@ go_rules.getNewState = (color, x, y, state) ->
       if countLiberties(xn, yn, newState) is 0
         for [xg, yg] in groupPoints(xn, yn, newState)
           newState[yg][xg] = 'empty'
+          captures[enemyColor(color)] += 1
 
   if countLiberties(x, y, newState) is 0
     throw Error 'illegal move'
-  return newState
+  return { state: newState, captures: captures }
+
+go_rules.getNewState = (color, x, y, state) ->
+  return go_rules.getNewStateAndCaptures(color, x, y, state).state
 
 go_rules.groupPoints = groupPoints = (x, y, state, colors=null) ->
   "Return a list of points in the group around (x, y) from `state`, whether

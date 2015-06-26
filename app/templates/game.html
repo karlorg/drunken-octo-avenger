@@ -100,11 +100,11 @@
     opacity: 0.5;
 }
 
-.black{
+.gopoint .black{
     background: #000000;
 }
 
-.white{
+.gopoint .white{
     background: #ffffff;
 }
 
@@ -270,10 +270,20 @@
 {% endblock %}
 
 {% block page_scripts %}
+<script>
+ (function() {
+     var onTurn = "{{ on_turn }}";
+     if (onTurn === "True") {
+         window.tesuji_charm.onTurn = true;
+     } else {
+         window.tesuji_charm.onTurn = false;
+     }
+     console.log(window.tesuji_charm.onTurn);
+ })();
+</script>
 <script src="/static/compiled-js/go_rules.js"></script>
 <script src="/static/compiled-js/smartgame.js"></script>
 <script src="/static/compiled-js/game_common.js"></script>
-{% if on_turn %}
 {% if with_scoring %}
 <script src="/static/compiled-js/game_marking.js"></script>
 <script>
@@ -285,9 +295,4 @@ window.tesuji_charm.game_marking.initialize();
 window.tesuji_charm.game_basic.initialize();
 </script>
 {% endif %} <!-- if with_scoring -->
-{% else %}  <!-- if on_turn -->
-<script>
- window.tesuji_charm.game_common.initialize();
-</script>
-{% endif %} <!-- if on_turn-->
 {% endblock %}
