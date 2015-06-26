@@ -181,7 +181,37 @@
 #chat-form{
 }
 
+/* If we wish to display a stone away from the board, for example in the
+   heading to show who is black/white or to show captures then we have to
+   put a 'stone' element within a 'stone-container' otherwise the stone
+   element will take on a percentage (80 at time of writing) of its parent
+   element.
+*/
+.stone-image{
+    display:inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid #ddd;
+    border-radius: 80%;
+    position: relative;
+    box-shadow: 0 0 5px rgba(0,0,0,0.8);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+#match-info{
+    background: #925F7D;
+}
+
 </style>
+
+<div id="match-info">
+       <span style="color:black;">{{black_email}}<span>
+       <div style="display:inline"><div class="stone-image black"></div>
+                                   <span style="color:#f52712;"> VS </span>
+                                   <div class="stone-image white"></div>
+       </div>
+       <span style="color:white;">{{white_email}}</span>
+</div><!-- end of match info -->
 
 <div id="content">
 <div id="board-area">
