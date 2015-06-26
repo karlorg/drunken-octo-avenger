@@ -211,6 +211,22 @@ def persona_login():
     else:
         abort(500)
 
+@app.route('/finished', methods=['GET'])
+def finished():
+    try:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
+        return redirect('/')
+    finished_games = (
+        db.session.query(Game)
+        .filter(Game.finished == True)  # noqa
+        .filter(or_(Game.black == email, Game.white == email))
+        .all()
+    )
+    return render_template_with_email(
+            "finished.html",
+            finished_games=finished_games)
+
 @app.route('/logout', methods=['POST'])
 def logout():
     try:

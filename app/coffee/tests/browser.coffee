@@ -659,7 +659,7 @@ registerTest new ResignTest
 class FinishedGamesTest extends BrowserTest
   names: ['FinishedGamesTest', 'finished', 'fin']
   description: "finished games page"
-  numTests: 4
+  numTests: 5
   testBody: (test) =>
     BLACK_EMAIL = "black@black.com"
     WHITE_EMAIL = "white@white.com"
@@ -686,7 +686,9 @@ class FinishedGamesTest extends BrowserTest
     casper.thenClick '.confirm_button'
 
     casper.thenOpen serverUrl
-    casper.thenClick '.finished_games_link'
+    casper.thenClick '.finished_games_link', ->
+      gamesCount = casper.evaluate -> $('#finished_games li').length
+      test.assertEqual gamesCount, 1, "exactly one finished game listed"
 
 registerTest new FinishedGamesTest
 
