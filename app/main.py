@@ -248,6 +248,22 @@ def persona_login():
     else:
         abort(500)
 
+@app.route('/finished', methods=['GET'])
+def finished():
+    try:
+        email = logged_in_email()
+    except NoLoggedInPlayerException:
+        return redirect('/')
+    finished_games = (
+        db.session.query(Game)
+        .filter(Game.finished == True)  # noqa
+        .filter(or_(Game.black == email, Game.white == email))
+        .all()
+    )
+    return render_template_with_email(
+            "finished.html",
+            finished_games=finished_games)
+
 @app.route('/logout', methods=['POST'])
 def logout():
     try:
@@ -366,6 +382,38 @@ def sgf_from_text_map(text_map):
     ab_str = sgfify(ab_coords, 'AB')
     aw_str = sgfify(aw_coords, 'AW')
     return "(;{ab}{aw})".format(ab=ab_str, aw=aw_str)
+
+
+@app.test_only_route('/testing_setup_finished_game', methods=['POST'])
+def testing_setup_finished_game():
+    """Create a finished game (in the marking phase)."""
+    black_email = request.form['black_email']
+    white_email = request.form['white_email']
+    setup_finished_game_internal(black_email, white_email)
+
+def setup_finished_game_internal(black_email, white_email):
+    stones = ['.....bww.wbb.......',
+              '.bb...bw.wwbb......',
+              '.wwbbb.bw.wbwwb..b.',
+              'b.www..b.w.b.bbb.b.',
+              '.w.w..bww.wwbbwwww.',
+              '.bwwb.bw.w.wwbbbbbb',
+              '.bbbbbbw.bbbbwwwwwb',
+              '...bwwwbbbwbwww..ww',
+              '....bbwwb.wwbbbww..',
+              '.bbbbww.ww.ww..wb..',
+              'bbwbw.....wbw..wb..',
+              'bwww.w...wbbw......',
+              'w.......w...w..w.ww',
+              'w.w.....wbbbw...wwb',
+              'bw...www.b.bbww.wbb',
+              'bbwwwwbwbbwww.wwbb.',
+              '.bbbwbbbwbbbwwbwb..',
+              '...bbw.bwb..bbbb...',
+              '...................']
+    sgf = sgf_from_text_map(stones)
+    passed_sgf = sgf[:-1] + 'B[];W[])'
+    create_game_internal(black_email, white_email, sgf=passed_sgf)
 
 
 @app.test_only_route('/testing_clear_games_for_player', methods=['POST'])

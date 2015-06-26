@@ -132,28 +132,7 @@ def run_test_server():
 @manager.command
 def setup_finished_game(black_email, white_email):
     """Create a game in the marking dead stones phase, for manual testing. """
-    stones = ['.....bww.wbb.......',
-              '.bb...bw.wwbb......',
-              '.wwbbb.bw.wbwwb..b.',
-              'b.www..b.w.b.bbb.b.',
-              '.w.w..bww.wwbbwwww.',
-              '.bwwb.bw.w.wwbbbbbb',
-              '.bbbbbbw.bbbbwwwwwb',
-              '...bwwwbbbwbwww..ww',
-              '....bbwwb.wwbbbww..',
-              '.bbbbww.ww.ww..wb..',
-              'bbwbw.....wbw..wb..',
-              'bwww.w...wbbw......',
-              'w.......w...w..w.ww',
-              'w.w.....wbbbw...wwb',
-              'bw...www.b.bbww.wbb',
-              'bbwwwwbwbbwww.wwbb.',
-              '.bbbwbbbwbbbwwbwb..',
-              '...bbw.bwb..bbbb...',
-              '...................']
-    sgf = main.sgf_from_text_map(stones)
-    passed_sgf = sgf[:-1] + 'B[];W[])'
-    main.create_game_internal(black_email, white_email, sgf=passed_sgf)
+    main.setup_finished_game_internal(black_email, white_email)
 
 if __name__ == "__main__":
     manager.run()
