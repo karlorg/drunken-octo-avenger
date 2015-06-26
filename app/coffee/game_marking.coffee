@@ -16,28 +16,47 @@ setResponseSgf = game_common.setResponseSgf
 go_rules = tesuji_charm.go_rules
 
 
-originalSgfObject = null
+initialSgfObject = null
+initialBlackPrisoners = null
+initialWhitePrisoners = null
 
 
 game_marking.initialize = ->
   sgfObject = smartgame.parse (getInputSgf() or '(;)')
-  originalSgfObject = game_common.cloneSgfObject sgfObject
+  initialSgfObject = game_common.cloneSgfObject sgfObject
   game_common.initialize sgfObject
+  addScoresToDom()
+
+  initialBlackPrisoners = game_common.getBlackPrisoners()
+  initialWhitePrisoners = game_common.getWhitePrisoners()
   setInitialDead sgfObject
   setupScoring()
 
-  $('.goban .gopoint').click ->
-    return unless game_common.hasCoordClass $(this)
-    [row, col] = game_common.parseCoordClass $(this)
-    markStonesAround col, row
-    setupScoring()
+  if tesuji_charm.onTurn
+    $('.goban .gopoint').click ->
+      return unless game_common.hasCoordClass $(this)
+      [col, row] = game_common.parseCoordClass $(this)
+      markStonesAround col, row
+      setupScoring()
 
-  $('.resume_button').click ->
-    resumeSgfObject = game_common.cloneSgfObject originalSgfObject
-    resumeNode = { TCRESUME: [] }
-    resumeSgfObject.gameTrees[0].nodes.push resumeNode
-    setResponseSgf smartgame.generate(resumeSgfObject)
-    $('#main_form').submit()
+    $('.resume_button').click ->
+      resumeSgfObject = game_common.cloneSgfObject initialSgfObject
+      resumeNode = { TCRESUME: [] }
+      resumeSgfObject.gameTrees[0].nodes.push resumeNode
+      setResponseSgf smartgame.generate(resumeSgfObject)
+      $('#main_form').submit()
+
+addScoresToDom = ->
+  $('.score_block').append(
+    '<div>Black score: <span class="score black" /></div>')
+  $('.score_block').append(
+    '<div>White score: <span class="score white" /></div>')
+  return
+
+setBlackScore = (score) ->
+  $('.score.black').text score
+setWhiteScore = (score) ->
+  $('.score.white').text score
 
 # setInitialDead
 
@@ -58,17 +77,26 @@ setInitialDead = (sgfObject) ->
 # setupScoring and its helpers
 
 setupScoring = ->
-  "set/remove scoring classes on the DOM based on current live/dead state of
-  all stones"
+  "set/remove scoring classes and score counts on the DOM, and
+  response SGF, based on current live/dead state of all stones"
   state = game_common.readBoardState()
   for region in getEmptyRegions state
-    [col, row] = region[0]
     boundary = go_rules.boundingColor region, state
     setRegionScores region, switch boundary
       when 'black' then 'blackscore'
       when 'white' then 'whitescore'
       when 'neither' then 'dame'
       else throw new Error "invalid boundary color: '#{boundary}'"
+
+  prisoners = countPrisoners state
+  totalBlackPrisoners = initialBlackPrisoners + prisoners.black
+  totalWhitePrisoners = initialWhitePrisoners + prisoners.white
+  game_common.setBlackPrisoners totalBlackPrisoners
+  game_common.setWhitePrisoners totalWhitePrisoners
+  territories = countTerritories()
+  setBlackScore territories.black + totalWhitePrisoners
+  setWhiteScore territories.white + totalBlackPrisoners
+
   updateForm()
   return
 
@@ -95,6 +123,27 @@ setRegionScores = (region, scoreColor) ->
     if game_common.colorFromDom($point) == 'empty'
       game_common.setPointColor $point, scoreColor
   return
+
+countPrisoners = (state) ->
+  black = 0
+  white = 0
+  for rowArray in state
+    for color in rowArray
+      if color is 'blackdead'
+        black += 1
+      else if color is 'whitedead'
+        white += 1
+  return black: black, white: white
+
+countTerritories = ->
+  black = 0
+  white = 0
+  $('.gopoint').each ->
+    if game_common.isBlackScore($(this))
+      black += 1
+    else if game_common.isWhiteScore($(this))
+      white += 1
+  return black: black, white: white
 
 # markStonesAround and its helpers
 

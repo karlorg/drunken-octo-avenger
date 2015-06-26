@@ -100,11 +100,11 @@
     opacity: 0.5;
 }
 
-.black{
+.gopoint .black{
     background: #000000;
 }
 
-.white{
+.gopoint .white{
     background: #ffffff;
 }
 
@@ -124,6 +124,18 @@
   width: 30%;
   height:30%;
   background: #000000;
+  border-radius: 100%;
+  position: absolute;
+  left: 35%;
+  top: 35%;
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+.last-played {
+  width: 30%;
+  height:30%;
+  background: #f52712;
   border-radius: 100%;
   position: absolute;
   left: 35%;
@@ -169,7 +181,48 @@
 #chat-form{
 }
 
+/* If we wish to display a stone away from the board, for example in the
+   heading to show who is black/white or to show captures then we have to
+   put a 'stone' element within a 'stone-container' otherwise the stone
+   element will take on a percentage (80 at time of writing) of its parent
+   element.
+*/
+.stone-image{
+    display:inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid #ddd;
+    border-radius: 80%;
+    position: relative;
+    box-shadow: 0 0 5px rgba(0,0,0,0.8);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+
+#match-info{
+    background: #925F7D;
+}
+
 </style>
+
+<div id="match-info">
+       {% if color_turn == 'black' %}
+            {% set black_text_property = 'underline' %}
+            {% set white_text_property = 'none' %}
+       {% elif color_turn == 'white' %}
+            {% set black_text_property = 'none' %}
+            {% set white_text_property = 'underline' %}
+       {% else %}
+            {% set black_text_property = 'none' %}
+            {% set white_text_property = 'none' %}
+       {% endif %}
+       <span style="color:black; text-decoration:{{black_text_property}};">{{black_email}}</span>
+       <div style="display:inline"><div class="stone-image" style="background:#000000"></div>
+                                   <span style="color:#f52712;"> VS </span>
+                                   <div class="stone-image" style="background:#ffffff"></div>
+       </div>
+       <span style="color:white; text-decoration:{{white_text_property}};">{{white_email}}</span>
+</div><!-- end of match info -->
 
 <div id="content">
 <div id="board-area">
@@ -228,10 +281,20 @@
 {% endblock %}
 
 {% block page_scripts %}
+<script>
+ (function() {
+     var onTurn = "{{ on_turn }}";
+     if (onTurn === "True") {
+         window.tesuji_charm.onTurn = true;
+     } else {
+         window.tesuji_charm.onTurn = false;
+     }
+     console.log(window.tesuji_charm.onTurn);
+ })();
+</script>
 <script src="/static/compiled-js/go_rules.js"></script>
 <script src="/static/compiled-js/smartgame.js"></script>
 <script src="/static/compiled-js/game_common.js"></script>
-{% if on_turn %}
 {% if with_scoring %}
 <script src="/static/compiled-js/game_marking.js"></script>
 <script>
@@ -243,9 +306,4 @@ window.tesuji_charm.game_marking.initialize();
 window.tesuji_charm.game_basic.initialize();
 </script>
 {% endif %} <!-- if with_scoring -->
-{% else %}  <!-- if on_turn -->
-<script>
- window.tesuji_charm.game_common.initialize();
-</script>
-{% endif %} <!-- if on_turn-->
 {% endblock %}

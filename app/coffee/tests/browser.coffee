@@ -76,6 +76,10 @@ class BrowserTest
       test.assertEqual game_counts.not_your_turn, players_wait,
                        'Expected number of not-your-turn games'
 
+  lastFinishedGameSelector: ->
+    list_id = 'finished_games'
+    return '#' + list_id + ' li:last-child a'
+
   lastGameSelector: (your_turn) ->
     list_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
     return '#' + list_id + ' li:last-child a'
@@ -168,6 +172,22 @@ class BrowserTest
 
   assertEmptyBoard: (test) =>
     @assertStonePointCounts test, 19*19, 0, 0
+
+  assertPrisoners: (test, counts) ->
+    for color, count of counts
+      actualCount = parseInt casper.evaluate(
+        (color) -> $(".prisoners.#{color}").text(),
+        color)
+      test.assertEqual actualCount, count,
+        "#{color} prisoners should be #{count}, is #{actualCount}"
+
+  assertScores: (test, scores) ->
+    for color, score of scores
+      actualScore = parseInt casper.evaluate(
+        (color) -> $(".score.#{color}").text(),
+        color)
+      test.assertEqual actualScore, score,
+        "#{color} score should be #{score}, is #{actualScore}"
 
 
 class ClientSideJsTest extends BrowserTest
@@ -505,12 +525,12 @@ registerTest new GameInterfaceTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 34
+  numTests: 62
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
     clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
-    createGame BLACK_EMAIL, WHITE_EMAIL, ['.b.wb',
+    createGame BLACK_EMAIL, WHITE_EMAIL, ['....b',
                                           'bb.wb',
                                           '...wb',
                                           'wwwwb',
@@ -522,9 +542,29 @@ class PassAndScoringTest extends BrowserTest
       casper.thenOpen serverUrl
       casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
 
+    # Black passes
+    goToGame BLACK_EMAIL
+    casper.thenClick '.pass_button'
+    # White plays (0,0)
+    goToGame WHITE_EMAIL
+    casper.thenClick pointSelector(0, 0)
+    casper.thenClick '.confirm_button'
+    # Black opens the game
+    goToGame BLACK_EMAIL, =>
+      # there are currently no prisoners
+      @assertPrisoners test, { black: 0, white: 0 }
+    casper.thenClick pointSelector(1, 0), =>
+      # the captured white stone is reflected in the prisoner counts
+      @assertPrisoners test, { black: 0, white: 1 }
+    casper.thenClick '.confirm_button'
+
+    # White plays one more stone (to get the game back to the state in which
+    # this test was originally written)
+    goToGame WHITE_EMAIL
+    casper.thenClick pointSelector(3, 0)
+    casper.thenClick '.confirm_button'
+
     # black opens the game and passes
-    # (it should be black's turn since there are no actual moves in this game,
-    # only setup stones)
     goToGame BLACK_EMAIL
     casper.thenClick '.pass_button'
     # for now we're not defining where the player should end up after passing.
@@ -550,6 +590,8 @@ class PassAndScoringTest extends BrowserTest
         white: 7
         blackscore: 19*19 - 25 + 1
         whitescore: 0
+      @assertPrisoners test, black: 0, white: 1
+      @assertScores test, black: 19*19 - 25 + 2, white: 0
     # clicking an empty point does nothing
     casper.thenClick (pointSelector 0, 0), =>
       @assertGeneralPointCounts test,
@@ -569,6 +611,8 @@ class PassAndScoringTest extends BrowserTest
         whitescore: 9
         blackdead: 3
         black: 9
+      @assertPrisoners test, black: 3, white: 1
+      @assertScores test, black: 19*19 - 25 + 1, white: 12
 
     # we click the white group; the neighbouring dead black stones are restored
     # automatically
@@ -577,11 +621,40 @@ class PassAndScoringTest extends BrowserTest
         label: "white stones marked dead"
         black: 12
         blackdead: 0
+        white: 0
+        whitedead: 7
         dame: 0
         blackscore: 19*19 - 12
         whitescore: 0
     # Black confirms this pleasing result
     casper.thenClick '.confirm_button'
+    # Black then revisits the same game off-turn to bask in the glory of his
+    # big win
+    casper.thenOpen serverUrl
+    casper.thenClick @lastGameSelector(false), =>  # false = not our turn
+      # the marks are still the same
+      @assertGeneralPointCounts test,
+        label: "Black views game off-turn"
+        black: 12
+        blackdead: 0
+        white: 0
+        whitedead: 7
+        dame: 0
+        blackscore: 19*19 - 12
+        whitescore: 0
+    # Black wonders if the devs remembered to turn off toggling dead stones
+    # off-turn
+    casper.thenClick pointSelector(3, 3), =>
+      # nothing changes
+      @assertGeneralPointCounts test,
+        label: "Black tries toggling marks off-turn"
+        black: 12
+        blackdead: 0
+        white: 0
+        whitedead: 7
+        dame: 0
+        blackscore: 19*19 - 12
+        whitescore: 0
 
     # White then logs in and opens the game
     goToGame WHITE_EMAIL, =>
@@ -638,8 +711,6 @@ class PassAndScoringTest extends BrowserTest
       test.assertDoesntExist (@lastGameSelector true)
       test.assertDoesntExist (@lastGameSelector false)
 
-    # TODO: add ability to view finished games, verify scores, winner etc.
-
 registerTest new PassAndScoringTest
 
 
@@ -668,6 +739,79 @@ class ResignTest extends BrowserTest
 registerTest new ResignTest
 
 
+class FinishedGamesTest extends BrowserTest
+  names: ['FinishedGamesTest', 'finished', 'fin']
+  description: "finished games page"
+  numTests: 26
+  testBody: (test) =>
+    BLACK_EMAIL = "black@black.com"
+    WHITE_EMAIL = "white@white.com"
+    clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
+    setupFinishedGame BLACK_EMAIL, WHITE_EMAIL
+
+    goToGame = (email, thenFn=(->)) =>
+      createLoginSession email
+      casper.thenOpen serverUrl
+      casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
+
+    # mark dead stones and finish game
+    goToGame BLACK_EMAIL
+    casper.thenClick pointSelector(1, 2)
+    casper.thenClick pointSelector(12, 2)
+    casper.thenClick pointSelector(7, 7)
+    casper.thenClick pointSelector(12, 8)
+    casper.thenClick pointSelector(8, 17), =>
+      # check scores and board markings to make sure we hit the right
+      # points there, and for comparison with test below
+      @assertPrisoners test, black: 14, white: 18
+      @assertScores test, black: 117, white: 89
+      @assertGeneralPointCounts test,
+        label: "before confirming dead stones"
+        blackdead: 14
+        whitedead: 18
+        blackscore: 117 - 18
+        whitescore: 89 - 14
+    casper.thenClick '.confirm_button'
+    goToGame WHITE_EMAIL
+    casper.thenClick '.confirm_button'
+
+    casper.thenOpen serverUrl
+    casper.thenClick '.finished_games_link', ->
+      gamesCount = casper.evaluate -> $('#finished_games li').length
+      test.assertEqual gamesCount, 1, "White: exactly one finished game listed"
+
+    # Black logs in and views the finished game
+    createLoginSession BLACK_EMAIL
+    casper.thenOpen serverUrl
+    casper.thenClick '.finished_games_link', ->
+      gamesCount = casper.evaluate -> $('#finished_games li').length
+      test.assertEqual gamesCount, 1, "Black: exactly one finished game listed"
+    casper.thenClick @lastFinishedGameSelector(), =>
+      # check scores and board markings are still the same
+      @assertPrisoners test, black: 14, white: 18
+      @assertScores test, black: 117, white: 89
+      @assertGeneralPointCounts test,
+        label: "viewing finished game"
+        blackdead: 14
+        whitedead: 18
+        blackscore: 117 - 18
+        whitescore: 89 - 14
+
+    # Black clicks a dead stone.  Although it would be Black's turn if the game
+    # were still running, nothing happens
+    casper.thenClick pointSelector(1, 2), =>
+      @assertPrisoners test, black: 14, white: 18
+      @assertScores test, black: 117, white: 89
+      @assertGeneralPointCounts test,
+        label: "Black clicks a dead stone after end of game"
+        blackdead: 14
+        whitedead: 18
+        blackscore: 117 - 18
+        whitescore: 89 - 14
+
+registerTest new FinishedGamesTest
+
+
 # helper functions
 
 clearGamesForPlayer = (email) ->
@@ -683,6 +827,13 @@ createGame = (black_email, white_email, stones=[]) ->
       'black_email': black_email
       'white_email': white_email
       'stones': JSON.stringify stones
+
+setupFinishedGame = (blackEmail, whiteEmail) ->
+  casper.thenOpen "#{serverUrl}/testing_setup_finished_game",
+    method: 'post'
+    data:
+      black_email: blackEmail
+      white_email: whiteEmail
 
 createLoginSession = (email) ->
   "Add steps to the stack to create a login session on the server."

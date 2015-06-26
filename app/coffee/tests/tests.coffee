@@ -18,6 +18,7 @@ isPointDame = ($point) ->
   contains_selector $point, '.territory.neutral'
 isPointBlackDead = ($point) -> contains_selector $point, '.stone.black.dead'
 isPointWhiteDead = ($point) -> contains_selector $point, '.stone.white.dead'
+isPointLastPlayed = ($point) -> contains_selector $point, '.last-played'
 
 
 # ============================================================================
@@ -69,6 +70,24 @@ test 'init function sets request and logout callbacks', ->
 setInputSgf = (sgf) -> $('input#data').val sgf
 getResponseSgf = -> $('input#response').val()
 
+QUnit.assert.prisonerCounts = (black, white, message = null) ->
+  message = if message then "#{message}: " else ''
+  actualBlack = $('.prisoners.black').text()
+  @equal parseInt(actualBlack), black,
+    "#{message}Black prisoners should be #{black}, is #{actualBlack}"
+  actualWhite = $('.prisoners.white').text()
+  @equal parseInt(actualWhite), white,
+    "#{message}White prisoners should be #{white}, is #{actualWhite}"
+
+QUnit.assert.scores = (black, white, message = null) ->
+  message = if message then "#{message}: " else ''
+  actualBlack = $('.score.black').text()
+  @equal parseInt(actualBlack), black,
+    "#{message}Black score should be #{black}, is #{actualBlack}"
+  actualWhite = $('.score.white').text()
+  @equal parseInt(actualWhite), white,
+    "#{message}White score should be #{white}, is #{actualWhite}"
+
 # ============================================================================
 
 
@@ -99,6 +118,20 @@ test "setup stones in SGF (tags AB & AW)", (assert) ->
                [ 'empty', 'black', 'empty' ] ]
   assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
 
+test "prisoner counts set from SGF", (assert) ->
+  testSgf = (sgf, black, white) ->
+    setInputSgf sgf
+    tesuji_charm.game_common.initialize()
+    assert.prisonerCounts(black, white)
+
+  testSgf '(;SZ[3];AW[ab]B[aa])', 0, 0
+  # regression: score elements are not duplicated
+  testSgf '(;SZ[3];AW[ab]B[aa])', 0, 0
+  assert.equal $('.prisoners.black').length, 1,
+    "only one black prisoner element"
+  testSgf '(;SZ[3];AW[ab]B[aa];W[ba])', 1, 0
+  testSgf '(;SZ[3];AW[aa]AB[ba]B[ab])', 0, 1
+
 test "helper function readBoardState", (assert) ->
   setInputSgf '(;SZ[3];B[ca];W[bc])'
   tesuji_charm.game_common.initialize()
@@ -115,6 +148,7 @@ module 'Basic game page',
   setup: ->
     setInputSgf '(;SZ[3])'
     $('input#response').val ''
+    tesuji_charm.onTurn = true
     tesuji_charm.game_basic.initialize()
 
 test 'clicking multiple points moves black stone', ->
@@ -135,6 +169,12 @@ test "white stones play correctly", ->
   $point = $pointAt 1, 1
   $point.click()
   ok isPointWhite($point), 'second player should be White'
+
+test "last move correctly indicated", ->
+  setInputSgf '(;SZ[3];B[ab])'
+  tesuji_charm.game_basic.initialize()
+  $point = $pointAt 0, 1
+  ok isPointLastPlayed($point), 'last placed stone indicated'
 
 test "next player correctly determined with info node", ->
   setInputSgf '(;SZ[3])'
@@ -197,13 +237,26 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   assert.notOk $('input#response').val().match(/B\[bb]/),
     "SGF response does not contain black stone"
 
-test "captured stones are removed from the board", (assert) ->
+test "captured stones are removed and prisoner counts updated", (assert) ->
   setInputSgf '(;SZ[3];B[ba];W[aa])'
   tesuji_charm.game_basic.initialize()
+  assert.prisonerCounts 0, 0
   # now make the capture
   $pointAt(0, 1).click()
   # corner should be blank now
   assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
+  assert.prisonerCounts 0, 1
+
+test "prisoner counts with pre-existing prisoners", (assert) ->
+  setInputSgf ('(;SZ[5];AB[ab][ee]AW[aa][de]' +
+               ';B[ba];W[ed]' +
+               ';AB[ce][dd])')
+  tesuji_charm.game_basic.initialize()
+  assert.prisonerCounts 1, 1
+  $pointAt(2, 2).click()
+  assert.prisonerCounts 1, 1
+  $pointAt(4, 4).click()
+  assert.prisonerCounts 1, 2
 
 test "correct color after resume with two passes (black first)", (assert) ->
   setInputSgf '(;SZ[3];B[];W[];TCRESUME[])'
@@ -268,7 +321,12 @@ test "mixed scoring board", (assert) ->
 test "clicking live stones makes them dead, " + \
      "clicking again brings them back", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac])'
+  # b.w
+  # .b.  (white captured at ab)
+  # bbw
   tesuji_charm.game_marking.initialize()
+  assert.prisonerCounts 0, 1, "initial layout"
+  assert.scores 2, 0, "initial layout"
 
   $pointAt(1, 1).click()
   assert.ok isPointBlackDead($pointAt(1, 1)),
@@ -281,6 +339,8 @@ test "clicking live stones makes them dead, " + \
     "(0, 1) becomes white score with black stones dead"
   assert.ok isPointWhiteScore($pointAt(2, 1)),
     "(2, 1) becomes white score with black stones dead"
+  assert.prisonerCounts 4, 1, "black marked dead"
+  assert.scores 1, 11, "black marked dead"
 
   $pointAt(1, 1).click()
   assert.ok isPointBlack($pointAt(1, 1)),
@@ -293,6 +353,8 @@ test "clicking live stones makes them dead, " + \
     "(0, 1) counts for black again with black stones restored"
   assert.notOk isPointWhiteScore($pointAt(2, 1)),
     "(2, 1) is neutral again with black stones restored"
+  assert.prisonerCounts 0, 1, "black stones revived"
+  assert.scores 2, 0, "black stones revived"
 
 test "killing stones revives neighbouring enemy groups " + \
      "automatically", (assert) ->
@@ -381,6 +443,12 @@ QUnit.assert.illegal = (color, x, y, state, message) ->
       return
   @push false, true, false, message ? "move is illegal"
 
+QUnit.assert.captures = (color, x, y, state, black, white, message) ->
+  message or= "move makes capture"
+  {_, captures} = go_rules.getNewStateAndCaptures(color, x, y, state)
+  @equal captures.black, black, message + ": black"
+  @equal captures.white, white, message + ": white"
+
 test "playing on an existing stone is illegal", (assert) ->
   board = [ ['empty', 'black'], ['empty', 'empty'] ]
   assert.legal('white', 0, 1, board)
@@ -447,6 +515,13 @@ test "capturing with own last liberty does not remove own stones", (assert) ->
   ]
   b1 = go_rules.getNewState('white', 1, 2, board)
   assert.deepEqual(b1, expected, "group capture succeeded")
+
+test "capture counts are reported correctly", (assert) ->
+  board = [ ['black', 'black'], ['empty', 'white'] ]
+  assert.captures('black', 0, 1, board, 0, 1,
+    "Black captures one white stone")
+  assert.captures('white', 0, 1, board, 2, 0,
+    "White captures two black stones")
 
 test "helper function neighboringPoints", (assert) ->
   board = [
