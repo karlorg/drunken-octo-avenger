@@ -76,9 +76,7 @@ def game(game_no):
     color_turn = go.next_color(sgf).name
     is_your_turn = is_players_turn_in_game(game)
     is_passed_twice = go.is_sgf_passed_twice(sgf)
-    # TODO: eliminate move_no once the client can work that out from sgf
-    move_no = go.next_move_no(sgf)
-    form_data = {'game_no': game.id, 'move_no': move_no, 'data': sgf}
+    form_data = {'game_no': game.id, 'data': sgf}
     form = PlayStoneForm(data=form_data)
     chatform = ChatForm(data=form_data)
     return render_template_with_email(
@@ -145,10 +143,6 @@ def _check_gameover_and_update(game):
     """If game is over, update the appropriate fields."""
     if go.ends_by_agreement(game.sgf):
         game.finished = True
-
-@app.route('/resign', methods=['POST'])
-def resign():
-    assert False, "needs implementation"
 
 @app.route('/challenge', methods=('GET', 'POST'))
 def challenge():
@@ -222,7 +216,6 @@ def email_to_move_in_game(game):
     next_in_game = {go.Color.black: game.black,
                     go.Color.white: game.white}[black_or_white]
     return next_in_game
-
 
 
 @app.route('/persona/login', methods=['POST'])
@@ -392,6 +385,7 @@ def testing_setup_finished_game():
     black_email = request.form['black_email']
     white_email = request.form['white_email']
     setup_finished_game_internal(black_email, white_email)
+    return ''
 
 def setup_finished_game_internal(black_email, white_email):
     stones = ['.....bww.wbb.......',
