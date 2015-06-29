@@ -9,8 +9,12 @@
 <body>
 {% if current_user_email %}
 <div class="logged_in_user">Logged in as: {{ current_user_email }}</div>
+{% if current_persona_email %}
 <a href="#" id="logout">Log out</a>
-{% else %}
+{% else %}  <!-- else current_persona_email -->
+<a href="/logout" id="logout">Log out</a>
+{% endif %}  <!-- end current_persona_email -->
+{% else %}  <!-- else current_user_email -->
 <a href="#" id="persona_login">Login with Persona</a>
 <form id="login_form" action="/login" method="POST">
     <label>Username: <input type="text" name="username" /></label>

@@ -280,10 +280,31 @@ class NativeLoginTest extends BrowserTest
     # Darren is automatically logged in
     casper.then ->
       # the next page has a logout button
-      test.assertExists '#logout'
+      test.assertExists '#logout',
+        "Darren logged in automatically, logout button appears"
       # and shows Darren's username
       test.assertTextExists 'darrenlamb',
         "Darren logged in for first time, his name appears"
+
+    # he logs out
+    casper.thenClick '#logout', ->
+      test.assertDoesntExist '#logout',
+        "Darren logs out, logout button disappears"
+      test.assertExists 'form#login_form',
+        "Darren logged out, the login form is back"
+
+    # later, he logs in again
+    casper.thenOpen serverUrl, ->
+      @fill 'form#login_form', {
+        username: 'darrenlamb'
+        password: 'iknowandy'
+        }, true  # true = submit form
+    # this time he gets in
+    casper.then ->
+      test.assertExists '#logout',
+        "Darren logs in again, logout button appears"
+      test.assertTextExists 'darrenlamb',
+        "Darren logs in again, his name appears on the page"
 
 registerTest new NativeLoginTest
 

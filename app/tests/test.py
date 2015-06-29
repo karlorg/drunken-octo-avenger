@@ -179,13 +179,22 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
 
 class TestLogoutIntegrated(TestWithTestingApp):
 
+    def test_no_content_on_post(self):
+        response = self.test_client.post(url_for('logout'))
+        self.assertEqual(len(response.data), 0)
+
+    def test_returns_to_front_on_get(self):
+        response = self.test_client.get(url_for('logout'))
+        self.assert_redirects(response, '/')
+
     def test_removes_email_and_persona_email_from_session(self):
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as session:
                 session['email'] = 'olduser@remove.me'
                 session['persona_email'] = 'olduser@remove.me'
+            with self.patch_render_template():
 
-            test_client.post('/logout')
+                test_client.post('/logout')
 
             with test_client.session_transaction() as session:
                 self.assertNotIn('email', session)
@@ -194,7 +203,8 @@ class TestLogoutIntegrated(TestWithTestingApp):
     def test_no_error_when_email_not_set(self):
         with main.app.test_client() as test_client:
             try:
-                test_client.post('/logout')
+                with self.patch_render_template():
+                    test_client.post('/logout')
             except Exception as e:
                 self.fail("exception {} raised for logout "
                           "with no email set".format(repr(e)))

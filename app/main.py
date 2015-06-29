@@ -280,7 +280,7 @@ def finished():
             "finished.html",
             finished_games=finished_games)
 
-@app.route('/logout', methods=['POST'])
+@app.route('/logout', methods=['GET', 'POST'])
 def logout():
     try:
         del session['email']
@@ -290,7 +290,10 @@ def logout():
         del session['persona_email']
     except KeyError:
         pass
-    return ''
+    if request.method == 'POST':
+        return ''
+    else:
+        return redirect('/')
 
 # test-only routes (used in testing to access the server more directly than
 # users are normally allowed to), and their helpers.  These should all use the
