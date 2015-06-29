@@ -240,7 +240,7 @@ registerTest new PersonaLoginTest
 class NativeLoginTest extends BrowserTest
   names: ['NativeLoginTest', 'login', 'nlogin']
   description: 'Test our native username/password login procedure'
-  numTests: 11
+  numTests: 14
   testBody: (test) ->
     deleteUser 'darrenlamb'
 
@@ -299,6 +299,21 @@ class NativeLoginTest extends BrowserTest
 
     # later, he logs in again
     casper.thenOpen serverUrl, ->
+      # at first he forgets what password he settled on
+      @fill 'form#login_form', {
+        username: 'darrenlamb'
+        password: 'imdarrenlamb'
+        }, true  # true = submit form
+    casper.then ->
+      test.assertDoesntExist '#logout',
+        "After trying incorrect password, logout button doesn't appear"
+      test.assertTextExists "incorrect",
+        "After trying incorrect password, a message to that effect appears"
+      test.assertExists 'form#login_form',
+        "After trying incorrect password, login form is presented again"
+
+    # he tries once more with the correct password
+    casper.then ->
       @fill 'form#login_form', {
         username: 'darrenlamb'
         password: 'iknowandy'

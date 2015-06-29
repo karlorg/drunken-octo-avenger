@@ -222,15 +222,17 @@ def email_to_move_in_game(game):
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        if (
-                db.session.query(User)
-                .filter_by(username=form.username.data).count() > 0
-        ):
-            session['email'] = form.username.data
-            return redirect(redirect_url())
-        else:
+        users = (db.session.query(User)
+                 .filter_by(username=form.username.data).all())
+        if len(users) == 0:
             flash('Username not found')
             return redirect(redirect_url())
+        user = users[0]
+        if user.password != form.password.data:
+            flash('Password incorrect')
+            return redirect(redirect_url())
+        session['email'] = form.username.data
+        return redirect(redirect_url())
     else:
         return redirect(redirect_url())
 
@@ -243,7 +245,8 @@ def create_account():
             flash("Passwords don't match")
             return render_template_with_basics('create_account.html',
                                                form=form)
-        user = User(username=form.username.data)
+        user = User(username=form.username.data,
+                    password=form.password1.data)
         db.session.add(user)
         session.update({'email': form.username.data})
         return redirect('/')
@@ -613,6 +616,7 @@ class GameComment(db.Model):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(length=254))
+    password = db.Column(db.String(length=254))
 
 
 # forms

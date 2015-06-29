@@ -113,10 +113,9 @@ class TestNativeLoginIntegrated(TestWithDb):
 
     def test_unknown_username(self):
         self.assertEqual(db.session.query(User).count(), 0)
-        db.session.add(User(username='bill'))
+        db.session.add(User(username='bill', password='sprestonesq'))
         db.session.commit()
         with main.app.test_client() as test_client:
-            self.assertNotIn('email', flask.session)
             with self.assert_flashes('not found'):
 
                 response = test_client.post(url_for('login'),
@@ -126,8 +125,21 @@ class TestNativeLoginIntegrated(TestWithDb):
             self.assertNotIn('email', flask.session)
         self.assert_redirects(response, '/')
 
+    def test_bad_password(self):
+        db.session.add(User(username='rufus', password='dudes'))
+        db.session.commit()
+        with main.app.test_client() as test_client:
+            with self.assert_flashes('incorrect'):
+
+                response = test_client.post(url_for('login'),
+                                            data=dict(username='rufus',
+                                                      password='fools'))
+
+            self.assertNotIn('email', flask.session)
+        self.assert_redirects(response, '/')
+
     def test_good_login(self):
-        db.session.add(User(username='rufus'))
+        db.session.add(User(username='rufus', password='dudes'))
         db.session.commit()
         with main.app.test_client() as test_client:
             self.assertNotIn('email', flask.session)
@@ -277,6 +289,7 @@ class TestCreateAccountIntegrated(TestWithDb):
             self.assertEqual(flask.session['email'], 'freddy')
         user = db.session.query(User).one()
         self.assertEqual(user.username, 'freddy')
+        self.assertEqual(user.password, 'letmein')
 
     def test_non_matching_passwords(self):
         with main.app.test_client() as test_client:
