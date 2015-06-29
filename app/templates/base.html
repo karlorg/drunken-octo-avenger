@@ -17,6 +17,9 @@
     <label>Password: <input type="password" name="password" /></label>
     <button name="login">Login with password</button>
 </form>
+<a id="new_account" href="{{ url_for('create_account') }}">
+    Create a new account
+</a>
 {% endif %}
 
 {% if current_user_email %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<form id="new_account_form"
+      method="POST" action="{{ url_for('create_account') }}">
+    {{ form.hidden_tag() }}
+    {{ form.username.label }} {{ form.username(size=30) }}
+    {{ form.password1.label }} {{ form.password1(size=30) }}
+    {{ form.password2.label }} {{ form.password2(size=30) }}
+    <input id="submit" type="submit" value="Create account">
+</form>
+{% endblock %}

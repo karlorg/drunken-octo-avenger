@@ -22,7 +22,7 @@ import json
 import requests
 from sqlalchemy import and_, not_, or_
 from sqlalchemy.exc import SQLAlchemyError
-from wtforms import HiddenField, IntegerField, StringField
+from wtforms import HiddenField, IntegerField, PasswordField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
 
@@ -222,6 +222,18 @@ def email_to_move_in_game(game):
 def login():
     flash('Username not found')
     return redirect('/')
+
+
+@app.route('/create_account', methods=['GET', 'POST'])
+def create_account():
+    form = CreateAccountForm()
+    if form.validate_on_submit():
+        session.update({'email': form.username.data})
+        # game = Game(black=form.opponent_email.data,
+        return redirect('/')
+    else:
+        return render_template_with_email('create_account.html',
+                                          form=form)
 
 
 @app.route('/persona/login', methods=['POST'])
@@ -573,6 +585,14 @@ class GameComment(db.Model):
 class ChallengeForm(Form):
     opponent_email = StringField(
             "Opponent's email", validators=[DataRequired(), Email()])
+
+class CreateAccountForm(Form):
+    username = StringField("Username",
+                           validators=[DataRequired()])
+    password1 = PasswordField("Password",
+                              validators=[DataRequired()])
+    password2 = PasswordField("Password again",
+                              validators=[DataRequired()])
 
 class HiddenInteger(IntegerField):
     widget = HiddenInput()

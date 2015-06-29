@@ -240,7 +240,7 @@ registerTest new PersonaLoginTest
 class NativeLoginTest extends BrowserTest
   names: ['NativeLoginTest', 'login', 'nlogin']
   description: 'Test our native username/password login procedure'
-  numTests: 2
+  numTests: 4
   testBody: (test) ->
     casper.thenOpen serverUrl, ->
       @fill 'form#login_form', {
@@ -252,6 +252,21 @@ class NativeLoginTest extends BrowserTest
       # and sees a message that his username is not found
       test.assertExists '#login_form'
       test.assertTextExists 'not found'
+
+    # he sets up a new account
+    casper.thenClick '#new_account', ->
+      @fill 'form#new_account_form', {
+        username: 'darrenlamb'
+        password1: 'iknowandy'
+        password2: 'iknowandy'
+        }, true  # true = submit form
+    # Darren is automatically logged in
+    casper.then ->
+      # the next page has a logout button
+      test.assertExists '#logout'
+      # and shows Darren's username
+      test.assertTextExists 'darrenlamb',
+        "Darren logged in for first time, his name appears"
 
 registerTest new NativeLoginTest
 

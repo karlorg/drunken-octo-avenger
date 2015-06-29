@@ -214,6 +214,26 @@ class TestChallengeIntegrated(TestWithDb):
         self.assertFalse(game.finished)
 
 
+class TestCreateAccountIntegrated(TestWithDb):
+
+    def test_get_request_shows_form(self):
+        with self.patch_render_template() as mock_render:
+            self.test_client.get(url_for('create_account'))
+            args, kwargs = mock_render.call_args
+            self.assertEqual('create_account.html', args[0])
+
+    def test_good_post_logs_in(self):
+        with main.app.test_client() as test_client:
+            self.assertNotIn('email', flask.session)
+            with self.patch_render_template():
+                test_client.post(url_for('create_account'),
+                                 data=dict(username='freddy',
+                                           password1='letmein',
+                                           password2='letmein'))
+            self.assertIn('email', flask.session)
+            self.assertEqual(flask.session['email'], 'freddy')
+
+
 class TestStatusIntegrated(TestWithDb):
 
     def count_pattern_in(self, pattern, string):
