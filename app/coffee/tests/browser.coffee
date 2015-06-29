@@ -240,7 +240,7 @@ registerTest new PersonaLoginTest
 class NativeLoginTest extends BrowserTest
   names: ['NativeLoginTest', 'login', 'nlogin']
   description: 'Test our native username/password login procedure'
-  numTests: 4
+  numTests: 7
   testBody: (test) ->
     casper.thenOpen serverUrl, ->
       @fill 'form#login_form', {
@@ -254,7 +254,24 @@ class NativeLoginTest extends BrowserTest
       test.assertTextExists 'not found'
 
     # he sets up a new account
+    # at first he gets overenthusiastic and tries to set two different passwords
     casper.thenClick '#new_account', ->
+      @fill 'form#new_account_form', {
+        username: 'darrenlamb'
+        password1: 'iknowandy'
+        password2: 'imdarrenlamb'
+        }, true  # true = submit form
+    # he is returned to the new account form with an error message
+    casper.then ->
+      test.assertExists 'form#new_account_form',
+        "Darren tried non-matching passwords, is returned to form"
+      test.assertTextExists "don't match",
+        "Darren is warned about his passwords not matching"
+      # he is not logged in
+      test.assertDoesntExist '#logout'
+
+    # he tries again with matching passwords
+    casper.then ->
       @fill 'form#new_account_form', {
         username: 'darrenlamb'
         password1: 'iknowandy'

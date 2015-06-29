@@ -233,6 +233,18 @@ class TestCreateAccountIntegrated(TestWithDb):
             self.assertIn('email', flask.session)
             self.assertEqual(flask.session['email'], 'freddy')
 
+    def test_non_matching_passwords(self):
+        with main.app.test_client() as test_client:
+            with self.assert_flashes("don't match"):
+                with self.patch_render_template() as mock_render:
+                    test_client.post(url_for('create_account'),
+                                     data=dict(username='freddy',
+                                               password1='letmein',
+                                               password2='letmien'))
+                    args, kwargs = mock_render.call_args
+                    self.assertEqual('create_account.html', args[0])
+            self.assertNotIn('email', flask.session)
+
 
 class TestStatusIntegrated(TestWithDb):
 

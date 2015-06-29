@@ -228,8 +228,11 @@ def login():
 def create_account():
     form = CreateAccountForm()
     if form.validate_on_submit():
+        if form.password1.data != form.password2.data:
+            flash("Passwords don't match")
+            return render_template_with_email('create_account.html',
+                                              form=form)
         session.update({'email': form.username.data})
-        # game = Game(black=form.opponent_email.data,
         return redirect('/')
     else:
         return render_template_with_email('create_account.html',
