@@ -12,6 +12,11 @@
 <a href="#" id="logout">Log out</a>
 {% else %}
 <a href="#" id="persona_login">Login with Persona</a>
+<form id="login_form" action="/login" method="POST">
+    <label>Username: <input type="text" name="username" /></label>
+    <label>Password: <input type="password" name="password" /></label>
+    <button name="login">Login with password</button>
+</form>
 {% endif %}
 
 {% if current_user_email %}

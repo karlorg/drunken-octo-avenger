@@ -218,6 +218,12 @@ def email_to_move_in_game(game):
     return next_in_game
 
 
+@app.route('/login', methods=['POST'])
+def login():
+    flash('Username not found')
+    return redirect('/')
+
+
 @app.route('/persona/login', methods=['POST'])
 def persona_login():
     if 'assertion' not in request.form:
