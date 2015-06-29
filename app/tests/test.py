@@ -16,7 +16,7 @@ import flask.ext.testing
 import requests
 
 from .. import main
-from ..main import Game, db
+from ..main import Game, User, db
 
 
 class TestWithTestingApp(flask.ext.testing.TestCase):
@@ -107,6 +107,38 @@ class TestFrontPageIntegrated(TestWithTestingApp):
         with self.set_email('test@mockmyid.com') as test_client:
             response = test_client.get('/')
         self.assert_redirects(response, url_for('status'))
+
+
+class TestNativeLoginIntegrated(TestWithDb):
+
+    def test_unknown_username(self):
+        self.assertEqual(db.session.query(User).count(), 0)
+        db.session.add(User(username='bill'))
+        db.session.commit()
+        with main.app.test_client() as test_client:
+            self.assertNotIn('email', flask.session)
+            with self.assert_flashes('not found'):
+
+                response = test_client.post(url_for('login'),
+                                            data=dict(username='ted',
+                                                      password='theolog'))
+
+            self.assertNotIn('email', flask.session)
+        self.assert_redirects(response, '/')
+
+    def test_good_login(self):
+        db.session.add(User(username='rufus'))
+        db.session.commit()
+        with main.app.test_client() as test_client:
+            self.assertNotIn('email', flask.session)
+
+            response = test_client.post(url_for('login'),
+                                        data=dict(username='rufus',
+                                                  password='dudes'))
+
+            self.assertIn('email', flask.session)
+            self.assertEqual(flask.session['email'], 'rufus')
+        self.assert_redirects(response, '/')
 
 
 class TestPersonaLoginIntegrated(TestWithTestingApp):
@@ -232,7 +264,8 @@ class TestCreateAccountIntegrated(TestWithDb):
             args, kwargs = mock_render.call_args
             self.assertEqual('create_account.html', args[0])
 
-    def test_good_post_logs_in(self):
+    def test_good_post_creates_account_and_logs_in(self):
+        self.assertEqual(db.session.query(User).count(), 0)
         with main.app.test_client() as test_client:
             self.assertNotIn('email', flask.session)
             with self.patch_render_template():
@@ -242,6 +275,8 @@ class TestCreateAccountIntegrated(TestWithDb):
                                            password2='letmein'))
             self.assertIn('email', flask.session)
             self.assertEqual(flask.session['email'], 'freddy')
+        user = db.session.query(User).one()
+        self.assertEqual(user.username, 'freddy')
 
     def test_non_matching_passwords(self):
         with main.app.test_client() as test_client:

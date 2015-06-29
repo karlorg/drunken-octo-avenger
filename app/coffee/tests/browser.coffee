@@ -240,8 +240,10 @@ registerTest new PersonaLoginTest
 class NativeLoginTest extends BrowserTest
   names: ['NativeLoginTest', 'login', 'nlogin']
   description: 'Test our native username/password login procedure'
-  numTests: 7
+  numTests: 11
   testBody: (test) ->
+    deleteUser 'darrenlamb'
+
     casper.thenOpen serverUrl, ->
       @fill 'form#login_form', {
         username: 'darrenlamb'
@@ -250,8 +252,10 @@ class NativeLoginTest extends BrowserTest
     casper.then ->
       # Darren is not known to us; he is returned to the login form
       # and sees a message that his username is not found
-      test.assertExists '#login_form'
-      test.assertTextExists 'not found'
+      test.assertExists '#login_form',
+        "After trying to log in without an account, returned to login form"
+      test.assertTextExists 'not found',
+        "After trying to log in without an account, message appears"
 
     # he sets up a new account
     # at first he gets overenthusiastic and tries to set two different passwords
@@ -886,6 +890,12 @@ registerTest new FinishedGamesTest
 
 
 # helper functions
+
+deleteUser = (username) ->
+  casper.thenOpen "#{serverUrl}/testing_delete_user",
+    method: 'post'
+    data:
+      username: username
 
 clearGamesForPlayer = (email) ->
   casper.thenOpen "#{serverUrl}/testing_clear_games_for_player",

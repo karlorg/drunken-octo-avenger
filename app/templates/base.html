@@ -16,10 +16,12 @@
 {% endif %}  <!-- end current_persona_email -->
 {% else %}  <!-- else current_user_email -->
 <a href="#" id="persona_login">Login with Persona</a>
-<form id="login_form" action="/login" method="POST">
-    <label>Username: <input type="text" name="username" /></label>
-    <label>Password: <input type="password" name="password" /></label>
-    <button name="login">Login with password</button>
+<form id="login_form"
+      action="{{ url_for('login') }}" method="POST">
+    {{ login_form.hidden_tag() }}
+    {{ login_form.username.label }} {{ login_form.username(size=30) }}
+    {{ login_form.password.label }} {{ login_form.password(size=30) }}
+    <input id="login_submit" type="submit" name="login" value="Login" \>
 </form>
 <a id="new_account" href="{{ url_for('create_account') }}">
     Create a new account

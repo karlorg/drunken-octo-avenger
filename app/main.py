@@ -62,7 +62,7 @@ def redirect_url(default='front_page'):
 def front_page():
     if 'email' in session:
         return redirect(url_for('status'))
-    return render_template_with_email("frontpage.html")
+    return render_template_with_basics("frontpage.html")
 
 @app.route('/game/<int:game_no>')
 def game(game_no):
@@ -79,7 +79,7 @@ def game(game_no):
     form_data = {'game_no': game.id, 'data': sgf}
     form = PlayStoneForm(data=form_data)
     chatform = ChatForm(data=form_data)
-    return render_template_with_email(
+    return render_template_with_basics(
         "game.html",
         black_email=game.black,
         white_email=game.white,
@@ -154,7 +154,7 @@ def challenge():
         db.session.add(game)
         db.session.commit()
         return redirect(url_for('status'))
-    return render_template_with_email("challenge.html", form=form)
+    return render_template_with_basics("challenge.html", form=form)
 
 @app.route('/status')
 def status():
@@ -163,7 +163,7 @@ def status():
     except NoLoggedInPlayerException:
         return redirect('/')
     your_turn_games, not_your_turn_games = get_status_lists(email)
-    return render_template_with_email(
+    return render_template_with_basics(
             "status.html",
             your_turn_games=your_turn_games,
             not_your_turn_games=not_your_turn_games)
@@ -220,8 +220,19 @@ def email_to_move_in_game(game):
 
 @app.route('/login', methods=['POST'])
 def login():
-    flash('Username not found')
-    return redirect('/')
+    form = LoginForm()
+    if form.validate_on_submit():
+        if (
+                db.session.query(User)
+                .filter_by(username=form.username.data).count() > 0
+        ):
+            session['email'] = form.username.data
+            return redirect(redirect_url())
+        else:
+            flash('Username not found')
+            return redirect(redirect_url())
+    else:
+        return redirect(redirect_url())
 
 
 @app.route('/create_account', methods=['GET', 'POST'])
@@ -230,13 +241,15 @@ def create_account():
     if form.validate_on_submit():
         if form.password1.data != form.password2.data:
             flash("Passwords don't match")
-            return render_template_with_email('create_account.html',
-                                              form=form)
+            return render_template_with_basics('create_account.html',
+                                               form=form)
+        user = User(username=form.username.data)
+        db.session.add(user)
         session.update({'email': form.username.data})
         return redirect('/')
     else:
-        return render_template_with_email('create_account.html',
-                                          form=form)
+        return render_template_with_basics('create_account.html',
+                                           form=form)
 
 
 @app.route('/persona/login', methods=['POST'])
@@ -276,7 +289,7 @@ def finished():
         .filter(or_(Game.black == email, Game.white == email))
         .all()
     )
-    return render_template_with_email(
+    return render_template_with_basics(
             "finished.html",
             finished_games=finished_games)
 
@@ -331,6 +344,16 @@ def shutdown():
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
     return 'Server shutting down...'
+
+@app.test_only_route('/testing_delete_user', methods=['POST'])
+def testing_delete_user():
+    """Delete the user with the given username."""
+    username = request.form['username']
+    users = db.session.query(User).filter_by(username=username).all()
+    for user in users:
+        db.session.delete(user)
+    db.session.commit()
+    return ''
 
 @app.test_only_route('/testing_create_login_session', methods=['POST'])
 def testing_create_login_session():
@@ -486,8 +509,8 @@ def logged_in_email():
     except KeyError:
         raise NoLoggedInPlayerException()
 
-def render_template_with_email(template_name_or_list, **context):
-    """A wrapper around flask.render_template, setting the email.
+def render_template_with_basics(template_name_or_list, **context):
+    """A wrapper around flask.render_template, setting always-present fields.
 
     Depends on the session object.
     """
@@ -503,6 +526,7 @@ def render_template_with_email(template_name_or_list, **context):
             template_name_or_list,
             current_user_email=email,
             current_persona_email=persona_email,
+            login_form=LoginForm(),
             **context)
 
 def max_with_sentinel(sentinel, *iterables):
@@ -586,11 +610,22 @@ class GameComment(db.Model):
         self.speaker = speaker
         self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
 
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(length=254))
+
+
 # forms
 
 class ChallengeForm(Form):
     opponent_email = StringField(
             "Opponent's email", validators=[DataRequired(), Email()])
+
+class LoginForm(Form):
+    username = StringField("Username",
+                           validators=[DataRequired()])
+    password = PasswordField("Password",
+                             validators=[DataRequired()])
 
 class CreateAccountForm(Form):
     username = StringField("Username",
