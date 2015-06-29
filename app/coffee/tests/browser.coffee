@@ -212,9 +212,9 @@ class ClientSideJsTest extends BrowserTest
 registerTest new ClientSideJsTest
 
 
-class LoginTest extends BrowserTest
-  names: ['LoginTest', 'login']
-  description: 'Test the login procedure'
+class PersonaLoginTest extends BrowserTest
+  names: ['PersonaLoginTest', 'persona', 'plogin']
+  description: 'Test the Persona login procedure'
   numTests: 3
   testBody: (test) ->
     casper.thenOpen serverUrl, ->
@@ -234,7 +234,27 @@ class LoginTest extends BrowserTest
       test.skip 1
       # test.assertExists '#logout'
 
-registerTest new LoginTest
+registerTest new PersonaLoginTest
+
+
+class NativeLoginTest extends BrowserTest
+  names: ['NativeLoginTest', 'login', 'nlogin']
+  description: 'Test our native username/password login procedure'
+  numTests: 2
+  testBody: (test) ->
+    casper.thenOpen serverUrl, ->
+      @fill 'form#login_form', {
+        username: 'darrenlamb'
+        password: 'iknowandy'
+        }, true  # true = submit form
+    casper.then ->
+      # Darren is not known to us; he is returned to the login form
+      # and sees a message that his username is not found
+      test.assertExists '#login_form'
+      test.assertTextExists 'not found'
+
+registerTest new NativeLoginTest
+
 
 class StatusTest extends BrowserTest
   names: ['StatusTest', 'status']
