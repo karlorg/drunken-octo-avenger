@@ -249,7 +249,8 @@ def create_account():
         user = User(username=form.username.data,
                     password=form.password1.data)
         db.session.add(user)
-        session.update({'email': form.username.data})
+        db.session.commit()
+        session['email'] = form.username.data
         return redirect('/')
     else:
         return render_template_with_basics('create_account.html',

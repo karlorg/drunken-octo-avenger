@@ -287,6 +287,7 @@ class TestCreateAccountIntegrated(TestWithDb):
                                            password2='letmein'))
             self.assertIn('email', flask.session)
             self.assertEqual(flask.session['email'], 'freddy')
+        db.session.rollback()  # to catch missing commits
         user = db.session.query(User).one()
         self.assertEqual(user.username, 'freddy')
         self.assertTrue(user.check_password('letmein'))
