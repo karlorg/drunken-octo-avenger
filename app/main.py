@@ -637,7 +637,7 @@ class User(db.Model):
 
 class ChallengeForm(Form):
     opponent_email = StringField(
-            "Opponent's email", validators=[DataRequired(), Email()])
+            "Opponent's email", validators=[DataRequired()])
 
 class LoginForm(Form):
     username = StringField("Username",
