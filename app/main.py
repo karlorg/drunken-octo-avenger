@@ -22,6 +22,7 @@ import json
 import requests
 from sqlalchemy import and_, not_, or_
 from sqlalchemy.exc import SQLAlchemyError
+import werkzeug.security as ws
 from wtforms import HiddenField, IntegerField, PasswordField, StringField
 from wtforms.validators import DataRequired, Email
 from wtforms.widgets import HiddenInput
@@ -228,7 +229,7 @@ def login():
             flash('Username not found')
             return redirect(redirect_url())
         user = users[0]
-        if user.password != form.password.data:
+        if not user.check_password(form.password.data):
             flash('Password incorrect')
             return redirect(redirect_url())
         session['email'] = form.username.data
@@ -616,7 +617,19 @@ class GameComment(db.Model):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(length=254))
-    password = db.Column(db.String(length=254))
+    password_hash = db.Column(db.String(length=254))
+
+    def __init__(self, username, password):
+        self.username = username
+        self.set_password(password)
+
+    def set_password(self, password):
+        self.password_hash = ws.generate_password_hash(password,
+                                                       method='pbkdf2:sha256')
+
+    def check_password(self, password):
+        return ws.check_password_hash(pwhash=self.password_hash,
+                                      password=password)
 
 
 # forms

@@ -289,7 +289,7 @@ class TestCreateAccountIntegrated(TestWithDb):
             self.assertEqual(flask.session['email'], 'freddy')
         user = db.session.query(User).one()
         self.assertEqual(user.username, 'freddy')
-        self.assertEqual(user.password, 'letmein')
+        self.assertTrue(user.check_password('letmein'))
 
     def test_non_matching_passwords(self):
         with main.app.test_client() as test_client:
