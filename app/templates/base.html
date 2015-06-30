@@ -7,6 +7,7 @@
 <title>Go</title>
 </head>
 <body>
+
 {% if current_user_email %}
 <div class="logged_in_user">Logged in as: {{ current_user_email }}</div>
 {% if current_persona_email %}
@@ -14,18 +15,22 @@
 {% else %}  <!-- else current_persona_email -->
 <a href="/logout" id="logout">Log out</a>
 {% endif %}  <!-- end current_persona_email -->
+
 {% else %}  <!-- else current_user_email -->
 <a href="#" id="persona_login">Login with Persona</a>
-<form id="login_form"
-      action="{{ url_for('login') }}" method="POST">
-    {{ login_form.hidden_tag() }}
-    {{ login_form.username.label }} {{ login_form.username(size=30) }}
-    {{ login_form.password.label }} {{ login_form.password(size=30) }}
-    <input id="login_submit" type="submit" name="login" value="Login" \>
-</form>
-<a id="new_account" href="{{ url_for('create_account') }}">
-    Create a new account
-</a>
+<div class="sign_in">
+    <a id="new_account" href="{{ url_for('create_account') }}">Sign up</a>
+    or sign in:
+    <form id="login_form"
+          action="{{ url_for('login') }}" method="POST">
+        {{ login_form.hidden_tag() }}
+        {{ login_form.username(size=15,
+                               placeholder=login_form.username.description) }}
+        {{ login_form.password(size=15,
+                               placeholder=login_form.password.description) }}
+        <input id="login_submit" type="submit" name="login" value="Login" \>
+    </form>
+</div>
 {% endif %}
 
 {% if current_user_email %}

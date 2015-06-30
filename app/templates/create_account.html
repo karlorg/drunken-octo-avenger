@@ -1,11 +1,33 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+ form#new_account_form .form_fields {
+     display: table;
+ }
+
+ form#new_account_form .form_fields div {
+     display: table-row;
+ }
+
+ form#new_account_form .form_fields label {
+     display: table-cell;
+     padding-right: 1em;
+ }
+
+ form#new_account_form .form_fields input {
+     display: table-cell;
+ }
+</style>
+
+<h3>Create a new account</h3>
 <form id="new_account_form"
       method="POST" action="{{ url_for('create_account') }}">
     {{ form.hidden_tag() }}
-    {{ form.username.label }} {{ form.username(size=30) }}
-    {{ form.password1.label }} {{ form.password1(size=30) }}
-    {{ form.password2.label }} {{ form.password2(size=30) }}
-    <input id="submit" type="submit" value="Create account">
+    <div class="form_fields">
+        <div>{{ form.username.label }} {{ form.username(size=30) }}</div>
+        <div>{{ form.password1.label }} {{ form.password1(size=30) }}</div>
+        <div>{{ form.password2.label }} {{ form.password2(size=30) }}</div>
+    </div>
+    <div><input id="submit" type="submit" value="Create account"></div>
 </form>
 {% endblock %}

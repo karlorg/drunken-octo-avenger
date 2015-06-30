@@ -641,9 +641,11 @@ class ChallengeForm(Form):
 
 class LoginForm(Form):
     username = StringField("Username",
-                           validators=[DataRequired()])
+                           validators=[DataRequired()],
+                           description="Username")
     password = PasswordField("Password",
-                             validators=[DataRequired()])
+                             validators=[DataRequired()],
+                             description="Password")
 
 class CreateAccountForm(Form):
     username = StringField("Username",
