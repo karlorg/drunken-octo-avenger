@@ -24,7 +24,7 @@ from sqlalchemy import and_, not_, or_
 from sqlalchemy.exc import SQLAlchemyError
 import werkzeug.security as ws
 from wtforms import HiddenField, IntegerField, PasswordField, StringField
-from wtforms.validators import DataRequired, Email
+from wtforms.validators import DataRequired
 from wtforms.widgets import HiddenInput
 
 from config import DOMAIN
@@ -61,7 +61,7 @@ def redirect_url(default='front_page'):
 
 @app.route('/')
 def front_page():
-    if 'email' in session:
+    if is_logged_in():
         return redirect(url_for('status'))
     return render_template_with_basics("frontpage.html")
 
@@ -82,8 +82,8 @@ def game(game_no):
     chatform = ChatForm(data=form_data)
     return render_template_with_basics(
         "game.html",
-        black_email=game.black,
-        white_email=game.white,
+        black_user=game.black,
+        white_user=game.white,
         color_turn=color_turn,
         form=form, chatform=chatform, game_no=game_no,
         on_turn=is_your_turn, with_scoring=is_passed_twice,
@@ -97,14 +97,14 @@ def comment(game_no):
         flash("Game #{} not found".format(game_no))
         return redirect('/')
     try:
-        current_email = logged_in_email()
+        current_user = logged_in_user()
     except NoLoggedInPlayerException:
         flash("You must be logged in to comment.")
         return redirect(redirect_url())
 
     form = ChatForm()
     if form.validate_on_submit():
-        comment = GameComment(game, form.comment.data, current_email)
+        comment = GameComment(game, form.comment.data, current_user)
         db.session.add(comment)
         db.session.commit()
         return redirect(redirect_url())
@@ -149,8 +149,8 @@ def _check_gameover_and_update(game):
 def challenge():
     form = ChallengeForm()
     if form.validate_on_submit():
-        game = Game(black=form.opponent_email.data,
-                    white=logged_in_email(),
+        game = Game(black=form.opponent.data,
+                    white=logged_in_user(),
                     sgf="(;)")
         db.session.add(game)
         db.session.commit()
@@ -160,54 +160,54 @@ def challenge():
 @app.route('/status')
 def status():
     try:
-        email = logged_in_email()
+        user = logged_in_user()
     except NoLoggedInPlayerException:
         return redirect('/')
-    your_turn_games, not_your_turn_games = get_status_lists(email)
+    your_turn_games, not_your_turn_games = get_status_lists(user)
     return render_template_with_basics(
             "status.html",
             your_turn_games=your_turn_games,
             not_your_turn_games=not_your_turn_games)
 
-def get_status_lists(player_email):
+def get_status_lists(user):
     """Return two lists of games for the player, split by on-turn or not.
 
     Accesses database.
     """
-    player_games = get_player_games(player_email)
+    player_games = get_player_games(user)
 
     your_turn_games = [g for g in player_games
-                       if email_to_move_in_game(g) == player_email]
+                       if user_to_move_in_game(g) == user]
     not_your_turn_games = [g for g in player_games
-                           if email_to_move_in_game(g) != player_email]
+                           if user_to_move_in_game(g) != user]
     return (your_turn_games, not_your_turn_games)
 
-def get_player_games(player_email):
-    """Returns the list of games in which `player_email` is involved.
+def get_player_games(user):
+    """Returns the list of games in which `user` is involved.
 
     Only includes running games, ie. not finished.
 
     Accesses database.
     """
     games = Game.query.filter(and_(not_(Game.finished),
-                                   or_(Game.black == player_email,
-                                       Game.white == player_email))).all()
+                                   or_(Game.black == user,
+                                       Game.white == user))).all()
     return games
 
 def is_players_turn_in_game(game):
     """Test if it's the logged-in player's turn to move in `game`.
 
-    Reads email from the session.
+    Reads user from the session.
     """
     try:
-        current_email = logged_in_email()
+        current_user = logged_in_user()
     except NoLoggedInPlayerException:
         return False
-    next_in_game = email_to_move_in_game(game)
-    return next_in_game == current_email
+    next_in_game = user_to_move_in_game(game)
+    return next_in_game == current_user
 
-def email_to_move_in_game(game):
-    """Return the email of the player to move in game.
+def user_to_move_in_game(game):
+    """Return the user id of the player to move in game.
 
     Accesses database.  Return None if game is finished.
     """
@@ -232,7 +232,7 @@ def login():
         if not user.check_password(form.password.data):
             flash('Password incorrect')
             return redirect(redirect_url())
-        session['email'] = form.username.data
+        set_logged_in_user(form.username.data)
         return redirect(redirect_url())
     else:
         return redirect(redirect_url())
@@ -250,7 +250,7 @@ def create_account():
                     password=form.password1.data)
         db.session.add(user)
         db.session.commit()
-        session['email'] = form.username.data
+        set_logged_in_user(form.username.data)
         return redirect('/')
     else:
         return render_template_with_basics('create_account.html',
@@ -271,11 +271,7 @@ def persona_login():
     )
     session_update = process_persona_response(response)
     if session_update.do:
-        # we separate out our internal "who's logged in" email from the one
-        # used by Persona so that when the browser automation tests need to
-        # create a fake login session, Persona doesn't get confused by a user
-        # appearing who it doesn't remember processing.
-        session.update({'email': session_update.email})
+        set_logged_in_user(session_update.email)
         session.update({'persona_email': session_update.email})
         # we're only accessed through AJAX, the response doesn't matter
         return ''
@@ -285,13 +281,13 @@ def persona_login():
 @app.route('/finished', methods=['GET'])
 def finished():
     try:
-        email = logged_in_email()
+        user = logged_in_user()
     except NoLoggedInPlayerException:
         return redirect('/')
     finished_games = (
         db.session.query(Game)
         .filter(Game.finished == True)  # noqa
-        .filter(or_(Game.black == email, Game.white == email))
+        .filter(or_(Game.black == user, Game.white == user))
         .all()
     )
     return render_template_with_basics(
@@ -301,7 +297,7 @@ def finished():
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     try:
-        del session['email']
+        logout_current_user()
     except KeyError:
         pass
     try:
@@ -362,18 +358,17 @@ def testing_delete_user():
 
 @app.test_only_route('/testing_create_login_session', methods=['POST'])
 def testing_create_login_session():
-    """Log in the given email address."""
-    email = request.form['email']
-    session.update({'email': email})
+    """Log in the given user id."""
+    set_logged_in_user(request.form['email'])
     return ''
 
 @app.test_only_route('/testing_create_game', methods=['POST'])
 def testing_create_game():
     """Create a custom game in the database directly"""
-    black_email = request.form['black_email']
-    white_email = request.form['white_email']
+    black_user = request.form['black_email']
+    white_user = request.form['white_email']
     stones = json.loads(request.form['stones'])
-    create_game_internal(black_email, white_email, stones)
+    create_game_internal(black_user, white_user, stones)
     return ''
 
 def create_game_internal(black, white,
@@ -434,12 +429,12 @@ def sgf_from_text_map(text_map):
 @app.test_only_route('/testing_setup_finished_game', methods=['POST'])
 def testing_setup_finished_game():
     """Create a finished game (in the marking phase)."""
-    black_email = request.form['black_email']
-    white_email = request.form['white_email']
-    setup_finished_game_internal(black_email, white_email)
+    black_user = request.form['black_email']
+    white_user = request.form['white_email']
+    setup_finished_game_internal(black_user, white_user)
     return ''
 
-def setup_finished_game_internal(black_email, white_email):
+def setup_finished_game_internal(black_user, white_user):
     stones = ['.....bww.wbb.......',
               '.bb...bw.wwbb......',
               '.wwbbb.bw.wbwwb..b.',
@@ -461,19 +456,19 @@ def setup_finished_game_internal(black_email, white_email):
               '...................']
     sgf = sgf_from_text_map(stones)
     passed_sgf = sgf[:-1] + 'B[];W[])'
-    create_game_internal(black_email, white_email, sgf=passed_sgf)
+    create_game_internal(black_user, white_user, sgf=passed_sgf)
 
 
 @app.test_only_route('/testing_clear_games_for_player', methods=['POST'])
 def testing_clear_games_for_player():
     """Clear all of `email`'s games from the database."""
-    email = request.form['email']
-    clear_games_for_player_internal(email)
+    user = request.form['email']
+    clear_games_for_player_internal(user)
     return ''
 
-def clear_games_for_player_internal(email):
-    games_as_black = Game.query.filter(Game.black == email).all()
-    games_as_white = Game.query.filter(Game.white == email).all()
+def clear_games_for_player_internal(user):
+    games_as_black = Game.query.filter(Game.black == user).all()
+    games_as_white = Game.query.filter(Game.white == user).all()
     games = games_as_black + games_as_white
     for game in games:
         db.session.delete(game)
@@ -501,16 +496,26 @@ def process_persona_response(response):
         return _SessionUpdate(do=False, email='')
     return _SessionUpdate(do=True, email=verification_data['email'])
 
+def is_logged_in():
+    """True if a user is logged in."""
+    return 'user' in session
+
+def set_logged_in_user(user):
+    session.update(user=user)
+
+def logout_current_user():
+    del session['user']
+
 class NoLoggedInPlayerException(Exception):
     pass
 
-def logged_in_email():
-    """Return email of logged in player, or raise NoLoggedInPlayerException.
+def logged_in_user():
+    """Return user id of logged in player, or raise NoLoggedInPlayerException.
 
     Accesses the session.
     """
     try:
-        return session['email']
+        return session['user']
     except KeyError:
         raise NoLoggedInPlayerException()
 
@@ -520,16 +525,16 @@ def render_template_with_basics(template_name_or_list, **context):
     Depends on the session object.
     """
     try:
-        email = logged_in_email()
+        user = logged_in_user()
     except NoLoggedInPlayerException:
-        email = ''
+        user = ''
     try:
         persona_email = session['persona_email']
     except KeyError:
         persona_email = ''
     return render_template(
             template_name_or_list,
-            current_user_email=email,
+            current_user=user,
             current_persona_email=persona_email,
             login_form=LoginForm(),
             **context)
@@ -636,8 +641,8 @@ class User(db.Model):
 # forms
 
 class ChallengeForm(Form):
-    opponent_email = StringField(
-            "Opponent's email", validators=[DataRequired()])
+    opponent = StringField(
+            "Opponent's email or username", validators=[DataRequired()])
 
 class LoginForm(Form):
     username = StringField("Username",

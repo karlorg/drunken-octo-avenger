@@ -373,7 +373,7 @@ class ChallengeTest extends BrowserTest
       @assertNumGames test, 0, 0
 
     casper.thenClick '#challenge_link', ->
-      form_values = 'input[name="opponent_email"]' : TOUYA_EMAIL
+      form_values = 'input[name="opponent"]' : TOUYA_EMAIL
       # The final 'true' argument means that the form is submitted.
       @fillSelectors 'form', form_values, true
 

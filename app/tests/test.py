@@ -30,13 +30,13 @@ class TestWithTestingApp(flask.ext.testing.TestCase):
         self.test_client = main.app.test_client()
 
     @contextmanager
-    def set_email(self, email=None):
-        """Set the logged in email value in the session object."""
-        if email is None:
-            email = self.LOGGED_IN_EMAIL
+    def set_user(self, user=None):
+        """Set the logged in user value in the session object."""
+        if user is None:
+            user = self.LOGGED_IN_EMAIL
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as session:
-                session['email'] = email
+                session['user'] = user
             yield test_client
 
     @contextmanager
@@ -104,7 +104,7 @@ class TestFrontPageIntegrated(TestWithTestingApp):
                 str(response.get_data())) is not None
 
     def test_with_login_redirects_to_status(self):
-        with self.set_email('test@mockmyid.com') as test_client:
+        with self.set_user('test@mockmyid.com') as test_client:
             response = test_client.get('/')
         self.assert_redirects(response, url_for('status'))
 
@@ -122,7 +122,7 @@ class TestNativeLoginIntegrated(TestWithDb):
                                             data=dict(username='ted',
                                                       password='theolog'))
 
-            self.assertNotIn('email', flask.session)
+            self.assertFalse(main.is_logged_in())
         self.assert_redirects(response, '/')
 
     def test_bad_password(self):
@@ -135,21 +135,21 @@ class TestNativeLoginIntegrated(TestWithDb):
                                             data=dict(username='rufus',
                                                       password='fools'))
 
-            self.assertNotIn('email', flask.session)
+            self.assertFalse(main.is_logged_in())
         self.assert_redirects(response, '/')
 
     def test_good_login(self):
         db.session.add(User(username='rufus', password='dudes'))
         db.session.commit()
         with main.app.test_client() as test_client:
-            self.assertNotIn('email', flask.session)
+            self.assertFalse(main.is_logged_in())
 
             response = test_client.post(url_for('login'),
                                         data=dict(username='rufus',
                                                   password='dudes'))
 
-            self.assertIn('email', flask.session)
-            self.assertEqual(flask.session['email'], 'rufus')
+            self.assertTrue(main.is_logged_in())
+            self.assertEqual(main.logged_in_user(), 'rufus')
         self.assert_redirects(response, '/')
 
 
@@ -199,7 +199,7 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
 
             self.post_simple_assertion(test_client)
 
-            self.assertEqual(session['email'], self.TEST_EMAIL)
+            self.assertEqual(main.logged_in_user(), self.TEST_EMAIL)
             self.assertEqual(session['persona_email'], self.TEST_EMAIL)
 
     def test_bad_response_status_aborts(self):
@@ -208,7 +208,7 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
 
             response, _ = self.post_simple_assertion(test_client, mock_post)
 
-            self.assertNotIn('email', session)
+            self.assertFalse(main.is_logged_in())
             self.assertNotEqual(response.status_code, 200)
 
     def test_bad_response_ok_aborts(self):
@@ -217,7 +217,7 @@ class TestPersonaLoginIntegrated(TestWithTestingApp):
 
             response, _ = self.post_simple_assertion(test_client, mock_post)
 
-            self.assertNotIn('email', session)
+            self.assertFalse(main.is_logged_in())
             self.assertNotEqual(response.status_code, 200)
 
 
@@ -234,14 +234,14 @@ class TestLogoutIntegrated(TestWithTestingApp):
     def test_removes_email_and_persona_email_from_session(self):
         with main.app.test_client() as test_client:
             with test_client.session_transaction() as session:
-                session['email'] = 'olduser@remove.me'
+                main.set_logged_in_user('olduser@remove.me')
                 session['persona_email'] = 'olduser@remove.me'
             with self.patch_render_template():
 
                 test_client.post('/logout')
 
             with test_client.session_transaction() as session:
-                self.assertNotIn('email', session)
+                self.assertFalse(main.is_logged_in())
                 self.assertNotIn('persona_email', session)
 
     def test_no_error_when_email_not_set(self):
@@ -256,11 +256,16 @@ class TestLogoutIntegrated(TestWithTestingApp):
 
 class TestChallengeIntegrated(TestWithDb):
 
+    def test_get_form(self):
+        with self.set_user('white@white.com') as test_client:
+            test_client.get(url_for('challenge'))
+        # should not raise
+
     def test_good_post_creates_game(self):
         assert Game.query.all() == []
-        with self.set_email('white@white.com') as test_client:
+        with self.set_user('white@white.com') as test_client:
             test_client.post('/challenge', data=dict(
-                opponent_email='black@black.com'))
+                opponent='black@black.com'))
         game = db.session.query(Game).one()
         self.assertEqual(game.white, 'white@white.com')
         self.assertEqual(game.black, 'black@black.com')
@@ -279,14 +284,14 @@ class TestCreateAccountIntegrated(TestWithDb):
     def test_good_post_creates_account_and_logs_in(self):
         self.assertEqual(db.session.query(User).count(), 0)
         with main.app.test_client() as test_client:
-            self.assertNotIn('email', flask.session)
+            self.assertFalse(main.is_logged_in())
             with self.patch_render_template():
                 test_client.post(url_for('create_account'),
                                  data=dict(username='freddy',
                                            password1='letmein',
                                            password2='letmein'))
-            self.assertIn('email', flask.session)
-            self.assertEqual(flask.session['email'], 'freddy')
+            self.assertTrue(main.is_logged_in())
+            self.assertEqual(main.logged_in_user(), 'freddy')
         db.session.rollback()  # to catch missing commits
         user = db.session.query(User).one()
         self.assertEqual(user.username, 'freddy')
@@ -302,7 +307,7 @@ class TestCreateAccountIntegrated(TestWithDb):
                                                password2='letmien'))
                     args, kwargs = mock_render.call_args
                     self.assertEqual('create_account.html', args[0])
-            self.assertNotIn('email', flask.session)
+            self.assertFalse(main.is_logged_in())
 
 
 class TestStatusIntegrated(TestWithDb):
@@ -327,7 +332,7 @@ class TestStatusIntegrated(TestWithDb):
 
     def test_sends_games_to_correct_template_params(self):
         game1, game2, game3, game4, game5, game6 = self.setup_test_games()
-        with self.set_email() as test_client:
+        with self.set_user() as test_client:
             with self.patch_render_template() as mock_render:
 
                 test_client.get(url_for('status'))
@@ -342,7 +347,7 @@ class TestStatusIntegrated(TestWithDb):
 
     def test_shows_links_to_existing_games(self):
         self.setup_test_games()
-        with self.set_email() as test_client:
+        with self.set_user() as test_client:
             response = test_client.get(url_for('status'))
         self.assertEqual(
                 self.count_pattern_in(r"Game \d", str(response.get_data())),
@@ -358,7 +363,7 @@ class TestStatusIntegrated(TestWithDb):
         for i in range(5):
             self.add_game(black='some@one.com', white='some@two.com')
             self.add_game(black='some@two.com', white='some@one.com')
-        with self.set_email('some@one.com') as test_client:
+        with self.set_user('some@one.com') as test_client:
             with self.patch_render_template() as mock_render:
 
                 test_client.get(url_for('status'))
@@ -389,7 +394,7 @@ class TestFinishedIntegrated(TestWithDb):
         white_game = self.add_game(white='us@we.com', finished=True)
         self.add_game(black='us@we.com', finished=False)
         self.add_game(finished=True)
-        with self.set_email('us@we.com') as test_client:
+        with self.set_user('us@we.com') as test_client:
             with self.patch_render_template() as mock_render:
 
                 test_client.get(url_for('finished'))
@@ -413,7 +418,7 @@ class TestGameIntegrated(TestWithDb):
         self.assert_redirects(response, '/')
 
     def do_mocked_get(self, game):
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             with self.patch_render_template() as mock_render:
                 test_client.get(url_for('game', game_no=game.id))
                 return mock_render.call_args
@@ -435,7 +440,7 @@ class TestResignIntegrated(TestWithDb):
         game = self.add_game()
         self.assertFalse(game.finished,
                          "game should not initially be finished")
-        with self.set_email(game.black) as test_client:
+        with self.set_user(game.black) as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(resign_button='resign'))
         self.assertTrue(game.finished,
@@ -445,7 +450,7 @@ class TestResignIntegrated(TestWithDb):
         game = self.add_game()
         self.assertFalse(game.finished,
                          "game should not initially be finished")
-        with self.set_email(game.white) as test_client:
+        with self.set_user(game.white) as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(resign_button='resign'))
         self.assertFalse(game.finished,
@@ -458,16 +463,16 @@ class TestPlayIntegrated(TestWithDb):
         game1 = self.add_game()
         game2 = self.add_game()
         with self.patch_render_template():
-            with self.set_email('black@black.com') as test_client:
+            with self.set_user('black@black.com') as test_client:
                 test_client.post(url_for('play', game_no=game1.id),
                                  data=dict(response="(;B[pd])"))
-            with self.set_email('black@black.com') as test_client:
+            with self.set_user('black@black.com') as test_client:
                 test_client.post(url_for('play', game_no=game2.id),
                                  data=dict(response="(;B[jj])"))
-            with self.set_email('white@white.com') as test_client:
+            with self.set_user('white@white.com') as test_client:
                 test_client.post(url_for('play', game_no=game1.id),
                                  data=dict(response="(;B[pd];W[pp])"))
-            with self.set_email('black@black.com') as test_client:
+            with self.set_user('black@black.com') as test_client:
                 test_client.post(url_for('play', game_no=game1.id),
                                  data=dict(response="(;B[pd];W[pp];B[])"))
         self.assertEqual(game1.sgf, "(;B[pd];W[pp];B[])")
@@ -482,7 +487,7 @@ class TestPlayIntegrated(TestWithDb):
         self.assert_redirects(response, '/')
 
     def test_redirects_to_home_if_game_not_found(self):
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             response = test_client.post(
                 url_for('play', game_no=0),
                 data=dict(response="(;B[])"))
@@ -491,7 +496,7 @@ class TestPlayIntegrated(TestWithDb):
     def test_rejects_new_move_off_turn(self):
         game = self.add_game()
         self.assertIn("(;", game.sgf)
-        with self.set_email('white@white.com') as test_client:
+        with self.set_user('white@white.com') as test_client:
             with self.assert_flashes('not your turn'):
                 test_client.post(url_for('play', game_no=game.id),
                                  data=dict(response="(;W[pq])"))
@@ -500,7 +505,7 @@ class TestPlayIntegrated(TestWithDb):
     def test_rejects_missing_args(self):
         game = self.add_game()
         self.assertIn("(;", game.sgf)
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             with self.assert_flashes('invalid'):
                 test_client.post(url_for('play', game_no=game.id), data={},
                                  follow_redirects=True)
@@ -508,14 +513,14 @@ class TestPlayIntegrated(TestWithDb):
 
     def test_works_with_setup_stones(self):
         game = self.add_game("(;AW[ba])")
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response="(;AW[ba]B[bc])"))
         self.assertEqual(game.sgf, "(;AW[ba]B[bc])")
 
     def test_rejects_invalid_move(self):
         game = self.add_game("(;AW[ba])")
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             with self.assert_flashes('invalid'):
                 response = test_client.post(
                     url_for('play', game_no=game.id),
@@ -525,16 +530,16 @@ class TestPlayIntegrated(TestWithDb):
 
     def test_handles_missing_move(self):
         game = self.add_game()
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response="(;)"))  # should not raise
 
     def test_counts_passes_toward_turn_count(self):
         game = self.add_game("(;)")
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response="(;B[])"))
-        with self.set_email('white@white.com') as test_client:
+        with self.set_user('white@white.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response="(;B[];W[pp])"))
         self.assertEqual(game.sgf, "(;B[];W[pp])")
@@ -547,7 +552,7 @@ class TestPlayIntegrated(TestWithDb):
         self.assertFalse(game.finished,
                          "game is not initially finished")
 
-        with self.set_email('white@white.com') as test_client:
+        with self.set_user('white@white.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response=new_sgf))
 
@@ -565,7 +570,7 @@ class TestPlayIntegrated(TestWithDb):
         self.assertFalse(game.finished,
                          "game is not initially finished")
 
-        with self.set_email('white@white.com') as test_client:
+        with self.set_user('white@white.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response=new_sgf))
 
@@ -582,7 +587,7 @@ class TestPlayIntegrated(TestWithDb):
         # to old bug whereby 'is our turn' testing happened before updating the
         # move list with the new stone
         game = self.add_game()
-        with self.set_email('black@black.com') as test_client:
+        with self.set_user('black@black.com') as test_client:
             response = test_client.get(
                     '/game?game_no={game}&move_no=0&row=16&column=15'
                     .format(game=game.id))
@@ -626,8 +631,8 @@ class TestServerPlayer(TestWithDb):
     def test_server_player(self):
         server_player_email = "serverplayer@localhost"
         server_player = main.ServerPlayer(server_player_email)
-        test_opponent_email = "serverplayermock@localhost"
-        main.create_game_internal(server_player_email, test_opponent_email)
+        test_opponent = "serverplayermock@localhost"
+        main.create_game_internal(server_player_email, test_opponent)
         self.assert_status_list_lengths(server_player_email, 1, 0)
         server_player.act()
         self.assert_status_list_lengths(server_player_email, 0, 1)
@@ -649,11 +654,11 @@ class TestServerPlayer(TestWithDb):
             server_player_email = "serverplayer@localhost"
             server_player = main.ServerPlayer(
                     server_player_email, rest_interval=rest_interval)
-            test_opponent_email = "serverplayermock@localhost"
+            test_opponent = "serverplayermock@localhost"
 
             # We start the daemon, create a game, then wait the three times the
             # rest period, during which the daemon should have acted.
-            main.create_game_internal(server_player_email, test_opponent_email)
+            main.create_game_internal(server_player_email, test_opponent)
             server_player.start_daemon()
             time.sleep(3 * rest_interval)
             server_player.terminate_daemon()

@@ -8,15 +8,15 @@
 </head>
 <body>
 
-{% if current_user_email %}
-<div class="logged_in_user">Logged in as: {{ current_user_email }}</div>
+{% if current_user %}
+<div class="logged_in_user">Logged in as: {{ current_user }}</div>
 {% if current_persona_email %}
 <a href="#" id="logout">Log out</a>
 {% else %}  <!-- else current_persona_email -->
 <a href="/logout" id="logout">Log out</a>
 {% endif %}  <!-- end current_persona_email -->
 
-{% else %}  <!-- else current_user_email -->
+{% else %}  <!-- else current_user -->
 <a href="#" id="persona_login">Login with Persona</a>
 <div class="sign_in">
     <a id="new_account" href="{{ url_for('create_account') }}">Sign up</a>
@@ -33,7 +33,7 @@
 </div>
 {% endif %}
 
-{% if current_user_email %}
+{% if current_user %}
 <div id="main_menu">
     <ul>
         <li><a href="{{ url_for('status') }}">Status</a></li>
@@ -57,7 +57,7 @@
 
 <script>
 window.tesuji_charm = {
-    currentUserEmail: "{{ current_user_email }}",
+    currentUserEmail: "{{ current_user }}",
     currentPersonaEmail: "{{ current_persona_email }}",
 };
 </script>
