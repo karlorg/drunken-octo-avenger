@@ -212,9 +212,9 @@ class ClientSideJsTest extends BrowserTest
 registerTest new ClientSideJsTest
 
 
-class LoginTest extends BrowserTest
-  names: ['LoginTest', 'login']
-  description: 'Test the login procedure'
+class PersonaLoginTest extends BrowserTest
+  names: ['PersonaLoginTest', 'persona', 'plogin']
+  description: 'Test the Persona login procedure'
   numTests: 3
   testBody: (test) ->
     casper.thenOpen serverUrl, ->
@@ -234,7 +234,99 @@ class LoginTest extends BrowserTest
       test.skip 1
       # test.assertExists '#logout'
 
-registerTest new LoginTest
+registerTest new PersonaLoginTest
+
+
+class NativeLoginTest extends BrowserTest
+  names: ['NativeLoginTest', 'login', 'nlogin']
+  description: 'Test our native username/password login procedure'
+  numTests: 14
+  testBody: (test) ->
+    deleteUser 'darrenlamb'
+
+    casper.thenOpen serverUrl, ->
+      @fill 'form#login_form', {
+        username: 'darrenlamb'
+        password: 'iknowandy'
+        }, true  # true = submit form
+    casper.then ->
+      # Darren is not known to us; he is returned to the login form
+      # and sees a message that his username is not found
+      test.assertExists '#login_form',
+        "After trying to log in without an account, returned to login form"
+      test.assertTextExists 'not found',
+        "After trying to log in without an account, message appears"
+
+    # he sets up a new account
+    # at first he gets overenthusiastic and tries to set two different passwords
+    casper.thenClick '#new_account', ->
+      @fill 'form#new_account_form', {
+        username: 'darrenlamb'
+        password1: 'iknowandy'
+        password2: 'imdarrenlamb'
+        }, true  # true = submit form
+    # he is returned to the new account form with an error message
+    casper.then ->
+      test.assertExists 'form#new_account_form',
+        "Darren tried non-matching passwords, is returned to form"
+      test.assertTextExists "don't match",
+        "Darren is warned about his passwords not matching"
+      # he is not logged in
+      test.assertDoesntExist '#logout'
+
+    # he tries again with matching passwords
+    casper.then ->
+      @fill 'form#new_account_form', {
+        username: 'darrenlamb'
+        password1: 'iknowandy'
+        password2: 'iknowandy'
+        }, true  # true = submit form
+    # Darren is automatically logged in
+    casper.then ->
+      # the next page has a logout button
+      test.assertExists '#logout',
+        "Darren logged in automatically, logout button appears"
+      # and shows Darren's username
+      test.assertTextExists 'darrenlamb',
+        "Darren logged in for first time, his name appears"
+
+    # he logs out
+    casper.thenClick '#logout', ->
+      test.assertDoesntExist '#logout',
+        "Darren logs out, logout button disappears"
+      test.assertExists 'form#login_form',
+        "Darren logged out, the login form is back"
+
+    # later, he logs in again
+    casper.thenOpen serverUrl, ->
+      # at first he forgets what password he settled on
+      @fill 'form#login_form', {
+        username: 'darrenlamb'
+        password: 'imdarrenlamb'
+        }, true  # true = submit form
+    casper.then ->
+      test.assertDoesntExist '#logout',
+        "After trying incorrect password, logout button doesn't appear"
+      test.assertTextExists "incorrect",
+        "After trying incorrect password, a message to that effect appears"
+      test.assertExists 'form#login_form',
+        "After trying incorrect password, login form is presented again"
+
+    # he tries once more with the correct password
+    casper.then ->
+      @fill 'form#login_form', {
+        username: 'darrenlamb'
+        password: 'iknowandy'
+        }, true  # true = submit form
+    # this time he gets in
+    casper.then ->
+      test.assertExists '#logout',
+        "Darren logs in again, logout button appears"
+      test.assertTextExists 'darrenlamb',
+        "Darren logs in again, his name appears on the page"
+
+registerTest new NativeLoginTest
+
 
 class StatusTest extends BrowserTest
   names: ['StatusTest', 'status']
@@ -281,7 +373,7 @@ class ChallengeTest extends BrowserTest
       @assertNumGames test, 0, 0
 
     casper.thenClick '#challenge_link', ->
-      form_values = 'input[name="opponent_email"]' : TOUYA_EMAIL
+      form_values = 'input[name="opponent"]' : TOUYA_EMAIL
       # The final 'true' argument means that the form is submitted.
       @fillSelectors 'form', form_values, true
 
@@ -813,6 +905,12 @@ registerTest new FinishedGamesTest
 
 
 # helper functions
+
+deleteUser = (username) ->
+  casper.thenOpen "#{serverUrl}/testing_delete_user",
+    method: 'post'
+    data:
+      username: username
 
 clearGamesForPlayer = (email) ->
   casper.thenOpen "#{serverUrl}/testing_clear_games_for_player",

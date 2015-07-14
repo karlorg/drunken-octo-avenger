@@ -62,6 +62,19 @@ test 'init function sets request and logout callbacks', ->
   $('#logout').click()
   equal logoutCalled, true, 'logout callback called correctly'
 
+test 'logout callback not set when not logged in with Persona', ->
+  logoutCalled = false
+  mockNavigator =
+    id:
+      logout: -> logoutCalled = true
+      request: ->
+      watch : ->
+  tesuji_charm.currentPersonaEmail = ''
+  tesuji_charm.persona.initialize mockNavigator
+
+  $('#logout').click()
+  equal logoutCalled, false
+
 
 # ============================================================================
 

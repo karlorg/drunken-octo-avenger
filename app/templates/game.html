@@ -216,12 +216,12 @@
             {% set black_text_property = 'none' %}
             {% set white_text_property = 'none' %}
        {% endif %}
-       <span style="color:black; text-decoration:{{black_text_property}};">{{black_email}}</span>
+       <span style="color:black; text-decoration:{{black_text_property}};">{{black_user}}</span>
        <div style="display:inline"><div class="stone-image" style="background:#000000"></div>
                                    <span style="color:#f52712;"> VS </span>
                                    <div class="stone-image" style="background:#ffffff"></div>
        </div>
-       <span style="color:white; text-decoration:{{white_text_property}};">{{white_email}}</span>
+       <span style="color:white; text-decoration:{{white_text_property}};">{{white_user}}</span>
 </div><!-- end of match info -->
 
 <div id="content">
@@ -257,9 +257,9 @@
 <div class="game-chat">
     <div class="chat-comments" style="max-height: 500px; overflow-y: scroll;">
       {% for comment in comments %}
-        {% if comment.speaker == black_email %}
+        {% if comment.speaker == black_user %}
            <div class="chat-comment-black">
-        {% elif comment.speaker == white_email %}
+        {% elif comment.speaker == white_user %}
            <div class="chat-comment-white">
         {% else %}
            <div class="chat-comment-anonymous">

@@ -2,7 +2,7 @@
 {% block content %}
 <form method="POST" action="{{ url_for('challenge') }}">
     {{ form.csrf_token }}
-    {{ form.opponent_email.label }} {{ form.opponent_email(size=30) }}
+    {{ form.opponent.label }} {{ form.opponent(size=30) }}
     <input id="send_challenge" type="submit" value="Send challenge">
 </form>
 {% endblock %}
