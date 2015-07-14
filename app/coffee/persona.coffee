@@ -8,13 +8,15 @@ persona.initialize = (navigator) ->
   signinLink = $('#persona_login')
   if signinLink.length > 0
     signinLink.click -> navigator.id.request()
-  signoutLink = $('#logout')
-  if signoutLink.length > 0
-    signoutLink.click -> navigator.id.logout()
 
   loggedInUser = tesuji_charm.currentPersonaEmail
   if loggedInUser == ''
     loggedInUser = null
+
+  if loggedInUser
+    signoutLink = $('#logout')
+    if signoutLink.length > 0
+      signoutLink.click -> navigator.id.logout()
 
   navigator.id.watch {
     loggedInUser: loggedInUser
