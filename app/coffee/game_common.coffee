@@ -116,6 +116,7 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
 
   createBoardDom size, newStoneColor
   createScoringDom()
+  createNavigationDom()
   setupState sgfObject
   return
 
@@ -163,6 +164,13 @@ createScoringDom = ->
     '<span class="prisoners white"></span></div>')
   $('#board').append $scoreBlock
   return
+
+createNavigationDom = ->
+  $('.board_nav_block').empty().remove()
+  $navBlock = $('<div class="board_nav_block"></div>')
+  $navBlock.append ('<input class="move_slider" ' +
+                    'type="range" min="0" max="10" value="10" />')
+  $('#board').prepend $navBlock
 
 setupState = (sgf_object) ->
   size = if sgf_object \

@@ -180,6 +180,18 @@ test "prisoner counts set from SGF", (assert) ->
   testSgf '(;SZ[3];AW[ab]B[aa];W[ba])', 1, 0
   testSgf '(;SZ[3];AW[aa]AB[ba]B[ab])', 0, 1
 
+test "slider allows viewing past board states", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa]B[ac];W[ab];B[bb];W[ca])'
+  tesuji_charm.game_common.initialize()
+  assert.boardState ['b.w'
+                     '.b.'
+                     'b..'], "initial board state"
+  $slider = $('input.move_slider')
+  assert.ok $slider.length > 0, "slider exists"
+
+  $slider.val(0).change()
+  assert.boardState ['...', '...', '...'], "board state at move 0"
+
 
 # ============================================================================
 
