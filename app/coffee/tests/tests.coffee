@@ -103,11 +103,47 @@ QUnit.assert.scores = (black, white, message = null) ->
 
 # ============================================================================
 
+module "helper function for testing"
+
+boardFromChars = (chars2d) ->
+  "Produce a board state from a character-based shorthand.
+
+  eg. ['.b.', 'bw.', '.b.']"
+  for row in chars2d
+    for char in row
+      switch char
+        when 'b' then 'black'
+        when 'w' then 'white'
+        else 'empty'
+
+test "test of testing helper function boardFromChars", (assert) ->
+  assert.deepEqual (boardFromChars ['.b.', 'bw.', '.b.']),
+                   [['empty', 'black', 'empty']
+                    ['black', 'white', 'empty']
+                    ['empty', 'black', 'empty']]
+
+# ============================================================================
 
 module "common game page functions",
   setup: ->
     setInputSgf ''
     tesuji_charm.game_common.initialize()
+
+QUnit.assert.boardState = (chars2d, message) ->
+  expected = boardFromChars chars2d
+  actual = tesuji_charm.game_common.readBoardState()
+  result = true
+  for row, j in expected
+    for point, i in row
+      (result = false) if actual[j][i] != point
+  @push result, actual, expected, (message or "")
+
+test "helper function readBoardState and assert.boardState", (assert) ->
+  setInputSgf '(;SZ[3];B[ca];W[bc])'
+  tesuji_charm.game_common.initialize()
+  assert.boardState ['..b'
+                     '...'
+                     '.w.']
 
 
 test "initialize creates board from SGF data", (assert) ->
@@ -126,10 +162,9 @@ test "setup stones in SGF (tags AB & AW)", (assert) ->
   # array for one and a single value for the other
   setInputSgf '(;SZ[3];AB[ba][ab][bc]AW[bb])'
   tesuji_charm.game_common.initialize()
-  expected = [ [ 'empty', 'black', 'empty' ]
-               [ 'black', 'white', 'empty' ]
-               [ 'empty', 'black', 'empty' ] ]
-  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+  assert.boardState ['.b.'
+                     'bw.'
+                     '.b.']
 
 test "prisoner counts set from SGF", (assert) ->
   testSgf = (sgf, black, white) ->
@@ -144,14 +179,6 @@ test "prisoner counts set from SGF", (assert) ->
     "only one black prisoner element"
   testSgf '(;SZ[3];AW[ab]B[aa];W[ba])', 1, 0
   testSgf '(;SZ[3];AW[aa]AB[ba]B[ab])', 0, 1
-
-test "helper function readBoardState", (assert) ->
-  setInputSgf '(;SZ[3];B[ca];W[bc])'
-  tesuji_charm.game_common.initialize()
-  expected = [ [ 'empty', 'empty', 'black' ]
-               [ 'empty', 'empty', 'empty' ]
-               [ 'empty', 'white', 'empty' ] ]
-  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
 
 
 # ============================================================================
