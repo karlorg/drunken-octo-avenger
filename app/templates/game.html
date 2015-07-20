@@ -4,13 +4,14 @@
 
 {% if size is undefined %}
     {% set size = 19 %}
+    {% set board_size = 20 * size %}
 {% endif %}
 
 <style>
 
 .goban {
-    width: {{20 * size}}px;
-    height: {{20 * size}}px;
+    width: {{board_size}}px;
+    height: {{board_size}}px;
     margin: 10px;
     border: 2px solid;
     padding: 10px;
@@ -156,7 +157,8 @@
 }
 
 .chat-comments{
-    border: 1px solid black;
+    max-height: {{board_size}}px;
+    overflow-y: auto;
 }
 
 .chat-comment-anonymous{
