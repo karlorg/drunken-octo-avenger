@@ -116,7 +116,7 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
 
   createBoardDom size, newStoneColor
   createScoringDom()
-  createNavigationDom()
+  createNavigationDom sgfObject
   setupState sgfObject
   return
 
@@ -165,20 +165,39 @@ createScoringDom = ->
   $('#board').append $scoreBlock
   return
 
-createNavigationDom = ->
+createNavigationDom = (sgfObject) ->
+  maxMoves = do ->
+    count = 0
+    for node in sgfObject.gameTrees[0].nodes
+      if node.B or node.W then count += 1
+    count
   $('.board_nav_block').empty().remove()
   $navBlock = $('<div class="board_nav_block"></div>')
-  $navBlock.append ('<input class="move_slider" ' +
-                    'type="range" min="0" max="10" value="10" />')
+  $slider = $("<input class='move_slider' " +
+              "type='range' min='0' max='#{maxMoves}' value='#{maxMoves}' />")
+  do ->
+    sliderPos = maxMoves
+    # respond to both 'change' and 'input' events for better cross-browser
+    # compatibility
+    $slider.on 'change input', ->
+      # but filter events to ensure we only update as necessary
+      setting = $(this).val()
+      return if setting == sliderPos
+      sliderPos = setting
+      setupState sgfObject, moves: setting
+  $navBlock.append $slider
   $('#board').prepend $navBlock
 
-setupState = (sgf_object) ->
-  size = if sgf_object \
-         then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
+setupState = (sgfObject, options={}) ->
+  {moves} = options
+  size = if sgfObject \
+         then parseInt(sgfObject.gameTrees[0].nodes[0].SZ) or 19 \
          else 19
   board_state = (('empty' for i in [0...size]) for j in [0...size])
   prisoners = { black: 0, white: 0 }
-  for node in sgf_object.gameTrees[0].nodes
+  moveNo = 0
+  for node in sgfObject.gameTrees[0].nodes
+    break if moves? and moveNo >= moves
     if node.AB
       coords = if Array.isArray(node.AB) then node.AB else [node.AB]
       for coordStr in coords
@@ -190,12 +209,14 @@ setupState = (sgf_object) ->
         [x, y] = decodeSgfCoord coordStr
         board_state[y][x] = 'white'
     if node.B
+      moveNo += 1
       [x, y] = decodeSgfCoord node.B
       result = go_rules.getNewStateAndCaptures('black', x, y, board_state)
       board_state = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
     if node.W
+      moveNo += 1
       [x, y] = decodeSgfCoord node.W
       result = go_rules.getNewStateAndCaptures('white', x, y, board_state)
       board_state = result.state

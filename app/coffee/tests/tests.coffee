@@ -189,8 +189,14 @@ test "slider allows viewing past board states", (assert) ->
   $slider = $('input.move_slider')
   assert.ok $slider.length > 0, "slider exists"
 
-  $slider.val(0).change()
+  $slider.val(0).trigger 'input'
   assert.boardState ['...', '...', '...'], "board state at move 0"
+
+  $slider.val(2).trigger 'input'
+  assert.boardState ['b..', 'w..', 'b..'], "board state at move 2"
+
+  $slider.val(3).trigger 'input'
+  assert.boardState ['b..', '.b.', 'b..'], "board state at move 2"
 
 
 # ============================================================================
