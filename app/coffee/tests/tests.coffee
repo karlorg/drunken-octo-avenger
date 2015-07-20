@@ -197,15 +197,15 @@ test "next player correctly determined with info node", ->
   ok isPointBlack($point), 'first player should be Black despite SGF info node'
 
 test 'clicking multiple points updates hidden form', ->
-  setInputSgf '(;)'
+  setInputSgf '(;SZ[3])'
   tesuji_charm.game_basic.initialize()
   $point1 = $pointAt 0, 0
   $point2 = $pointAt 1, 2
 
   $point1.click()
-  equal getResponseSgf(), '(;B[aa])', "first stone sets correct SGF"
+  equal getResponseSgf(), '(;SZ[3];B[aa])', "first stone sets correct SGF"
   $point2.click()
-  equal getResponseSgf(), '(;B[bc])', "second stone sets correct SGF"
+  equal getResponseSgf(), '(;SZ[3];B[bc])', "second stone sets correct SGF"
 
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
