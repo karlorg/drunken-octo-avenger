@@ -114,9 +114,11 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
   size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ) or 19
 
-  createBoardDom size, newStoneColor
-  createScoringDom()
-  createNavigationDom sgfObject
+  $board = createBoardDom size, newStoneColor
+  $scoreBlock = createScoringDom()
+  $navBlock = createNavigationDom sgfObject
+  $('#board').empty()
+  $('#board').append($elem) for $elem in [$board, $navBlock, $scoreBlock]
   setupState sgfObject
   return
 
@@ -151,19 +153,15 @@ createBoardDom = (size, newStoneColor = null) ->
     row_element += "</div>"
     tableContentsStr += row_element
 
-  $('.goban').remove()
-  $('#board').append '<div class="goban">' + tableContentsStr + '</div>'
-  return
+  $('<div class="goban">' + tableContentsStr + '</div>')
 
 createScoringDom = ->
-  $('.score_block').empty().remove()
   $scoreBlock = $('<div class="score_block"></div>')
   $scoreBlock.append ('<div>Black prisoners: ' +
     '<span class="prisoners black"></span></div>')
   $scoreBlock.append ('<div>White prisoners: ' +
     '<span class="prisoners white"></span></div>')
-  $('#board').append $scoreBlock
-  return
+  $scoreBlock
 
 createNavigationDom = (sgfObject) ->
   maxMoves = do ->
@@ -171,7 +169,6 @@ createNavigationDom = (sgfObject) ->
     for node in sgfObject.gameTrees[0].nodes
       if node.B or node.W then count += 1
     count
-  $('.board_nav_block').empty().remove()
   $navBlock = $('<div class="board_nav_block"></div>')
   $slider = $("<input class='move_slider' " +
               "type='range' min='0' max='#{maxMoves}' value='#{maxMoves}' />")
@@ -186,7 +183,7 @@ createNavigationDom = (sgfObject) ->
       sliderPos = setting
       setupState sgfObject, moves: setting
   $navBlock.append $slider
-  $('#board').prepend $navBlock
+  $navBlock
 
 setupState = (sgfObject, options={}) ->
   {moves} = options
