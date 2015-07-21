@@ -186,6 +186,9 @@ createNavigationDom = (sgfObject) ->
   $navBlock
 
 setupState = (sgfObject, options={}) ->
+  "Update the DOM board to match the given SGF object.
+
+  If 'moves' is given as an option, include only that many moves."
   {moves} = options
   size = if sgfObject \
          then parseInt(sgfObject.gameTrees[0].nodes[0].SZ) or 19 \
@@ -222,7 +225,6 @@ setupState = (sgfObject, options={}) ->
   updateBoard board_state
   if x? and y?
     setLastPlayed ($pointAt x, y)
-
 
   setBlackPrisoners prisoners.black
   setWhitePrisoners prisoners.white
