@@ -45,9 +45,13 @@ game_common.setPointColor = setPointColor = ($td, color) ->
     $td.append territoryElement
 
 game_common.setLastPlayed = setLastPlayed = ($point) ->
+  $('.goban .last-played').remove()
   lastPlayedElement = document.createElement 'div'
   lastPlayedElement.className = 'last-played'
   $point.append lastPlayedElement
+
+removeLastPlayed = ->
+  $('.goban .last-played').remove()
 
 # end of setPointColor helpers
 
@@ -129,8 +133,6 @@ createBoardDom = (size, newStoneColor = null) ->
   left_horizontal = '<div class="board_line board_line_horizontal"></div>'
   right_horizontal = '<div class="board_line board_line_horizontal
                                   board_line_right_horizontal"></div>'
-  placement = "<div class='placement " + newStoneColor + "'></div>"
-  placement = if newStoneColor in ['black', 'white'] then placement else ""
 
   tableContentsStr = ''
   for j in [0...size]
@@ -147,7 +149,6 @@ createBoardDom = (size, newStoneColor = null) ->
         point_element += right_horizontal
       if isHandicapPoint(size, j, i)
         point_element += "<div class='handicappoint'></div>"
-      point_element += placement
       point_element += "</div>"
       row_element += point_element
     row_element += "</div>"
@@ -163,27 +164,49 @@ createScoringDom = ->
     '<span class="prisoners white"></span></div>')
   $scoreBlock
 
+
+# move slider/navigation ====================================================
+
+_moveNoListeners = []
+
+game_common.onViewMoveNo = (callback) ->
+  _moveNoListeners.push callback
+  callback
+
+_isViewingLatestMove = false
+
+game_common.isViewingLatestMove = -> _isViewingLatestMove
+
 createNavigationDom = (sgfObject) ->
   maxMoves = do ->
     count = 0
     for node in sgfObject.gameTrees[0].nodes
       if node.B or node.W then count += 1
     count
+
   $navBlock = $('<div class="board_nav_block"></div>')
   $slider = $("<input class='move_slider' " +
               "type='range' min='0' max='#{maxMoves}' value='#{maxMoves}' />")
+  _isViewingLatestMove = true
   do ->
-    sliderPos = maxMoves
+    oldVal = maxMoves
     # respond to both 'change' and 'input' events for better cross-browser
     # compatibility
     $slider.on 'change input', ->
       # but filter events to ensure we only update as necessary
-      setting = $(this).val()
-      return if setting == sliderPos
-      sliderPos = setting
-      setupState sgfObject, moves: setting
+      val = parseInt($(this).val())
+      return if oldVal == val
+      oldVal = val
+      _isViewingLatestMove = val == maxMoves
+      setupState sgfObject, moves: val
+      # notify listeners
+      cb() for cb in _moveNoListeners
+
   $navBlock.append $slider
   $navBlock
+
+# end of move slider/navigation =============================================
+
 
 setupState = (sgfObject, options={}) ->
   "Update the DOM board to match the given SGF object.
@@ -225,6 +248,8 @@ setupState = (sgfObject, options={}) ->
   updateBoard board_state
   if x? and y?
     setLastPlayed ($pointAt x, y)
+  else
+    removeLastPlayed()
 
   setBlackPrisoners prisoners.black
   setWhitePrisoners prisoners.white

@@ -42,7 +42,17 @@ game_basic.initialize = ->
   $('button.confirm_button').prop 'disabled', true
 
   if tesuji_charm.onTurn
+    addHoverEffects()
+    game_common.onViewMoveNo ->
+      if game_common.isViewingLatestMove()
+        addHoverEffects()
+      else
+        removeNewStone()
+        removeHoverEffects()
+      return
+
     $('.goban .gopoint').click ->
+      return unless game_common.isViewingLatestMove()
       return unless game_common.hasCoordClass $(this)
       [col, row] = game_common.parseCoordClass $(this)
       setNewStoneAt col, row
@@ -51,11 +61,6 @@ game_basic.initialize = ->
       passSgfObject = sgfObjectWithMoveAdded initialSgfObject
       setResponseSgf smartgame.generate(passSgfObject)
       $('#main_form').get(0).submit()
-
-# to facilitate testing, export a function to reload our internal state from
-# the page
-game_basic._reloadBoard = ->
-  initialBoardState = game_common.readBoardState()
 
 nextPlayerInSgfObject = (sgfObject) ->
   nodes = sgfObject.gameTrees[0].nodes
@@ -108,6 +113,24 @@ setNewStoneAt = (x, y) ->
   game_common.setWhitePrisoners (initialWhitePrisoners + captures.white)
 
   $('button.confirm_button').prop 'disabled', false
+
+removeNewStone = ->
+  "update everything necessary to remove a proposed new stone"
+  if game_common.isViewingLatestMove()
+    # if not viewing latest move, the board state will have been set by
+    # game_common
+    game_common.updateBoard initialBoardState
+  $('.confirm_button').prop 'disabled', true
+
+addHoverEffects = ->
+  # the hover effects are all CSS, we just need a div with the right class
+  # on each goban point that needs the effect
+  $('.goban .placement').remove()
+  $('.goban :not(.black) :not(.white)').append(
+    "<div class='placement #{newStoneColor}' />")
+
+removeHoverEffects = ->
+  $('.goban .placement').remove()
 
 sgfObjectWithMoveAdded = (sgfObject, col=null, row=null) ->
   if col != null and row != null

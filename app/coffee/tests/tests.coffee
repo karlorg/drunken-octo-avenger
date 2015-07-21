@@ -191,12 +191,19 @@ test "slider allows viewing past board states", (assert) ->
 
   $slider.val(0).trigger 'input'
   assert.boardState ['...', '...', '...'], "board state at move 0"
+  assert.notOk $('.last-played').length, "no last-move marker on move 0"
 
   $slider.val(2).trigger 'input'
   assert.boardState ['b..', 'w..', 'b..'], "board state at move 2"
+  assert.equal $('.last-played').length, 1, "exactly one last-move marker"
+  assert.ok $('.col-0.row-1').find('.last-played').length,
+    "last-move marker is at (0,1)"
 
   $slider.val(3).trigger 'input'
   assert.boardState ['b..', '.b.', 'b..'], "board state at move 2"
+  assert.equal $('.last-played').length, 1, "exactly one last-move marker"
+  assert.ok $('.col-1.row-1').find('.last-played').length,
+    "last-move marker is at (1,1)"
 
 
 # ============================================================================
@@ -220,6 +227,14 @@ test 'clicking multiple points moves black stone', ->
   $point2.click()
   ok isPointEmpty($point1), 'after second click, first clicked point clear'
   ok isPointBlack($point2), 'after second click, second clicked point black'
+
+test "off turn, no hover effects and can't play stones", (assert) ->
+  tesuji_charm.onTurn = false
+  tesuji_charm.game_basic.initialize()
+  assert.notOk $('.goban .placement').length, "hover effect is disabled"
+  $point = $pointAt 0, 0
+  $point.click()
+  assert.ok isPointEmpty($point), "no stone placed"
 
 test "white stones play correctly", ->
   setInputSgf '(;SZ[3];B[aa])'
@@ -343,6 +358,31 @@ test "correct color after resume with three passes (white first)", (assert) ->
   $point = $pointAt 1, 1
   $point.click()
   assert.ok isPointWhite($point)
+
+test "behaviour changes while viewing past moves", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[bb])'
+  tesuji_charm.game_basic.initialize()
+  $confirm_button = $('button.confirm_button')
+  $slider = $('input.move_slider')
+  $point = $pointAt 2, 2
+  $point.click()
+
+  $slider.val(1).trigger 'input'
+  assert.ok isPointEmpty($point), "proposed stone vanishes on viewing past move"
+  assert.ok $confirm_button.prop('disabled'), "confirm button disabled"
+  assert.notOk $point.find('.placement').length, "hover effect is gone"
+
+  $point.click()
+  assert.ok isPointEmpty($point), "no stone appears"
+
+  $slider.val(2).trigger 'input'
+  assert.ok $confirm_button.prop('disabled'), "confirm button still disabled"
+  assert.ok isPointEmpty($point), "proposed stone does not reappear"
+  assert.ok $point.find('.placement').length, "hover effect is back"
+
+  $point.click()
+  assert.ok isPointBlack($point), "after returning to end, stone can be placed"
+  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
 
 
 # ============================================================================
