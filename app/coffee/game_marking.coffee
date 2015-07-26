@@ -34,6 +34,7 @@ game_marking.initialize = ->
 
   if tesuji_charm.onTurn
     $('.goban .gopoint').click ->
+      return unless game_common.isViewingLatestMove()
       return unless game_common.hasCoordClass $(this)
       [col, row] = game_common.parseCoordClass $(this)
       markStonesAround col, row
@@ -45,6 +46,10 @@ game_marking.initialize = ->
       resumeSgfObject.gameTrees[0].nodes.push resumeNode
       setResponseSgf smartgame.generate(resumeSgfObject)
       $('#main_form').submit()
+
+    game_common.onViewMoveNo ->
+      if game_common.isViewingLatestMove()
+        setupScoring()
 
 addScoresToDom = ->
   $('.score_block').append(

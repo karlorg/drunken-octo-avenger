@@ -173,6 +173,13 @@ game_common.onViewMoveNo = (callback) ->
   _moveNoListeners.push callback
   callback
 
+game_common.offViewMoveNo = ->
+  "Clear all view move no listeners.
+
+  We need this for testing, where initialise() functions get called in many
+  test cases, so we must clean up listeners after each test."
+  _moveNoListeners = []
+
 _isViewingLatestMove = false
 
 game_common.isViewingLatestMove = -> _isViewingLatestMove
