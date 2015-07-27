@@ -165,7 +165,7 @@ createScoringDom = ->
   $scoreBlock
 
 
-# move slider/navigation ====================================================
+# move navigation ====================================================
 
 _moveNoListeners = []
 
@@ -192,15 +192,22 @@ createNavigationDom = (sgfObject) ->
     count
 
   $navBlock = $('<div class="board_nav_block"></div>')
-  $slider = $("<input class='move_slider' " +
-              "type='range' min='0' max='#{maxMoves}' value='#{maxMoves}' />")
+  $select = $('<select class="move_select"/>')
+  for i in [0..maxMoves]
+    selected = if i == maxMoves then 'selected' else ''
+    $select.append("<option value=#{i} #{selected}>Move #{i}</value>")
+
+  # hack for Firefox; it won't respond to moving through the list with
+  # arrow keys until it sees an onblur event
+  $select.on 'keyup', (e) ->
+    e.target.blur()
+    e.target.focus()
+
   _isViewingLatestMove = true
   do ->
     oldVal = maxMoves
-    # respond to both 'change' and 'input' events for better cross-browser
-    # compatibility
-    $slider.on 'change input', ->
-      # but filter events to ensure we only update as necessary
+    $select.on 'change input', ->
+      # filter events to ensure we only update as necessary
       val = parseInt($(this).val(), 10)
       return if oldVal == val
       oldVal = val
@@ -209,10 +216,10 @@ createNavigationDom = (sgfObject) ->
       # notify listeners
       cb() for cb in _moveNoListeners
 
-  $navBlock.append $slider
+  $navBlock.append $select
   $navBlock
 
-# end of move slider/navigation =============================================
+# end of move navigation =============================================
 
 
 setupState = (sgfObject, options={}) ->

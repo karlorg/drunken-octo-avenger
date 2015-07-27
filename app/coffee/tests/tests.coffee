@@ -139,8 +139,8 @@ QUnit.assert.boardState = (chars2d, message) ->
   @push result, actual, expected, (message or "")
 
 setViewMoveNo = (n) ->
-  $slider = $('input.move_slider')
-  $slider.val(n).trigger 'input'
+  $select = $('.move_select')
+  $select.val(n).trigger 'input'
   return
 
 test "helper function readBoardState and assert.boardState", (assert) ->
@@ -185,14 +185,12 @@ test "prisoner counts set from SGF", (assert) ->
   testSgf '(;SZ[3];AW[ab]B[aa];W[ba])', 1, 0
   testSgf '(;SZ[3];AW[aa]AB[ba]B[ab])', 0, 1
 
-test "slider allows viewing past board states", (assert) ->
+test "can view past board states", (assert) ->
   setInputSgf '(;SZ[3];AB[aa]B[ac];W[ab];B[bb];W[ca])'
   tesuji_charm.game_common.initialize()
   assert.boardState ['b.w'
                      '.b.'
                      'b..'], "initial board state"
-  $slider = $('input.move_slider')
-  assert.ok $slider.length > 0, "slider exists"
 
   setViewMoveNo 0
   assert.boardState ['...', '...', '...'], "board state at move 0"
