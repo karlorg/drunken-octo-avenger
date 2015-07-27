@@ -14,8 +14,8 @@ game_common.getInputSgf = getInputSgf = -> $('input#data').val()
 game_common.setResponseSgf = setResponseSgf = (sgf) ->
   $('#response').val sgf
 
-game_common.getBlackPrisoners = -> parseInt($('.prisoners.black').text())
-game_common.getWhitePrisoners = -> parseInt($('.prisoners.white').text())
+game_common.getBlackPrisoners = -> parseInt($('.prisoners.black').text(), 10)
+game_common.getWhitePrisoners = -> parseInt($('.prisoners.white').text(), 10)
 game_common.setBlackPrisoners = setBlackPrisoners = (count) ->
   $('.prisoners.black').text count
 game_common.setWhitePrisoners = setWhitePrisoners = (count) ->
@@ -116,7 +116,7 @@ isHandicapPoint = (size, row, column) ->
 
 game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
-  size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ) or 19
+  size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
   $board = createBoardDom size, newStoneColor
   $scoreBlock = createScoringDom()
@@ -201,7 +201,7 @@ createNavigationDom = (sgfObject) ->
     # compatibility
     $slider.on 'change input', ->
       # but filter events to ensure we only update as necessary
-      val = parseInt($(this).val())
+      val = parseInt($(this).val(), 10)
       return if oldVal == val
       oldVal = val
       _isViewingLatestMove = val == maxMoves
@@ -221,7 +221,7 @@ setupState = (sgfObject, options={}) ->
   If 'moves' is given as an option, include only that many moves."
   {moves} = options
   size = if sgfObject \
-         then parseInt(sgfObject.gameTrees[0].nodes[0].SZ) or 19 \
+         then parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19 \
          else 19
   board_state = (('empty' for i in [0...size]) for j in [0...size])
   prisoners = { black: 0, white: 0 }

@@ -86,19 +86,19 @@ getResponseSgf = -> $('input#response').val()
 QUnit.assert.prisonerCounts = (black, white, message = null) ->
   message = if message then "#{message}: " else ''
   actualBlack = $('.prisoners.black').text()
-  @equal parseInt(actualBlack), black,
+  @equal parseInt(actualBlack, 10), black,
     "#{message}Black prisoners should be #{black}, is #{actualBlack}"
   actualWhite = $('.prisoners.white').text()
-  @equal parseInt(actualWhite), white,
+  @equal parseInt(actualWhite, 10), white,
     "#{message}White prisoners should be #{white}, is #{actualWhite}"
 
 QUnit.assert.scores = (black, white, message = null) ->
   message = if message then "#{message}: " else ''
   actualBlack = $('.score.black').text()
-  @equal parseInt(actualBlack), black,
+  @equal parseInt(actualBlack, 10), black,
     "#{message}Black score should be #{black}, is #{actualBlack}"
   actualWhite = $('.score.white').text()
-  @equal parseInt(actualWhite), white,
+  @equal parseInt(actualWhite, 10), white,
     "#{message}White score should be #{white}, is #{actualWhite}"
 
 # ============================================================================
