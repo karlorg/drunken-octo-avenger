@@ -193,9 +193,25 @@ createNavigationDom = (sgfObject) ->
 
   $navBlock = $('<div class="board_nav_block"></div>')
   $select = $('<select class="move_select"/>')
-  for i in [0..maxMoves]
-    selected = if i == maxMoves then 'selected' else ''
-    $select.append("<option value=#{i} #{selected}>Move #{i}</value>")
+  do ->
+    moveNo = 0
+    options = [n: 0, text: 'Start']
+    for node in sgfObject.gameTrees[0].nodes
+      if node.B?
+        moveNo += 1
+        options.push n: moveNo, text: 'B ' + (a1FromSgfTag(node.B) or 'pass')
+      else if node.W?
+        moveNo += 1
+        options.push n: moveNo, text: 'W ' + (a1FromSgfTag(node.W) or 'pass')
+      else if node.TB? or node.TW?
+        moveNo += 1
+        options.push n: moveNo, text: 'Mark dead'
+    for option in options
+      $select.append(
+        "<option value=#{option.n}>" +
+        "Move #{option.n}: #{option.text}" +
+        "</option>")
+  $select.find('option:last-child').attr('selected', true)
 
   # hack for Firefox; it won't respond to moving through the list with
   # arrow keys until it sees an onblur event
@@ -218,6 +234,16 @@ createNavigationDom = (sgfObject) ->
 
   $navBlock.append $select
   $navBlock
+
+a1FromSgfTag = (tag) ->
+  if typeof tag is 'string'
+    tag = [tag]
+  coordStr = tag[0]
+  return '' unless coordStr
+  [x, y] = decodeSgfCoord coordStr
+  colStr = String.fromCharCode(x + 'a'.charCodeAt(0))
+  rowStr = y.toString()
+  return "#{colStr}#{rowStr}"
 
 # end of move navigation =============================================
 
