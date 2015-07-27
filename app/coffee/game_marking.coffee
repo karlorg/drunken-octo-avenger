@@ -32,6 +32,11 @@ game_marking.initialize = ->
   setInitialDead sgfObject
   setupScoring()
 
+  game_common.onViewMoveNo ->
+    if shouldMarkAtMoveNo game_common.viewingMoveNo(), sgfObject
+      setInitialDead sgfObject, moves: game_common.viewingMoveNo()
+      setupScoring()
+
   if tesuji_charm.onTurn
     $('.goban .gopoint').click ->
       return unless game_common.isViewingLatestMove()
@@ -47,10 +52,6 @@ game_marking.initialize = ->
       setResponseSgf smartgame.generate(resumeSgfObject)
       $('#main_form').submit()
 
-    game_common.onViewMoveNo ->
-      if game_common.isViewingLatestMove()
-        setupScoring()
-
 addScoresToDom = ->
   $('.score_block').append(
     '<div>Black score: <span class="score black" /></div>')
@@ -65,12 +66,17 @@ setWhiteScore = (score) ->
 
 # setInitialDead
 
-setInitialDead = (sgfObject) ->
-  "mark dead stones on the DOM according to the supplied SGF object"
+setInitialDead = (sgfObject, options={}) ->
+  "mark dead stones on the DOM according to the supplied SGF object
+
+  If 'moves' is given as an option, include only that many moves."
+  {moves} = options
   nodes = sgfObject.gameTrees[0].nodes
-  last_node = nodes[nodes.length - 1]
-  tws = last_node.TW or []
-  tbs = last_node.TB or []
+  if not moves?
+    moves = nodes.length - 1
+  lastNode = nodes[moves]
+  tws = lastNode.TW or []
+  tbs = lastNode.TB or []
   for asciiCoords in tws.concat tbs
     [x, y] = game_common.decodeSgfCoord asciiCoords
     $point = $pointAt x, y
@@ -149,6 +155,32 @@ countTerritories = ->
     else if game_common.isWhiteScore($(this))
       white += 1
   return black: black, white: white
+
+# shouldMarkAtMoveNo
+
+shouldMarkAtMoveNo = (n, sgfObject) ->
+  # we should be in marking mode for a given move if we find a run of two
+  # passes more recently than any actual play-a-stone moves
+  nodes = sgfObject.gameTrees[0].nodes
+  next = n
+  seenPass = false
+  while next >= 0
+    node = nodes[next]
+    if node.B or node.W
+      # value of node.B|W is empty string for passes, which is falsy
+      # so this does not catch passes
+      return false
+    if node.B? or node.W?
+      # this must be a pass since we eliminated real moves already
+      if seenPass
+        return true
+      else
+        seenPass = true
+    else
+      seenPass = false
+    next -= 1
+  return false
+
 
 # markStonesAround and its helpers
 

@@ -181,15 +181,13 @@ game_common.offViewMoveNo = ->
   _moveNoListeners = []
 
 _isViewingLatestMove = false
+_viewingMoveNo = 0
 
 game_common.isViewingLatestMove = -> _isViewingLatestMove
+game_common.viewingMoveNo = -> _viewingMoveNo
 
 createNavigationDom = (sgfObject) ->
-  maxMoves = do ->
-    count = 0
-    for node in sgfObject.gameTrees[0].nodes
-      if node.B or node.W then count += 1
-    count
+  maxMoves =  null
 
   $navBlock = $('<div class="board_nav_block"></div>')
   $select = $('<select class="move_select"/>')
@@ -206,6 +204,8 @@ createNavigationDom = (sgfObject) ->
       else if node.TB? or node.TW?
         moveNo += 1
         options.push n: moveNo, text: 'Mark dead'
+    maxMoves = moveNo
+    _viewingMoveNo = moveNo
     for option in options
       $select.append(
         "<option value=#{option.n}>" +
@@ -221,12 +221,11 @@ createNavigationDom = (sgfObject) ->
 
   _isViewingLatestMove = true
   do ->
-    oldVal = maxMoves
     $select.on 'change input', ->
       # filter events to ensure we only update as necessary
       val = parseInt($(this).val(), 10)
-      return if oldVal == val
-      oldVal = val
+      return if _viewingMoveNo == val
+      _viewingMoveNo = val
       _isViewingLatestMove = val == maxMoves
       setupState sgfObject, moves: val
       # notify listeners

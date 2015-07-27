@@ -119,7 +119,7 @@ exports.parse = (sgf) ->
         if Array.isArray node[propIdent]
           node[propIdent].push propValue
         else
-          node[propIdent] = [propValue]
+          node[propIdent] = propValue
 
         return parse(sgf.substring(firstPropEnd+1))
       else

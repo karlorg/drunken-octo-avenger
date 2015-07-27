@@ -531,12 +531,13 @@ test "Resume button updates response and submits", (assert) ->
   form.submit = oldSubmit
 
 test "behaviour changes while viewing past moves", (assert) ->
-  setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac])'
+  setInputSgf ('(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac];W[];B[]' +
+               ';TW[aa][ba][ab][bb][cb][ac][bc]')
   # b.w
   # .b.  (white captured at ab)
   # bbw
   tesuji_charm.game_marking.initialize()
-  assert.ok isPointDame($pointAt 1, 0), "initial layout shows dame"
+  assert.ok isPointBlackDead($pointAt 0, 0), "initial layout shows dead stones"
   ($pointAt 2, 0).click()
   assert.ok isPointWhiteDead($pointAt 2, 0), "click kills stone"
 
@@ -550,10 +551,20 @@ test "behaviour changes while viewing past moves", (assert) ->
   assert.notOk isPointWhiteDead($pointAt 2, 0),
     "earlier move, click does nothing"
 
-  setViewMoveNo 7
-  assert.ok isPointDame($pointAt 1, 0), "return to latest move, dame reappear"
+  setViewMoveNo 9
+  assert.notOk isPointBlackDead($pointAt 0, 0),
+    "before black stones marked dead, black stone not shown as dead"
+  assert.ok isPointDame($pointAt 1, 0),
+    "before black stones marked dead, dame point marked"
+  ($pointAt 2, 0).click()
   assert.notOk isPointWhiteDead($pointAt 2, 0),
-    "latest move, dead stones are not re-marked"
+    "before black stones marked dead, click does nothing"
+
+  setViewMoveNo 10
+  assert.ok isPointBlackDead($pointAt 0, 0),
+    "return to latest move, dead stones from other player re-marked"
+  assert.notOk isPointWhiteDead($pointAt 2, 0),
+    "latest move, dead stones we set up before are not re-marked"
   ($pointAt 2, 0).click()
   assert.ok isPointWhiteDead($pointAt 2, 0), "click once again kills stone"
 
