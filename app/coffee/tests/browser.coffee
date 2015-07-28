@@ -177,7 +177,7 @@ class BrowserTest
     for color, count of counts
       actualCount = parseInt casper.evaluate(
         (color) -> $(".prisoners.#{color}").text(),
-        color)
+        color), 10
       test.assertEqual actualCount, count,
         "#{color} prisoners should be #{count}, is #{actualCount}"
 
@@ -185,7 +185,7 @@ class BrowserTest
     for color, score of scores
       actualScore = parseInt casper.evaluate(
         (color) -> $(".score.#{color}").text(),
-        color)
+        color), 10
       test.assertEqual actualScore, score,
         "#{color} score should be #{score}, is #{actualScore}"
 
