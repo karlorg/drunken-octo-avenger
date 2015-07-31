@@ -78,6 +78,9 @@ def parse(sgf):
             raise ParseError("expected '{}' at '|' sign in '{}|{}'".format(
                 char, sgf[:len(sgf)-len(d['rest'])], d['rest']))
 
+    def accept_whitespace():
+        accept_re(r"[ \t\n]*")
+
     def sequence():
         expect('(')
         nodes_ = nodes()
@@ -86,8 +89,10 @@ def parse(sgf):
 
     def nodes():
         result = []
+        accept_whitespace()
         while accept(';'):
             result.append(node_body())
+            accept_whitespace()
         return result
 
     def node_body():
@@ -98,6 +103,7 @@ def parse(sgf):
                 break
             values = tag_values()
             result[tag] = values
+            accept_whitespace()
         return result
 
     def tag_values():

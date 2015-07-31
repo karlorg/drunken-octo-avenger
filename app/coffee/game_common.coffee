@@ -14,8 +14,8 @@ game_common.getInputSgf = getInputSgf = -> $('input#data').val()
 game_common.setResponseSgf = setResponseSgf = (sgf) ->
   $('#response').val sgf
 
-game_common.getBlackPrisoners = -> parseInt($('.prisoners.black').text())
-game_common.getWhitePrisoners = -> parseInt($('.prisoners.white').text())
+game_common.getBlackPrisoners = -> parseInt($('.prisoners.black').text(), 10)
+game_common.getWhitePrisoners = -> parseInt($('.prisoners.white').text(), 10)
 game_common.setBlackPrisoners = setBlackPrisoners = (count) ->
   $('.prisoners.black').text count
 game_common.setWhitePrisoners = setWhitePrisoners = (count) ->
@@ -45,9 +45,13 @@ game_common.setPointColor = setPointColor = ($td, color) ->
     $td.append territoryElement
 
 game_common.setLastPlayed = setLastPlayed = ($point) ->
+  $('.goban .last-played').remove()
   lastPlayedElement = document.createElement 'div'
   lastPlayedElement.className = 'last-played'
   $point.append lastPlayedElement
+
+removeLastPlayed = ->
+  $('.goban .last-played').remove()
 
 # end of setPointColor helpers
 
@@ -112,10 +116,13 @@ isHandicapPoint = (size, row, column) ->
 
 game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
-  size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ) or 19
+  size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
-  createBoardDom size, newStoneColor
-  createScoringDom()
+  $board = createBoardDom size, newStoneColor
+  $scoreBlock = createScoringDom()
+  $navBlock = createNavigationDom sgfObject
+  $('#board').empty()
+  $('#board').append($elem) for $elem in [$board, $navBlock, $scoreBlock]
   setupState sgfObject
   return
 
@@ -126,8 +133,6 @@ createBoardDom = (size, newStoneColor = null) ->
   left_horizontal = '<div class="board_line board_line_horizontal"></div>'
   right_horizontal = '<div class="board_line board_line_horizontal
                                   board_line_right_horizontal"></div>'
-  placement = "<div class='placement " + newStoneColor + "'></div>"
-  placement = if newStoneColor in ['black', 'white'] then placement else ""
 
   tableContentsStr = ''
   for j in [0...size]
@@ -144,33 +149,117 @@ createBoardDom = (size, newStoneColor = null) ->
         point_element += right_horizontal
       if isHandicapPoint(size, j, i)
         point_element += "<div class='handicappoint'></div>"
-      point_element += placement
       point_element += "</div>"
       row_element += point_element
     row_element += "</div>"
     tableContentsStr += row_element
 
-  $('.goban').remove()
-  $('#board').append '<div class="goban">' + tableContentsStr + '</div>'
-  return
+  $('<div class="goban">' + tableContentsStr + '</div>')
 
 createScoringDom = ->
-  $('.score_block').empty().remove()
   $scoreBlock = $('<div class="score_block"></div>')
   $scoreBlock.append ('<div>Black prisoners: ' +
     '<span class="prisoners black"></span></div>')
   $scoreBlock.append ('<div>White prisoners: ' +
     '<span class="prisoners white"></span></div>')
-  $('#board').append $scoreBlock
-  return
+  $scoreBlock
 
-setupState = (sgf_object) ->
-  size = if sgf_object \
-         then parseInt(sgf_object.gameTrees[0].nodes[0].SZ) or 19 \
+
+# move navigation ====================================================
+
+_moveNoListeners = []
+
+game_common.onViewMoveNo = (callback) ->
+  _moveNoListeners.push callback
+  callback
+
+game_common.offViewMoveNo = ->
+  "Clear all view move no listeners.
+
+  We need this for testing, where initialise() functions get called in many
+  test cases, so we must clean up listeners after each test."
+  _moveNoListeners = []
+
+_isViewingLatestMove = false
+_viewingMoveNo = 0
+
+game_common.isViewingLatestMove = -> _isViewingLatestMove
+game_common.viewingMoveNo = -> _viewingMoveNo
+
+createNavigationDom = (sgfObject) ->
+  maxMoves =  null
+
+  $navBlock = $('<div class="board_nav_block"></div>')
+  $select = $('<select class="move_select"/>')
+  do ->
+    moveNo = 0
+    options = [n: 0, text: 'Start']
+    for node in sgfObject.gameTrees[0].nodes
+      if node.B?
+        moveNo += 1
+        options.push n: moveNo, text: 'B ' + (a1FromSgfTag(node.B) or 'pass')
+      else if node.W?
+        moveNo += 1
+        options.push n: moveNo, text: 'W ' + (a1FromSgfTag(node.W) or 'pass')
+      else if node.TB? or node.TW?
+        moveNo += 1
+        options.push n: moveNo, text: 'Mark dead'
+    maxMoves = moveNo
+    _viewingMoveNo = moveNo
+    for option in options
+      $select.append(
+        "<option value=#{option.n}>" +
+        "Move #{option.n}: #{option.text}" +
+        "</option>")
+  $select.find('option:last-child').attr('selected', true)
+
+  # hack for Firefox; it won't respond to moving through the list with
+  # arrow keys until it sees an onblur event
+  $select.on 'keyup', (e) ->
+    e.target.blur()
+    e.target.focus()
+
+  _isViewingLatestMove = true
+  do ->
+    $select.on 'change input', ->
+      # filter events to ensure we only update as necessary
+      val = parseInt($(this).val(), 10)
+      return if _viewingMoveNo == val
+      _viewingMoveNo = val
+      _isViewingLatestMove = val == maxMoves
+      setupState sgfObject, moves: val
+      # notify listeners
+      cb() for cb in _moveNoListeners
+
+  $navBlock.append $select
+  $navBlock
+
+a1FromSgfTag = (tag) ->
+  if typeof tag is 'string'
+    tag = [tag]
+  coordStr = tag[0]
+  return '' unless coordStr
+  [x, y] = decodeSgfCoord coordStr
+  colStr = String.fromCharCode(x + 'a'.charCodeAt(0))
+  rowStr = y.toString()
+  return "#{colStr}#{rowStr}"
+
+# end of move navigation =============================================
+
+
+setupState = (sgfObject, options={}) ->
+  "Update the DOM board to match the given SGF object.
+
+  If 'moves' is given as an option, include only that many moves."
+  {moves} = options
+  size = if sgfObject \
+         then parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19 \
          else 19
   board_state = (('empty' for i in [0...size]) for j in [0...size])
   prisoners = { black: 0, white: 0 }
-  for node in sgf_object.gameTrees[0].nodes
+  moveNo = 0
+  for node in sgfObject.gameTrees[0].nodes
+    break if moves? and moveNo >= moves
     if node.AB
       coords = if Array.isArray(node.AB) then node.AB else [node.AB]
       for coordStr in coords
@@ -182,12 +271,14 @@ setupState = (sgf_object) ->
         [x, y] = decodeSgfCoord coordStr
         board_state[y][x] = 'white'
     if node.B
+      moveNo += 1
       [x, y] = decodeSgfCoord node.B
       result = go_rules.getNewStateAndCaptures('black', x, y, board_state)
       board_state = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
     if node.W
+      moveNo += 1
       [x, y] = decodeSgfCoord node.W
       result = go_rules.getNewStateAndCaptures('white', x, y, board_state)
       board_state = result.state
@@ -196,7 +287,8 @@ setupState = (sgf_object) ->
   updateBoard board_state
   if x? and y?
     setLastPlayed ($pointAt x, y)
-
+  else
+    removeLastPlayed()
 
   setBlackPrisoners prisoners.black
   setWhitePrisoners prisoners.white
