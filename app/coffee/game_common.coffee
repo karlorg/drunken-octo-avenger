@@ -118,43 +118,43 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
   size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
-  $board = createBoardDom size, newStoneColor
   $scoreBlock = createScoringDom()
   $navBlock = createNavigationDom sgfObject
   $('#board').empty()
-  $('#board').append($elem) for $elem in [$board, $navBlock, $scoreBlock]
+  React.render (React.createElement BoardDom, size: size),
+               $('#board')[0]
+  $('#board').append($elem) for $elem in [$navBlock, $scoreBlock]
   setupState sgfObject
   return
 
-createBoardDom = (size, newStoneColor = null) ->
-  top_vertical = '<div class="board_line board_line_vertical"></div>'
-  bottom_vertical = '<div class="board_line board_line_vertical
-                                 board_line_bottom_vertical"></div>'
-  left_horizontal = '<div class="board_line board_line_horizontal"></div>'
-  right_horizontal = '<div class="board_line board_line_horizontal
-                                  board_line_right_horizontal"></div>'
+BoardDom = React.createClass
+  render: ->
+    {div} = React.DOM
+    topVert = div {className: "board_line board_line_vertical"}
+    botVert = div {className: "board_line board_line_vertical
+                               board_line_bottom_vertical"}
+    leftHoriz = div {className: "board_line board_line_horizontal"}
+    rightHoriz = div {className: "board_line board_line_horizontal
+                                  board_line_right_horizontal"}
+    handicapPoint = div {className: "handicappoint" }
 
-  tableContentsStr = ''
-  for j in [0...size]
-    row_element = "<div class='goban-row'>"
-    for i in [0...size]
-      point_element = "<div class='gopoint row-#{j} col-#{i}'>"
-      if j > 0
-        point_element += top_vertical
-      if j < size - 1
-        point_element += bottom_vertical
-      if i > 0
-        point_element += left_horizontal
-      if i < size - 1
-        point_element += right_horizontal
-      if isHandicapPoint(size, j, i)
-        point_element += "<div class='handicappoint'></div>"
-      point_element += "</div>"
-      row_element += point_element
-    row_element += "</div>"
-    tableContentsStr += row_element
+    size = this.props.size
 
-  $('<div class="goban">' + tableContentsStr + '</div>')
+    boardDivsForPos = (i, j) ->
+      result = []
+      if j > 0 then result.push topVert
+      if j < size - 1 then result.push botVert
+      if i > 0 then result.push leftHoriz
+      if i < size - 1 then result.push rightHoriz
+      if isHandicapPoint(size, j, i) then result.push handicapPoint
+      result
+
+    div {className: 'goban'},
+        for j in [0...size]
+          div {className: 'goban-row'},
+              for i in [0...size]
+                div {className: "gopoint row-#{i} col-#{j}"},
+                    (boardDivsForPos i, j)
 
 createScoringDom = ->
   $scoreBlock = $('<div class="score_block"></div>')
