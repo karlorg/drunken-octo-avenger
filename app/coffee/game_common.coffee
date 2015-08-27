@@ -118,20 +118,26 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
   size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
-  $scoreBlock = createScoringDom()
   $navBlock = createNavigationDom sgfObject
   $('#board').empty()
-  React.render (React.createElement BoardDom, size: size,
-                                              sgfObject: sgfObject),
+  React.render (React.createElement BoardAreaDom, {sgfObject: sgfObject}),
                $('#board')[0]
-  $('#board').append($elem) for $elem in [$navBlock, $scoreBlock]
-  # setupState sgfObject
+  $('#board').append($elem) for $elem in [$navBlock]
   return
+
+BoardAreaDom = React.createClass
+  render: ->
+    {boardState, lastPlayed, prisoners} = stateFromSgfObject @props.sgfObject
+    size = parseInt(@props.sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
+
+    {div} = React.DOM
+    div {},
+        [(React.createElement BoardDom, boardState: boardState, size: size),
+         (React.createElement ScoreDom, prisoners: prisoners)]
 
 BoardDom = React.createClass
   render: ->
-    sgfObject = smartgame.parse(getInputSgf() or '(;SZ[19])')
-    {boardState, lastPlayed, prisoners} = stateFromSgfObject sgfObject
+    {boardState, size} = @props
 
     {div} = React.DOM
     topVert = div {className: "board_line board_line_vertical"}
@@ -143,8 +149,6 @@ BoardDom = React.createClass
     handicapPoint = div {className: "handicappoint" }
     blackStone = div {className: "stone black"}
     whiteStone = div {className: "stone white"}
-
-    size = this.props.size
 
     boardDivsForPos = (i, j) ->
       result = []
@@ -169,13 +173,17 @@ BoardDom = React.createClass
                     (boardDivsForPos i, j),
                     (stoneDivsForPos i, j)
 
-createScoringDom = ->
-  $scoreBlock = $('<div class="score_block"></div>')
-  $scoreBlock.append ('<div>Black prisoners: ' +
-    '<span class="prisoners black"></span></div>')
-  $scoreBlock.append ('<div>White prisoners: ' +
-    '<span class="prisoners white"></span></div>')
-  $scoreBlock
+ScoreDom = React.createClass
+  render: ->
+    prisoners = @props.prisoners
+
+    {div, span} = React.DOM
+
+    div {className: "score_block"},
+        [div {}, ["Black prisoners: ",
+                  span {className: "prisoners black"}, prisoners.black],
+         div {}, ["White prisoners: ",
+                  span {className: "prisoners white"}, prisoners.white]]
 
 
 # move navigation ====================================================
@@ -265,7 +273,7 @@ setupState = (sgfObject, options={}) ->
 
   If 'moves' is given as an option, include only that many moves."
   {boardState, lastPlayed, prisoners} = stateFromSgfObject sgfObject, options
-  updateBoard board_state
+  updateBoard boardState
   if lastPlayed.x? and lastPlayed.y?
     setLastPlayed ($pointAt lastPlayed.x, lastPlayed.y)
   else
