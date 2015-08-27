@@ -144,6 +144,7 @@ setViewMoveNo = (n) ->
   return
 
 test "helper function readBoardState and assert.boardState", (assert) ->
+  # readBoardState is invoked by the boardState assert
   setInputSgf '(;SZ[3];B[ca];W[bc])'
   tesuji_charm.game_common.initialize()
   assert.boardState ['..b'

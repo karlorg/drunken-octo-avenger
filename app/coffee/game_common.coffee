@@ -121,14 +121,18 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   $scoreBlock = createScoringDom()
   $navBlock = createNavigationDom sgfObject
   $('#board').empty()
-  React.render (React.createElement BoardDom, size: size),
+  React.render (React.createElement BoardDom, size: size,
+                                              sgfObject: sgfObject),
                $('#board')[0]
   $('#board').append($elem) for $elem in [$navBlock, $scoreBlock]
-  setupState sgfObject
+  # setupState sgfObject
   return
 
 BoardDom = React.createClass
   render: ->
+    sgfObject = smartgame.parse(getInputSgf() or '(;SZ[19])')
+    {boardState, lastPlayed, prisoners} = stateFromSgfObject sgfObject
+
     {div} = React.DOM
     topVert = div {className: "board_line board_line_vertical"}
     botVert = div {className: "board_line board_line_vertical
@@ -137,6 +141,8 @@ BoardDom = React.createClass
     rightHoriz = div {className: "board_line board_line_horizontal
                                   board_line_right_horizontal"}
     handicapPoint = div {className: "handicappoint" }
+    blackStone = div {className: "stone black"}
+    whiteStone = div {className: "stone white"}
 
     size = this.props.size
 
@@ -149,12 +155,19 @@ BoardDom = React.createClass
       if isHandicapPoint(size, j, i) then result.push handicapPoint
       result
 
+    stoneDivsForPos = (i, j) ->
+      switch boardState[j][i]
+        when 'black' then [blackStone]
+        when 'white' then [whiteStone]
+        else []
+
     div {className: 'goban'},
         for j in [0...size]
           div {className: 'goban-row'},
               for i in [0...size]
-                div {className: "gopoint row-#{i} col-#{j}"},
-                    (boardDivsForPos i, j)
+                div {className: "gopoint row-#{j} col-#{i}"},
+                    (boardDivsForPos i, j),
+                    (stoneDivsForPos i, j)
 
 createScoringDom = ->
   $scoreBlock = $('<div class="score_block"></div>')
@@ -251,6 +264,21 @@ setupState = (sgfObject, options={}) ->
   "Update the DOM board to match the given SGF object.
 
   If 'moves' is given as an option, include only that many moves."
+  {boardState, lastPlayed, prisoners} = stateFromSgfObject sgfObject, options
+  updateBoard board_state
+  if lastPlayed.x? and lastPlayed.y?
+    setLastPlayed ($pointAt lastPlayed.x, lastPlayed.y)
+  else
+    removeLastPlayed()
+
+  setBlackPrisoners prisoners.black
+  setWhitePrisoners prisoners.white
+  return
+
+stateFromSgfObject = (sgfObject, options={}) ->
+  "Get a board state and associated info from an SGF object.
+
+  If 'moves' is given as an option, include only that many moves."
   {moves} = options
   size = if sgfObject \
          then parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19 \
@@ -284,15 +312,8 @@ setupState = (sgfObject, options={}) ->
       board_state = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
-  updateBoard board_state
-  if x? and y?
-    setLastPlayed ($pointAt x, y)
-  else
-    removeLastPlayed()
+  {boardState: board_state, lastPlayed: [x, y], prisoners: prisoners}
 
-  setBlackPrisoners prisoners.black
-  setWhitePrisoners prisoners.white
-  return
 
 aCode = 'a'.charCodeAt(0)
 
