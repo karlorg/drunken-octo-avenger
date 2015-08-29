@@ -109,11 +109,9 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
   size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
-  $navBlock = createNavigationDom sgfObject
   $('#board').empty()
   React.render (React.createElement BoardAreaDom, {sgfObject: sgfObject}),
                $('#board')[0]
-  $('#board').append($elem) for $elem in [$navBlock]
   return
 
 BoardAreaDom = React.createClass
@@ -127,6 +125,8 @@ BoardAreaDom = React.createClass
                               boardState: boardState
                               lastPlayed: lastPlayed
                               size: size),
+         (React.createElement NavigationDom,
+                              sgfObject: @props.sgfObject),
          (React.createElement ScoreDom, prisoners: prisoners)]
 
 BoardDom = React.createClass
@@ -189,7 +189,7 @@ ScoreDom = React.createClass
 _moveNoListeners = []
 
 game_common.onViewMoveNo = (callback) ->
-  _moveNoListeners.push callback
+  # _moveNoListeners.push callback
   callback
 
 game_common.offViewMoveNo = ->
@@ -205,6 +205,37 @@ _viewingMoveNo = 0
 game_common.isViewingLatestMove = -> _isViewingLatestMove
 game_common.viewingMoveNo = -> _viewingMoveNo
 
+NavigationDom = React.createClass
+  render: ->
+    {sgfObject} = @props
+
+    options = [n: 0, text: 'Start']
+    maxMoves = null
+    do ->
+      moveNo = 0
+      for node in sgfObject.gameTrees[0].nodes
+        if node.B?
+          moveNo += 1
+          options.push n: moveNo, text: 'B ' + (a1FromSgfTag(node.B) or 'pass')
+        else if node.W?
+          moveNo += 1
+          options.push n: moveNo, text: 'W ' + (a1FromSgfTag(node.W) or 'pass')
+        else if node.TB? or node.TW?
+          moveNo += 1
+          options.push n: moveNo, text: 'Mark dead'
+      maxMoves = moveNo
+
+    reactOption = (option) ->
+      {n, text} = option
+      React.DOM.option {value: n, selected: n == maxMoves},
+                       ["Move #{n}: #{text}"]
+
+    {div, select} = React.DOM
+    div {className: 'board_nav_block'},
+        (select {className: 'move_select'},
+                (reactOption o for o in options))
+
+###
 createNavigationDom = (sgfObject) ->
   maxMoves =  null
 
@@ -252,6 +283,7 @@ createNavigationDom = (sgfObject) ->
 
   $navBlock.append $select
   $navBlock
+###
 
 a1FromSgfTag = (tag) ->
   if typeof tag is 'string'
