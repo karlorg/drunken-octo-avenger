@@ -11,16 +11,13 @@ go_rules = tesuji_charm.go_rules
 
 game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 game_common.getInputSgf = getInputSgf = -> $('input#data').val()
-game_common.setResponseSgf = setResponseSgf = (sgf) ->
-  $('#response').val sgf
+# game_common.setResponseSgf = setResponseSgf = (sgf) ->
+  # $('#response').val sgf
 
 game_common.getBlackPrisoners = -> parseInt($('.prisoners.black').text(), 10)
 game_common.getWhitePrisoners = -> parseInt($('.prisoners.white').text(), 10)
-game_common.setBlackPrisoners = setBlackPrisoners = (count) ->
-  $('.prisoners.black').text count
-game_common.setWhitePrisoners = setWhitePrisoners = (count) ->
-  $('.prisoners.white').text count
 
+###
 # setPointColor and helpers
 
 game_common.setPointColor = setPointColor = ($td, color) ->
@@ -54,6 +51,7 @@ removeLastPlayed = ->
   $('.goban .last-played').remove()
 
 # end of setPointColor helpers
+###
 
 game_common.contains_selector = contains_selector = ($context, selector) ->
   "A helper function returns true if the given element/context contains an
@@ -99,13 +97,6 @@ game_common.readBoardState = readBoardState = ->
     result[row] ?= []
     result[row][col] = colorFromDom $this
   return result
-
-game_common.updateBoard = updateBoard = (state) ->
-  "set the images and classes of the DOM board to match the given state"
-  for rowArray, row in state
-    for color, col in rowArray
-      setPointColor ($pointAt col, row), color
-  return
 
 isHandicapPoint = (size, row, column) ->
   switch size
@@ -273,22 +264,6 @@ a1FromSgfTag = (tag) ->
   return "#{colStr}#{rowStr}"
 
 # end of move navigation =============================================
-
-
-setupState = (sgfObject, options={}) ->
-  "Update the DOM board to match the given SGF object.
-
-  If 'moves' is given as an option, include only that many moves."
-  {boardState, lastPlayed, prisoners} = stateFromSgfObject sgfObject, options
-  updateBoard boardState
-  if lastPlayed.x? and lastPlayed.y?
-    setLastPlayed ($pointAt lastPlayed.x, lastPlayed.y)
-  else
-    removeLastPlayed()
-
-  setBlackPrisoners prisoners.black
-  setWhitePrisoners prisoners.white
-  return
 
 stateFromSgfObject = (sgfObject, options={}) ->
   "Get a board state and associated info from an SGF object.
