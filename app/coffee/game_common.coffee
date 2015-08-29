@@ -132,12 +132,15 @@ BoardAreaDom = React.createClass
 
     {div} = React.DOM
     div {},
-        [(React.createElement BoardDom, boardState: boardState, size: size),
+        [(React.createElement BoardDom,
+                              boardState: boardState
+                              lastPlayed: lastPlayed
+                              size: size),
          (React.createElement ScoreDom, prisoners: prisoners)]
 
 BoardDom = React.createClass
   render: ->
-    {boardState, size} = @props
+    {boardState, lastPlayed, size} = @props
 
     {div} = React.DOM
     topVert = div {className: "board_line board_line_vertical"}
@@ -149,6 +152,7 @@ BoardDom = React.createClass
     handicapPoint = div {className: "handicappoint" }
     blackStone = div {className: "stone black"}
     whiteStone = div {className: "stone white"}
+    lastPlayedMarker = div {className: "last-played"}
 
     boardDivsForPos = (i, j) ->
       result = []
@@ -160,10 +164,13 @@ BoardDom = React.createClass
       result
 
     stoneDivsForPos = (i, j) ->
-      switch boardState[j][i]
+      result = switch boardState[j][i]
         when 'black' then [blackStone]
         when 'white' then [whiteStone]
         else []
+      if i == lastPlayed.x and j == lastPlayed.y
+        result.push lastPlayedMarker
+      result
 
     div {className: 'goban'},
         for j in [0...size]
@@ -320,7 +327,7 @@ stateFromSgfObject = (sgfObject, options={}) ->
       board_state = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
-  {boardState: board_state, lastPlayed: [x, y], prisoners: prisoners}
+  {boardState: board_state, lastPlayed: {x, y}, prisoners: prisoners}
 
 
 aCode = 'a'.charCodeAt(0)
