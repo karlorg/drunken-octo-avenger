@@ -110,13 +110,21 @@ game_common.initialize = (sgfObject = null, newStoneColor = null) ->
   size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
   $('#board').empty()
-  React.render (React.createElement BoardAreaDom, {sgfObject: sgfObject}),
-               $('#board')[0]
+  reactTop = React.render (React.createElement BoardAreaDom,
+                                               {sgfObject: sgfObject}),
+                          $('#board')[0]
   return
 
 BoardAreaDom = React.createClass
+  getInitialState: ->
+    viewingMove: null
+
+  onNavigate: (newViewingMove) ->
+    @setState {viewingMove: newViewingMove}
+
   render: ->
-    {boardState, lastPlayed, prisoners} = stateFromSgfObject @props.sgfObject
+    objState = stateFromSgfObject @props.sgfObject, moves: @state.viewingMove
+    {boardState, lastPlayed, prisoners} = objState
     size = parseInt(@props.sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
     {div} = React.DOM
@@ -126,7 +134,9 @@ BoardAreaDom = React.createClass
                               lastPlayed: lastPlayed
                               size: size),
          (React.createElement NavigationDom,
-                              sgfObject: @props.sgfObject),
+                              changeCallback: @onNavigate,
+                              sgfObject: @props.sgfObject,
+                              viewingMove: @state.viewingMove),
          (React.createElement ScoreDom, prisoners: prisoners)]
 
 BoardDom = React.createClass
@@ -171,12 +181,54 @@ BoardDom = React.createClass
                     (boardDivsForPos i, j),
                     (stoneDivsForPos i, j)
 
+NavigationDom = React.createClass
+  render: ->
+    {sgfObject, viewingMove} = @props
+
+    options = [n: 0, text: 'Start']
+    maxMoves = null
+    do ->
+      moveNo = 0
+      for node in sgfObject.gameTrees[0].nodes
+        if node.B?
+          moveNo += 1
+          options.push n: moveNo, text: 'B ' + (a1FromSgfTag(node.B) or 'pass')
+        else if node.W?
+          moveNo += 1
+          options.push n: moveNo, text: 'W ' + (a1FromSgfTag(node.W) or 'pass')
+        else if node.TB? or node.TW?
+          moveNo += 1
+          options.push n: moveNo, text: 'Mark dead'
+      maxMoves = moveNo
+
+    reactOption = (option) ->
+      {n, text} = option
+      React.DOM.option {key: n, value: n},
+                       ["Move #{n}: #{text}"]
+
+    onChange = (event) =>
+      @props.changeCallback parseInt(event.target.value, 10)
+
+    # hack for Firefox, which won't fire change/input event on
+    # keyboard updates to select boxes until the focus is removed
+    onKeyUp = (event) ->
+      event.target.blur()
+      event.target.focus()
+
+    {div, select} = React.DOM
+    div {className: 'board_nav_block'},
+        (select {
+          className: 'move_select',
+          onChange: onChange
+          onInput: onChange
+          onKeyUp: onKeyUp
+          value: viewingMove ? maxMoves},
+                (reactOption o for o in options))
+
 ScoreDom = React.createClass
   render: ->
     prisoners = @props.prisoners
-
     {div, span} = React.DOM
-
     div {className: "score_block"},
         [div {}, ["Black prisoners: ",
                   span {className: "prisoners black"}, prisoners.black],
@@ -204,86 +256,6 @@ _viewingMoveNo = 0
 
 game_common.isViewingLatestMove = -> _isViewingLatestMove
 game_common.viewingMoveNo = -> _viewingMoveNo
-
-NavigationDom = React.createClass
-  render: ->
-    {sgfObject} = @props
-
-    options = [n: 0, text: 'Start']
-    maxMoves = null
-    do ->
-      moveNo = 0
-      for node in sgfObject.gameTrees[0].nodes
-        if node.B?
-          moveNo += 1
-          options.push n: moveNo, text: 'B ' + (a1FromSgfTag(node.B) or 'pass')
-        else if node.W?
-          moveNo += 1
-          options.push n: moveNo, text: 'W ' + (a1FromSgfTag(node.W) or 'pass')
-        else if node.TB? or node.TW?
-          moveNo += 1
-          options.push n: moveNo, text: 'Mark dead'
-      maxMoves = moveNo
-
-    reactOption = (option) ->
-      {n, text} = option
-      React.DOM.option {value: n, selected: n == maxMoves},
-                       ["Move #{n}: #{text}"]
-
-    {div, select} = React.DOM
-    div {className: 'board_nav_block'},
-        (select {className: 'move_select'},
-                (reactOption o for o in options))
-
-###
-createNavigationDom = (sgfObject) ->
-  maxMoves =  null
-
-  $navBlock = $('<div class="board_nav_block"></div>')
-  $select = $('<select class="move_select"/>')
-  do ->
-    moveNo = 0
-    options = [n: 0, text: 'Start']
-    for node in sgfObject.gameTrees[0].nodes
-      if node.B?
-        moveNo += 1
-        options.push n: moveNo, text: 'B ' + (a1FromSgfTag(node.B) or 'pass')
-      else if node.W?
-        moveNo += 1
-        options.push n: moveNo, text: 'W ' + (a1FromSgfTag(node.W) or 'pass')
-      else if node.TB? or node.TW?
-        moveNo += 1
-        options.push n: moveNo, text: 'Mark dead'
-    maxMoves = moveNo
-    _viewingMoveNo = moveNo
-    for option in options
-      $select.append(
-        "<option value=#{option.n}>" +
-        "Move #{option.n}: #{option.text}" +
-        "</option>")
-  $select.find('option:last-child').attr('selected', true)
-
-  # hack for Firefox; it won't respond to moving through the list with
-  # arrow keys until it sees an onblur event
-  $select.on 'keyup', (e) ->
-    e.target.blur()
-    e.target.focus()
-
-  _isViewingLatestMove = true
-  do ->
-    $select.on 'change input', ->
-      # filter events to ensure we only update as necessary
-      val = parseInt($(this).val(), 10)
-      return if _viewingMoveNo == val
-      _viewingMoveNo = val
-      _isViewingLatestMove = val == maxMoves
-      setupState sgfObject, moves: val
-      # notify listeners
-      cb() for cb in _moveNoListeners
-
-  $navBlock.append $select
-  $navBlock
-###
 
 a1FromSgfTag = (tag) ->
   if typeof tag is 'string'

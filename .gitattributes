@@ -1,2 +1,4 @@
 app/static/jquery.js linguist-vendored
 app/static/tests/qunit.* linguist-vendored
+app/static/react.js linguist-vendored
+app/static/react-with-addons.js linguist-vendored

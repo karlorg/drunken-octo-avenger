@@ -139,8 +139,8 @@ QUnit.assert.boardState = (chars2d, message) ->
   @push result, actual, expected, (message or "")
 
 setViewMoveNo = (n) ->
-  $select = $('.move_select')
-  $select.val(n).trigger 'input'
+  select = $('.move_select').val(n).get(0)
+  React.addons.TestUtils.Simulate.input(select, target: select)
   return
 
 test "helper function readBoardState and assert.boardState", (assert) ->
