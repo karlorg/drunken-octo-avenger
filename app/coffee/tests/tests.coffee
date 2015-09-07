@@ -392,6 +392,23 @@ test "behaviour changes while viewing past moves", (assert) ->
   assert.ok isPointBlack($point), "after returning to end, stone can be placed"
   assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
 
+test "proposed stone removed when viewing past moves", (assert) ->
+  initialSgf = '(;SZ[3];B[bb])'
+  setInputSgf initialSgf
+  tesuji_charm.game.initialize()
+  $pointAt(0, 0).click()
+  assert.boardState ['w..', '.b.', '...'], "board state with proposed stone"
+  assert.equal getResponseSgf(), '(;SZ[3];B[bb];W[aa])',
+               "SGF with proposed move"
+  setViewMoveNo 0
+  assert.boardState ['...', '...', '...'], "board state on past move"
+  assert.equal getResponseSgf(), initialSgf,
+               "SGF on turn 0"
+  setViewMoveNo 1
+  assert.boardState ['...', '.b.', '...'], "proposed stone doesn't re-appear"
+  assert.equal getResponseSgf(), initialSgf,
+               "SGF on return to turn 1"
+
 
 # ============================================================================
 
