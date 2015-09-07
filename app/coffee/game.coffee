@@ -1,26 +1,26 @@
 window.tesuji_charm ?= {}
 tesuji_charm = window.tesuji_charm
 
-tesuji_charm.game_common ?= {}
-game_common = tesuji_charm.game_common
+tesuji_charm.game ?= {}
+exports = tesuji_charm.game
 
 
 smartgame = tesuji_charm.smartgame
 go_rules = tesuji_charm.go_rules
 
 
-game_common.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
-game_common.getInputSgf = getInputSgf = -> $('input#data').val()
-# game_common.setResponseSgf = setResponseSgf = (sgf) ->
+exports.$pointAt = $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
+exports.getInputSgf = getInputSgf = -> $('input#data').val()
+# exports.setResponseSgf = setResponseSgf = (sgf) ->
   # $('#response').val sgf
 
-game_common.getBlackPrisoners = -> parseInt($('.prisoners.black').text(), 10)
-game_common.getWhitePrisoners = -> parseInt($('.prisoners.white').text(), 10)
+exports.getBlackPrisoners = -> parseInt($('.prisoners.black').text(), 10)
+exports.getWhitePrisoners = -> parseInt($('.prisoners.white').text(), 10)
 
 ###
 # setPointColor and helpers
 
-game_common.setPointColor = setPointColor = ($td, color) ->
+exports.setPointColor = setPointColor = ($td, color) ->
   $('.stone', $td).remove()
   $('.territory', $td).remove()
   [stoneclass, territoryclass] = switch color
@@ -41,7 +41,7 @@ game_common.setPointColor = setPointColor = ($td, color) ->
     territoryElement.className = territoryclass
     $td.append territoryElement
 
-game_common.setLastPlayed = setLastPlayed = ($point) ->
+exports.setLastPlayed = setLastPlayed = ($point) ->
   $('.goban .last-played').remove()
   lastPlayedElement = document.createElement 'div'
   lastPlayedElement.className = 'last-played'
@@ -53,12 +53,12 @@ removeLastPlayed = ->
 # end of setPointColor helpers
 ###
 
-game_common.contains_selector = contains_selector = ($context, selector) ->
+exports.contains_selector = contains_selector = ($context, selector) ->
   "A helper function returns true if the given element/context contains an
    element that satisfies the selector."
   return ($context.find selector).length > 0
 
-game_common.colorFromDom = colorFromDom = ($point) ->
+exports.colorFromDom = colorFromDom = ($point) ->
   "return the color of the given point based on the DOM status"
   # We do the dead ones first because a dead stone would still satisfy the
   # test for a white/black stone.
@@ -69,26 +69,26 @@ game_common.colorFromDom = colorFromDom = ($point) ->
   if not (contains_selector $point, '.stone') then return 'empty'
   return null
 
-game_common.isBlackScore = ($point) ->
+exports.isBlackScore = ($point) ->
   return contains_selector $point, '.territory.black'
 
-game_common.isWhiteScore = ($point) ->
+exports.isWhiteScore = ($point) ->
   return contains_selector $point, '.territory.white'
 
 rowRe = /row-(\d+)/
 colRe = /col-(\d+)/
 
-game_common.hasCoordClass = hasCoordClass = ($obj) ->
+exports.hasCoordClass = hasCoordClass = ($obj) ->
   classStr = $obj.attr "class"
   return rowRe.test(classStr) and colRe.test(classStr)
 
-game_common.parseCoordClass = parseCoordClass = ($obj) ->
+exports.parseCoordClass = parseCoordClass = ($obj) ->
   classStr = $obj.attr "class"
   [_, rowStr] = rowRe.exec classStr
   [_, colStr] = colRe.exec classStr
   return [parseInt(colStr, 10), parseInt(rowStr, 10)]
 
-game_common.readBoardState = readBoardState = ->
+exports.readBoardState = readBoardState = ->
   "generate a board state object based on the loaded page contents"
   result = []
   $('.goban .gopoint').each ->
@@ -105,7 +105,7 @@ isHandicapPoint = (size, row, column) ->
     when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
     else false
 
-game_common.initialize = (sgfObject = null, newStoneColor = null) ->
+exports.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
   size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
@@ -240,11 +240,11 @@ ScoreDom = React.createClass
 
 _moveNoListeners = []
 
-game_common.onViewMoveNo = (callback) ->
+exports.onViewMoveNo = (callback) ->
   # _moveNoListeners.push callback
   callback
 
-game_common.offViewMoveNo = ->
+exports.offViewMoveNo = ->
   "Clear all view move no listeners.
 
   We need this for testing, where initialise() functions get called in many
@@ -254,8 +254,8 @@ game_common.offViewMoveNo = ->
 _isViewingLatestMove = false
 _viewingMoveNo = 0
 
-game_common.isViewingLatestMove = -> _isViewingLatestMove
-game_common.viewingMoveNo = -> _viewingMoveNo
+exports.isViewingLatestMove = -> _isViewingLatestMove
+exports.viewingMoveNo = -> _viewingMoveNo
 
 a1FromSgfTag = (tag) ->
   if typeof tag is 'string'
@@ -311,17 +311,17 @@ stateFromSgfObject = (sgfObject, options={}) ->
 
 aCode = 'a'.charCodeAt(0)
 
-game_common.decodeSgfCoord = decodeSgfCoord = (coordStr) ->
+exports.decodeSgfCoord = decodeSgfCoord = (coordStr) ->
   x = coordStr.charCodeAt(0) - aCode
   y = coordStr.charCodeAt(1) - aCode
   return [x, y]
 
-game_common.encodeSgfCoord = encodeSgfCoord = (x, y) ->
+exports.encodeSgfCoord = encodeSgfCoord = (x, y) ->
   encodedX = String.fromCharCode(aCode + x)
   encodedY = String.fromCharCode(aCode + y)
   return encodedX + encodedY
 
-game_common.cloneSgfObject = (sgfObject) ->
+exports.cloneSgfObject = (sgfObject) ->
   "The trick here is that 'parent' attributes must be replaced with the parent
   in the new copy instead of pointing to the old one."
   getClone = (v, self, k=null, parent=null) -> switch
