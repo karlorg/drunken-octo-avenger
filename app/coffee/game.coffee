@@ -117,6 +117,7 @@ exports.initialize = (sgfObject = null, newStoneColor = null) ->
 
 BoardAreaDom = React.createClass
   getInitialState: ->
+    proposedMove: null
     viewingMove: null
 
   onNavigate: (newViewingMove) ->
@@ -127,10 +128,19 @@ BoardAreaDom = React.createClass
     {boardState, lastPlayed, prisoners} = objState
     size = parseInt(@props.sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
+    nextColor = nextPlayerInSgfObject @props.sgfObject
+    onPlaceStone = (xy) =>
+      @setState proposedMove:
+        color: nextColor
+        x: xy.x
+        y: xy.y
+
     {div} = React.DOM
     div {},
         [(React.createElement BoardDom,
                               boardState: boardState
+                              placeStoneCallback: onPlaceStone
+                              proposedMove: @state.proposedMove
                               lastPlayed: lastPlayed
                               size: size),
          (React.createElement NavigationDom,
@@ -141,7 +151,7 @@ BoardAreaDom = React.createClass
 
 BoardDom = React.createClass
   render: ->
-    {boardState, lastPlayed, size} = @props
+    {boardState, lastPlayed, proposedMove, size} = @props
 
     {div} = React.DOM
     topVert = div {className: "board_line board_line_vertical"}
@@ -165,21 +175,36 @@ BoardDom = React.createClass
       result
 
     stoneDivsForPos = (i, j) ->
-      result = switch boardState[j][i]
+      color = boardState[j][i]
+      if proposedMove?
+        _lastPlayed = proposedMove
+        if proposedMove.x == i and proposedMove.y == j
+          color = proposedMove.color
+      else
+        _lastPlayed = lastPlayed
+      result = switch color
         when 'black' then [blackStone]
         when 'white' then [whiteStone]
         else []
-      if i == lastPlayed.x and j == lastPlayed.y
+      if i == _lastPlayed.x and j == _lastPlayed.y
         result.push lastPlayedMarker
       result
+
+    onClickForPos = (i, j) => (event) =>
+      @props.placeStoneCallback {
+        x: i
+        y: j
+      }
 
     div {className: 'goban'},
         for j in [0...size]
           div {className: 'goban-row'},
               for i in [0...size]
-                div {className: "gopoint row-#{j} col-#{i}"},
+                (div {
+                  className: "gopoint row-#{j} col-#{i}"
+                  onClick: onClickForPos(i, j)},
                     (boardDivsForPos i, j),
-                    (stoneDivsForPos i, j)
+                    (stoneDivsForPos i, j))
 
 NavigationDom = React.createClass
   render: ->
@@ -340,3 +365,16 @@ exports.cloneSgfObject = (sgfObject) ->
       result.push getClone(v, result)
     return result
   return cloneObjectRecursive sgfObject, null
+
+nextPlayerInSgfObject = (sgfObject) ->
+  nodes = sgfObject.gameTrees[0].nodes
+  reversedNodes = nodes.slice(0).reverse()  # slice(0) copies
+  for node, index in reversedNodes
+    if 'B' of node
+      return 'white'
+    else if 'W' of node
+      return 'black'
+    else if 'TCRESUME' of node
+      # next to move is the first to pass before this resumption
+      return _lastPassInRun reversedNodes.slice(index + 1)
+  return 'black'
