@@ -244,10 +244,12 @@ test 'clicking multiple points moves black stone', ->
 test "off turn, no hover effects and can't play stones", (assert) ->
   tesuji_charm.onTurn = false
   tesuji_charm.game.initialize()
+  oldResponse = getResponseSgf()
   assert.notOk $('.goban .placement').length, "hover effect is disabled"
   $point = $pointAt 0, 0
   $point.click()
   assert.ok isPointEmpty($point), "no stone placed"
+  equal getResponseSgf(), oldResponse, "server response not changed"
 
 test "white stones play correctly", ->
   setInputSgf '(;SZ[3];B[aa])'

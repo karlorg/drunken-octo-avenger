@@ -121,19 +121,26 @@ BoardAreaDom = React.createClass
     viewingMove: null
 
   onNavigate: (newViewingMove) ->
-    @setState {viewingMove: newViewingMove}
+    @setState
+      proposedMove: null
+      viewingMove: newViewingMove
 
   render: ->
     objState = stateFromSgfObject @props.sgfObject, moves: @state.viewingMove
     {boardState, lastPlayed, prisoners} = objState
     size = parseInt(@props.sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
-    nextColor = nextPlayerInSgfObject @props.sgfObject
-    onPlaceStone = (xy) =>
-      @setState proposedMove:
-        color: nextColor
-        x: xy.x
-        y: xy.y
+    if (tesuji_charm.onTurn and \
+        (@state.viewingMove == null or \
+         @state.viewingMove == moveCount(@props.sgfObject)))
+      nextColor = nextPlayerInSgfObject @props.sgfObject
+      onPlaceStone = (xy) =>
+        @setState proposedMove:
+          color: nextColor
+          x: xy.x
+          y: xy.y
+    else
+      onPlaceStone = ->
 
     {div} = React.DOM
     div {},
@@ -332,6 +339,14 @@ stateFromSgfObject = (sgfObject, options={}) ->
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
   {boardState: board_state, lastPlayed: {x, y}, prisoners: prisoners}
+
+moveCount = (sgfObject) ->
+  "Return number of moves (including passes) in sgf object."
+  count = 0
+  for node in sgfObject.gameTrees[0].nodes
+    if node.B or node.W
+      count += 1
+  count
 
 
 aCode = 'a'.charCodeAt(0)
