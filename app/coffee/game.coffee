@@ -152,6 +152,7 @@ BoardAreaDom = React.createClass
     objState = stateFromSgfObject sgfObject, moves: @state.viewingMove
     {boardState, lastPlayed, prisoners} = objState
     size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
+    nextColor = null
 
     if (tesuji_charm.onTurn and \
         (@state.viewingMove == null or \
@@ -176,6 +177,7 @@ BoardAreaDom = React.createClass
     div {},
         [(React.createElement BoardDom,
                               boardState: boardState
+                              hoverColor: nextColor
                               placeStoneCallback: onPlaceStone
                               proposedMove: @state.proposedMove
                               lastPlayed: lastPlayed
@@ -201,6 +203,9 @@ BoardDom = React.createClass
     blackStone = div {className: "stone black"}
     whiteStone = div {className: "stone white"}
     lastPlayedMarker = div {className: "last-played"}
+    hover = if @props.hoverColor \
+            then div {className: "placement #{@props.hoverColor}"} \
+            else div {}
 
     boardDivsForPos = (i, j) ->
       result = []
@@ -222,6 +227,7 @@ BoardDom = React.createClass
       result = switch color
         when 'black' then [blackStone]
         when 'white' then [whiteStone]
+        when 'empty' then [hover]
         else []
       if i == _lastPlayed.x and j == _lastPlayed.y
         result.push lastPlayedMarker
