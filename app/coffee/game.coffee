@@ -149,7 +149,12 @@ BoardAreaDom = React.createClass
     else
       sgfObject = origSgfObject
 
-    objState = stateFromSgfObject sgfObject, moves: @state.viewingMove
+    moveToShow = if @state.viewingMove == null \
+                 then null \
+                 else if @state.proposedMove \
+                      then @state.viewingMove + 1 \
+                      else @state.viewingMove
+    objState = stateFromSgfObject sgfObject, moves: moveToShow
     {boardState, lastPlayed, prisoners} = objState
     size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
     nextColor = null
@@ -218,18 +223,12 @@ BoardDom = React.createClass
 
     stoneDivsForPos = (i, j) ->
       color = boardState[j][i]
-      if proposedMove?
-        _lastPlayed = proposedMove
-        if proposedMove.x == i and proposedMove.y == j
-          color = proposedMove.color
-      else
-        _lastPlayed = lastPlayed
       result = switch color
         when 'black' then [blackStone]
         when 'white' then [whiteStone]
         when 'empty' then [hover]
         else []
-      if i == _lastPlayed.x and j == _lastPlayed.y
+      if i == lastPlayed.x and j == lastPlayed.y
         result.push lastPlayedMarker
       result
 
