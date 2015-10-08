@@ -425,6 +425,25 @@ nextPlayerInSgfObject = (sgfObject) ->
       return _lastPassInRun reversedNodes.slice(index + 1)
   return 'black'
 
+_lastPassInRun = (nodes) ->
+  lastPassSeen = null
+  for node in nodes
+    if 'B' of node
+      if node.B == null or node.B == ''
+        lastPassSeen = 'black'
+      else
+        break
+    else if 'W' of node
+      if node.W == null or node.W == ''
+        lastPassSeen = 'white'
+      else
+        break
+    else
+      break
+  if lastPassSeen == null
+    throw Error "no passes found before resumption node"
+  return lastPassSeen
+
 sgfObjectWithMoveAdded = (sgfObject, color=null, col=null, row=null) ->
   if col != null and row != null
     coordStr = encodeSgfCoord col, row
