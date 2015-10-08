@@ -182,7 +182,7 @@ BoardAreaDom = React.createClass
                               size: size),
          (React.createElement NavigationDom,
                               changeCallback: @onNavigate,
-                              sgfObject: sgfObject,
+                              sgfObject: origSgfObject,
                               viewingMove: @state.viewingMove),
          (React.createElement ScoreDom, prisoners: prisoners)]
 

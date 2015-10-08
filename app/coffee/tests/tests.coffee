@@ -138,6 +138,8 @@ QUnit.assert.boardState = (chars2d, message) ->
       (result = false) if actual[j][i] != point
   @push result, actual, expected, (message or "")
 
+navigationMovesLength = -> $('.move_select').children('option').length
+
 setViewMoveNo = (n) ->
   select = $('.move_select').val(n).get(0)
   React.addons.TestUtils.Simulate.input(select, target: select)
@@ -367,6 +369,13 @@ test "correct color after resume with three passes (white first)", (assert) ->
   $point = $pointAt 1, 1
   $point.click()
   assert.ok isPointWhite($point)
+
+test "regression: proposed stone not listed in navigation UI", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[bb])'
+  tesuji_charm.game.initialize()
+  assert.equal navigationMovesLength(), 3, 'start with 3 moves listed'
+  $pointAt(2, 2).click()
+  assert.equal navigationMovesLength(), 3, 'still 3 moves with proposed move'
 
 test "behaviour changes while viewing past moves", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[bb])'
