@@ -228,10 +228,11 @@ BoardDom = React.createClass
       result
 
     onClickForPos = (i, j) => (event) =>
-      @props.placeStoneCallback {
-        x: i
-        y: j
-      }
+      if boardState[j][i] == 'empty'
+        @props.placeStoneCallback {
+          x: i
+          y: j
+        }
 
     div {className: 'goban'},
         for j in [0...size]
