@@ -433,7 +433,7 @@ test "clicking empty points in marking mode does nothing", (assert) ->
   assert.ok isPointDame($point), "still dame after click"
 
 test "mixed scoring board", (assert) ->
-  setInputSgf '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc])'
+  setInputSgf '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc];B[];W[])'
   # .b.
   # bww
   # .w.
@@ -448,7 +448,7 @@ test "mixed scoring board", (assert) ->
 
 test "clicking live stones makes them dead, " + \
      "clicking again brings them back", (assert) ->
-  setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac])'
+  setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac];W[];B[])'
   # b.w
   # .b.  (white captured at ab)
   # bbw
@@ -486,7 +486,7 @@ test "clicking live stones makes them dead, " + \
 
 test "killing stones revives neighbouring enemy groups " + \
      "automatically", (assert) ->
-  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc])'
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
   # b.b
   # .b.
   # bbw
@@ -511,7 +511,7 @@ test "initialization sets initial dead stones from SGF", (assert) ->
   assert.ok isPointWhiteScore($pointAt 1, 1), "(1, 1) scores for White"
 
 test "Form is updated with current dead stones", (assert) ->
-  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][ab]AW[cb])'
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][ab]AW[cb];B[];W[])'
   # b.b
   # .b.
   # bbw
