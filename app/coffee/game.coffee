@@ -154,7 +154,10 @@ BoardAreaDom = React.createClass
                  else if @state.proposedMove \
                       then @state.viewingMove + 1 \
                       else @state.viewingMove
-    objState = stateFromSgfObject sgfObject, moves: moveToShow
+    scoringMode = isPassedTwice sgfObject
+    objState = stateFromSgfObject sgfObject,
+                                  moves: moveToShow,
+                                  scoring: scoringMode
     {boardState, lastPlayed, prisoners} = objState
     size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
     nextColor = null
@@ -184,7 +187,6 @@ BoardAreaDom = React.createClass
                               boardState: boardState
                               hoverColor: nextColor
                               placeStoneCallback: onPlaceStone
-                              proposedMove: @state.proposedMove
                               lastPlayed: lastPlayed
                               size: size),
          (React.createElement NavigationDom,
@@ -195,7 +197,11 @@ BoardAreaDom = React.createClass
 
 BoardDom = React.createClass
   render: ->
-    {boardState, lastPlayed, proposedMove, size} = @props
+    # boardState is the complete state to show, with the newly proposed
+    # stone included if there is one.  lastPlayed is only used to locate
+    # the 'new stone' marker, the stone it refers to should already be in
+    # the boardState.
+    {boardState, lastPlayed, size} = @props
 
     {div} = React.DOM
     topVert = div {className: "board_line board_line_vertical"}
@@ -207,6 +213,7 @@ BoardDom = React.createClass
     handicapPoint = div {className: "handicappoint" }
     blackStone = div {className: "stone black"}
     whiteStone = div {className: "stone white"}
+    dame = div {className: "territory neutral"}
     lastPlayedMarker = div {className: "last-played"}
     hover = if @props.hoverColor \
             then div {className: "placement #{@props.hoverColor}"} \
@@ -227,6 +234,7 @@ BoardDom = React.createClass
         when 'black' then [blackStone]
         when 'white' then [whiteStone]
         when 'empty' then [hover]
+        when 'dame' then [dame]
         else []
       if i == lastPlayed.x and j == lastPlayed.y
         result.push lastPlayedMarker
@@ -305,6 +313,7 @@ ScoreDom = React.createClass
 
 
 # move navigation ====================================================
+###
 
 _moveNoListeners = []
 
@@ -324,6 +333,7 @@ _viewingMoveNo = 0
 
 exports.isViewingLatestMove = -> _isViewingLatestMove
 exports.viewingMoveNo = -> _viewingMoveNo
+###
 
 a1FromSgfTag = (tag) ->
   if typeof tag is 'string'
@@ -340,12 +350,14 @@ a1FromSgfTag = (tag) ->
 stateFromSgfObject = (sgfObject, options={}) ->
   "Get a board state and associated info from an SGF object.
 
-  If 'moves' is given as an option, include only that many moves."
-  {moves} = options
+  If 'moves' is given as an option, include only that many moves.
+
+  If 'scoring' is given as an option, mark dame and scoring points."
+  {moves, scoring} = options
   size = if sgfObject \
          then parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19 \
          else 19
-  board_state = (('empty' for i in [0...size]) for j in [0...size])
+  boardState = (('empty' for i in [0...size]) for j in [0...size])
   prisoners = { black: 0, white: 0 }
   moveNo = 0
   for node in sgfObject.gameTrees[0].nodes
@@ -354,27 +366,38 @@ stateFromSgfObject = (sgfObject, options={}) ->
       coords = if Array.isArray(node.AB) then node.AB else [node.AB]
       for coordStr in coords
         [x, y] = decodeSgfCoord coordStr
-        board_state[y][x] = 'black'
+        boardState[y][x] = 'black'
     if node.AW
       coords = if Array.isArray(node.AW) then node.AW else [node.AW]
       for coordStr in coords
         [x, y] = decodeSgfCoord coordStr
-        board_state[y][x] = 'white'
+        boardState[y][x] = 'white'
     if node.B
       moveNo += 1
       [x, y] = decodeSgfCoord node.B
-      result = go_rules.getNewStateAndCaptures('black', x, y, board_state)
-      board_state = result.state
+      result = go_rules.getNewStateAndCaptures('black', x, y, boardState)
+      boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
     if node.W
       moveNo += 1
       [x, y] = decodeSgfCoord node.W
-      result = go_rules.getNewStateAndCaptures('white', x, y, board_state)
-      board_state = result.state
+      result = go_rules.getNewStateAndCaptures('white', x, y, boardState)
+      boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
-  {boardState: board_state, lastPlayed: {x, y}, prisoners: prisoners}
+  if scoring
+    [x, y] = [null, null]
+    {boardState, prisoners} = scoreState {boardState, prisoners}
+  {boardState: boardState, lastPlayed: {x, y}, prisoners: prisoners}
+
+scoreState = (stateObj) ->
+  {boardState, prisoners} = stateObj
+  for row in boardState
+    for point, x in row
+      if point == 'empty'
+        row[x] = 'dame'
+  {boardState: boardState, prisoners: prisoners}
 
 moveCount = (sgfObject) ->
   "Return number of moves (including passes) in sgf object."
@@ -448,6 +471,13 @@ _lastPassInRun = (nodes) ->
   if lastPassSeen == null
     throw Error "no passes found before resumption node"
   return lastPassSeen
+
+isPassedTwice = (sgfObject) ->
+  # true iff sgf ends with two successive passes
+  nodes = sgfObject.gameTrees[0].nodes
+  len = nodes.length
+  isPass = (node) -> node.B == '' or node.W == ''
+  return len >= 2 and isPass(nodes[len-1]) and isPass(nodes[len-2])
 
 sgfObjectWithMoveAdded = (sgfObject, color=null, col=null, row=null) ->
   if col != null and row != null

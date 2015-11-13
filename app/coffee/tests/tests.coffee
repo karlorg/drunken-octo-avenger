@@ -228,8 +228,6 @@ module 'Game page: playing stones',
     tesuji_charm.onTurn = true
     tesuji_charm.game.initialize()
 
-  afterEach: ->
-    tesuji_charm.game.offViewMoveNo()
 
 test 'clicking multiple points moves black stone', ->
   $point1 = $pointAt 0, 0
@@ -424,15 +422,8 @@ test "proposed stone removed when viewing past moves", (assert) ->
 
 module 'Game page: marking dead stones',
   beforeEach: ->
-    $('#with_scoring').remove()
-    $("#qunit-fixture").append $("<div/>",
-                                 id: 'with_scoring'
-                                 class: 'with_scoring')
     tesuji_charm.onTurn = true
-    setInputSgf '(;SZ[3])'
-
-  afterEach: ->
-    tesuji_charm.game.offViewMoveNo()
+    setInputSgf '(;SZ[3];B[];W[])'
 
 test "clicking empty points in marking mode does nothing", (assert) ->
   tesuji_charm.game.initialize()
