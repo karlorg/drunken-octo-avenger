@@ -214,6 +214,8 @@ BoardDom = React.createClass
     blackStone = div {className: "stone black"}
     whiteStone = div {className: "stone white"}
     dame = div {className: "territory neutral"}
+    blackScore = div {className: "territory black"}
+    whiteScore = div {className: "territory white"}
     lastPlayedMarker = div {className: "last-played"}
     hover = if @props.hoverColor \
             then div {className: "placement #{@props.hoverColor}"} \
@@ -235,6 +237,8 @@ BoardDom = React.createClass
         when 'white' then [whiteStone]
         when 'empty' then [hover]
         when 'dame' then [dame]
+        when 'blackscore' then [blackScore]
+        when 'whitescore' then [whiteScore]
         else []
       if i == lastPlayed.x and j == lastPlayed.y
         result.push lastPlayedMarker
@@ -392,12 +396,40 @@ stateFromSgfObject = (sgfObject, options={}) ->
   {boardState: boardState, lastPlayed: {x, y}, prisoners: prisoners}
 
 scoreState = (stateObj) ->
+  "given a board state, change its 'empty' points to 'blackscore',
+  'whitescore' and 'dame' and return it"
   {boardState, prisoners} = stateObj
-  for row in boardState
-    for point, x in row
-      if point == 'empty'
-        row[x] = 'dame'
+
+  setRegionScores = (region, color) ->
+    for [x, y] in region
+      boardState[y][x] = color
+
+  for region in getEmptyRegions boardState
+    boundary = go_rules.boundingColor region, boardState
+    setRegionScores region, switch boundary
+      when 'black' then 'blackscore'
+      when 'white' then 'whitescore'
+      when 'neither' then 'dame'
+      else throw new Error "invalid boundary color: '#{boundary}'"
+
   {boardState: boardState, prisoners: prisoners}
+
+getEmptyRegions = (state) ->
+  regions = []
+  # which colors count as empty when detecting regions:
+  emptyColors = ['empty', 'blackdead', 'whitedead']
+  height = state.length
+  width = state[0].length
+  done = ((false for i in [0..width]) for j in [0..height])
+  for rowArray, row in state
+    for color, col in rowArray
+      continue if done[row][col]
+      if state[row][col] in emptyColors
+        region = go_rules.groupPoints col, row, state, emptyColors
+        for [x, y] in region
+          done[y][x] = true
+        regions.push region
+  return regions
 
 moveCount = (sgfObject) ->
   "Return number of moves (including passes) in sgf object."
