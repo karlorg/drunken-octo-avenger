@@ -217,6 +217,11 @@ test "can view past board states", (assert) ->
   assert.ok $('.col-1.row-1').find('.last-played').length,
     "last-move marker is at (1,1)"
 
+test "scores do not appear outside of marking mode", (assert) ->
+  setInputSgf '(;SZ[3])'
+  tesuji_charm.game.initialize()
+  assert.notOk $('.score').length, "score class should not appear in page"
+
 
 # ============================================================================
 

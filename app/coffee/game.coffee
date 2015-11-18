@@ -311,15 +311,19 @@ ScoreDom = React.createClass
   render: ->
     {prisoners, scores} = @props
     {div, span} = React.DOM
+    if scores?
+      blackScore = div {}, ["Black score: ",
+                            span {className: "score black"}, scores.black]
+      whiteScore = div {}, ["White score: ",
+                            span {className: "score white"}, scores.white]
+    else
+      blackScore = whiteScore = div {}
     div {className: "score_block"},
         [div {}, ["Black prisoners: ",
                   span {className: "prisoners black"}, prisoners.black],
          div {}, ["White prisoners: ",
                   span {className: "prisoners white"}, prisoners.white],
-         div {}, ["Black score: ",
-                  span {className: "score black"}, scores?.black],
-         div {}, ["White score: ",
-                  span {className: "score white"}, scores?.white]]
+         blackScore, whiteScore]
 
 
 # move navigation ====================================================
