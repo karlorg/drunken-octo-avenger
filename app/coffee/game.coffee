@@ -158,7 +158,7 @@ BoardAreaDom = React.createClass
     objState = stateFromSgfObject sgfObject,
                                   moves: moveToShow,
                                   scoring: scoringMode
-    {boardState, lastPlayed, prisoners} = objState
+    {boardState, lastPlayed, prisoners, scores} = objState
     size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
     nextColor = null
 
@@ -193,7 +193,9 @@ BoardAreaDom = React.createClass
                               changeCallback: @onNavigate,
                               sgfObject: origSgfObject,
                               viewingMove: @state.viewingMove),
-         (React.createElement ScoreDom, prisoners: prisoners)]
+         (React.createElement ScoreDom,
+                              prisoners: prisoners
+                              scores: scores)]
 
 BoardDom = React.createClass
   render: ->
@@ -307,13 +309,17 @@ NavigationDom = React.createClass
 
 ScoreDom = React.createClass
   render: ->
-    prisoners = @props.prisoners
+    {prisoners, scores} = @props
     {div, span} = React.DOM
     div {className: "score_block"},
         [div {}, ["Black prisoners: ",
                   span {className: "prisoners black"}, prisoners.black],
          div {}, ["White prisoners: ",
-                  span {className: "prisoners white"}, prisoners.white]]
+                  span {className: "prisoners white"}, prisoners.white],
+         div {}, ["Black score: ",
+                  span {className: "score black"}, scores?.black],
+         div {}, ["White score: ",
+                  span {className: "score white"}, scores?.white]]
 
 
 # move navigation ====================================================
@@ -392,12 +398,15 @@ stateFromSgfObject = (sgfObject, options={}) ->
       prisoners.white += result.captures.white
   if scoring
     [x, y] = [null, null]
-    {boardState, prisoners} = scoreState {boardState, prisoners}
-  {boardState: boardState, lastPlayed: {x, y}, prisoners: prisoners}
+    {boardState, prisoners, scores} = scoreState {boardState, prisoners}
+  else
+    scores = null
+  {boardState, lastPlayed: {x, y}, prisoners, scores}
 
 scoreState = (stateObj) ->
   "given a board state, change its 'empty' points to 'blackscore',
-  'whitescore' and 'dame' and return it"
+  'whitescore' and 'dame' and return it with prisoner counts and total
+  scores"
   {boardState, prisoners} = stateObj
 
   setRegionScores = (region, color) ->
@@ -412,7 +421,16 @@ scoreState = (stateObj) ->
       when 'neither' then 'dame'
       else throw new Error "invalid boundary color: '#{boundary}'"
 
-  {boardState: boardState, prisoners: prisoners}
+  scores = do ->
+    black = prisoners.white
+    white = prisoners.black
+    for row in boardState
+      for point in row
+        if point == 'blackscore' then black += 1
+        if point == 'whitescore' then white += 1
+    {black, white}
+
+  {boardState, prisoners, scores}
 
 getEmptyRegions = (state) ->
   regions = []
