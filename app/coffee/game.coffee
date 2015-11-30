@@ -115,8 +115,15 @@ exports.initialize = (sgfObject = null, newStoneColor = null) ->
   scoredSgfObject = sgfObjectWithDeadStones sgfObject, boardState
   setResponseSgf smartgame.generate(scoredSgfObject)
   $('.confirm_button').prop('disabled', true)
+
   $('.pass_button').click ->
     newSgfObject = sgfObjectWithMoveAdded sgfObject
+    newSgf = smartgame.generate newSgfObject
+    setResponseSgf newSgf
+    $('#main_form').get(0).submit()
+
+  $('.resume_button').click ->
+    newSgfObject = sgfObjectWithResumeAdded sgfObject
     newSgf = smartgame.generate newSgfObject
     setResponseSgf newSgf
     $('#main_form').get(0).submit()
@@ -646,6 +653,13 @@ sgfObjectWithDeadStones = (sgfObject, boardState) ->
   nodes = sgfObjectCopy.gameTrees[0].nodes
   nodes.push newMove
 
+  return sgfObjectCopy
+
+sgfObjectWithResumeAdded = (sgfObject) ->
+  newNode = {TCRESUME: ''}
+  sgfObjectCopy = cloneSgfObject sgfObject
+  nodes = sgfObjectCopy.gameTrees[0].nodes
+  nodes.push newNode
   return sgfObjectCopy
 
 # markStonesAround and helpers
