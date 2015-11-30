@@ -515,8 +515,37 @@ test "initialization sets initial dead stones from SGF", (assert) ->
   assert.ok isPointWhiteScore($pointAt 0, 1), "(0, 1) scores for White"
   assert.ok isPointWhiteScore($pointAt 1, 1), "(1, 1) scores for White"
 
+test "Form starts with correct SGF when no stones dead", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
+  # b.b
+  # .b.
+  # bbw
+  tesuji_charm.game.initialize()
+  expected = ///
+    AB(\[\w\w]){5}  # sanity check: black setup is retained with 5 coords
+    .*              # (don't check white setup as we can't guarantee the order)
+    TB(\[\w\w]){2}  # black territory appears with 2 coords
+    ///
+  actual = $('input#response').val()
+  assert.ok actual.match(expected), "2 black territory coords"
+
+test "Form starts with correct SGF with dead stones", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[];' +
+              'TB[ab][ba][cb][cc])'
+  # b.b
+  # .b.
+  # bbw
+  tesuji_charm.game.initialize()
+  expected = ///
+    AB(\[\w\w]){5}  # sanity check: black setup is retained with 5 coords
+    .*              # (don't check white setup as we can't guarantee the order)
+    TB(\[\w\w]){4}  # black territory appears with 4 coords
+    ///
+  actual = $('input#response').val()
+  assert.ok actual.match(expected), "4 black territory coords"
+
 test "Form is updated with current dead stones", (assert) ->
-  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][ab]AW[cb];B[];W[])'
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
   # b.b
   # .b.
   # bbw
@@ -535,8 +564,8 @@ test "Form is updated with current dead stones", (assert) ->
   assert.notOk actual.match(tbPattern), "no TB property in SGF"
 
   # here we check for a specific coord
-  $pointAt(2, 1).click()
-  expected = /TB[\]\[\w]*\[bc]/  # TB, any number of [] and letters, [cc]
+  $pointAt(2, 2).click()
+  expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
 
