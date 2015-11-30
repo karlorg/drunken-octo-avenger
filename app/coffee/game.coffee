@@ -167,8 +167,8 @@ BoardAreaDom = React.createClass
 
     if scoringMode
       onBoardClick = (xy) =>
-        groupToToggle = go_rules.groupPoints xy.x, xy.y, boardState
-        @setState deadStones: groupToToggle
+        newDead = getNewDeadForToggledPoint boardState, xy.x, xy.y
+        @setState deadStones: newDead
     else if (tesuji_charm.onTurn and \
         (@state.viewingMove == null or \
          @state.viewingMove == moveCount(origSgfObject)))
@@ -418,9 +418,13 @@ stateFromSgfObject = (sgfObject, options={}) ->
     [x, y] = [null, null]
     if deadStones?
       for [px, py] in deadStones
-        boardState[py][px] = switch boardState[py][px]
-          when 'black' then 'blackdead'
-          else boardState[py][px]
+        switch boardState[py][px]
+          when 'black'
+            boardState[py][px] = 'blackdead'
+            prisoners.black += 1
+          when 'white'
+            boardState[py][px] = 'whitedead'
+            prisoners.white += 1
     {boardState, prisoners, scores} = scoreState {boardState, prisoners}
   else
     scores = null
@@ -450,8 +454,8 @@ scoreState = (stateObj) ->
     white = prisoners.black
     for row in boardState
       for point in row
-        if point == 'blackscore' then black += 1
-        if point == 'whitescore' then white += 1
+        if point == 'blackscore' or point == 'whitedead' then black += 1
+        if point == 'whitescore' or point == 'blackdead' then white += 1
     {black, white}
 
   {boardState, prisoners, scores}
@@ -577,3 +581,80 @@ sgfObjectWithMoveAdded = (sgfObject, color=null, col=null, row=null) ->
     nodes.push newMove
 
   return sgfObjectCopy
+
+# markStonesAround and helpers
+
+getNewDeadForToggledPoint = (state, x, y) ->
+  "Return the new set of dead stones resulting from toggling the
+  life/death status of the stone at (x, y) and all friendly stones in
+  the region (ie. the area bounded by unfriendly stones).  If killing
+  stones, also revive surrounding enemy stones.
+
+  Changes `state` as a side effect (at time of writing this doesn't
+  matter for our callers)."
+  markStonesAround state, x, y
+  dead = []
+  for row, j in state
+    for point, i in row
+      if point == 'blackdead' or point == 'whitedead'
+        dead.push [i, j]
+  dead
+
+markStonesAround = (state, x, y) ->
+  "Toggle the life/death status of the given point and all friendly stones in
+  the region (ie. the area bounded by unfriendly stones).  If killing stones,
+  also revive surrounding enemy stones."
+  color = state[y][x]
+  return if color == 'empty'
+  isKilling = color in ['black', 'white']
+  # we're assuming here that the region never contains both live and dead
+  # stones of the same color, as the interface should not allow this to happen
+  region = go_rules.groupPoints(
+    x, y, state,
+    # list of colors to include in 'group'
+    ['empty', 'dame', 'blackscore', 'whitescore', color])
+  togglePoints state, region
+  if isKilling
+    reviveAroundRegion state, region
+  return
+
+reviveAroundRegion = (state, region) ->
+  "Revive all dead groups touching, but not in, the given region; together with
+  friendly stones in their own regions."
+  height = state.length
+  width = state[0].length
+  ignore = ((false for i in [0..width]) for j in [0..height])
+  for [x, y] in region
+    ignore[y][x] = true
+
+  for [x, y] in region
+    for [xn, yn] in go_rules.neighboringPoints x, y, state
+      continue if ignore[yn][xn]
+      ignore[yn][xn] = true
+      neighborColor = state[yn][xn]
+      if neighborColor in ['blackdead', 'whitedead']
+        neighborRegion = go_rules.groupPoints(
+          xn, yn, state,
+          # list of colors to include in 'group'
+          ['empty', 'dame', 'blackscore', 'whitescore', neighborColor])
+        togglePoints state, neighborRegion
+        for [xg, yg] in neighborRegion
+          ignore[yg][xg] = true
+  return
+
+togglePoints = (state, points) ->
+  "Among the given points, mark live stones as dead and dead stones as alive."
+  for [x, y] in points
+    color = state[y][x]
+    continue if color == 'empty'
+    newColor = switch color
+      when 'black' then 'blackdead'
+      when 'white' then 'whitedead'
+      when 'blackdead' then 'black'
+      when 'whitedead' then 'white'
+      else null
+    if newColor
+      state[y][x] = newColor
+  return
+
+# end markStonesAround
