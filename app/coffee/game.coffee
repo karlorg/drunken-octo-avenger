@@ -380,8 +380,10 @@ stateFromSgfObject = (sgfObject, options={}) ->
 
   If 'scoring' is given as an option, mark dame and scoring points.
 
-  If 'deadStones' is given as an option, the listed stones should be dead."
-  {moves, scoring, deadStones} = options
+  If 'deadStones' is given as an option, the listed stones should be
+  dead.  If null or not given, use the TB and TW nodes in the SGF to
+  determine dead stones."
+  {moves, scoring, deadStones: deadFromUi} = options
   size = if sgfObject \
          then parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19 \
          else 19
@@ -416,19 +418,40 @@ stateFromSgfObject = (sgfObject, options={}) ->
       prisoners.white += result.captures.white
   if scoring
     [x, y] = [null, null]
-    if deadStones?
-      for [px, py] in deadStones
-        switch boardState[py][px]
-          when 'black'
-            boardState[py][px] = 'blackdead'
-            prisoners.black += 1
-          when 'white'
-            boardState[py][px] = 'whitedead'
-            prisoners.white += 1
+    if deadFromUi?
+      deadStones = deadFromUi
+    else
+      deadStones = deadStonesFromSgfObject sgfObject, boardState
+    for [px, py] in deadStones
+      switch boardState[py][px]
+        when 'black'
+          boardState[py][px] = 'blackdead'
+          prisoners.black += 1
+        when 'white'
+          boardState[py][px] = 'whitedead'
+          prisoners.white += 1
     {boardState, prisoners, scores} = scoreState {boardState, prisoners}
   else
     scores = null
   {boardState, lastPlayed: {x, y}, prisoners, scores}
+
+deadStonesFromSgfObject = (sgfObject, state) ->
+  "Read current territories in sgfObject, mark dead stones in `state`
+  accordingly, and return an array of points for all dead stones."
+  nodes = sgfObject.gameTrees[0].nodes
+  node = nodes[nodes.length-1]
+  deadStones = []
+  for tag in node.TB or []
+    [x, y] = decodeSgfCoord tag
+    if state[y][x] == 'white'
+      state[y][x] = 'whitedead'
+      deadStones.push [x, y]
+  for tag in node.TW or []
+    [x, y] = decodeSgfCoord tag
+    if state[y][x] == 'black'
+      state[y][x] = 'blackdead'
+      deadStones.push [x, y]
+  deadStones
 
 scoreState = (stateObj) ->
   "given a board state, change its 'empty' points to 'blackscore',
@@ -555,7 +578,18 @@ isPassedTwice = (sgfObject) ->
   nodes = sgfObject.gameTrees[0].nodes
   len = nodes.length
   isPass = (node) -> node.B == '' or node.W == ''
-  return len >= 2 and isPass(nodes[len-1]) and isPass(nodes[len-2])
+  hasMoveOrResume = (node) -> (typeof node.B == 'string' and node.B != '') or
+                              (typeof node.W == 'string' and node.W != '') or
+                              node.TCRESUME?
+  passesSeen = 0
+  i = len - 1
+  while i >= 0 and not hasMoveOrResume(nodes[i])
+    if isPass(nodes[i])
+      passesSeen += 1
+    if passesSeen >= 2
+      return true
+    i -= 1
+  return false
 
 sgfObjectWithMoveAdded = (sgfObject, color=null, col=null, row=null) ->
   if col != null and row != null
