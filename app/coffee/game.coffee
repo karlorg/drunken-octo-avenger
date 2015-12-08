@@ -166,13 +166,22 @@ BoardAreaDom = React.createClass
                  else if @state.proposedMove \
                       then @state.viewingMove + 1 \
                       else @state.viewingMove
-    scoringMode = (@state.viewingMove == null or
-                   @state.viewingMove == moveCount(origSgfObject)) and
-                  isPassedTwice sgfObject
+    isViewingLatestMove = @state.viewingMove == null or
+                          @state.viewingMove == actionCount(origSgfObject)
+    isOnTurn = tesuji_charm.onTurn and isViewingLatestMove
+    # show proposed scores in board view?
+    showScoring = isPassedTwice sgfObject, moves: moveToShow
+    # allow user to change stone markings?
+    scoringMode = isOnTurn and showScoring
+    # allow user to place a proposed new stone?
+    playMode = isOnTurn and not showScoring
+
     objState = stateFromSgfObject sgfObject,
                                   moves: moveToShow,
-                                  scoring: scoringMode
-                                  deadStones: @state.deadStones
+                                  scoring: showScoring,
+                                  deadStones: if scoringMode \
+                                              then @state.deadStones \
+                                              else null
     {boardState, lastPlayed, prisoners, scores} = objState
     size = parseInt(sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
     nextColor = null
@@ -188,9 +197,9 @@ BoardAreaDom = React.createClass
                                                     deadStones: newDead
         newSgfObject = sgfObjectWithDeadStones origSgfObject, newState
         setResponseSgf smartgame.generate(newSgfObject)
-    else if (tesuji_charm.onTurn and \
-        (@state.viewingMove == null or \
-         @state.viewingMove == moveCount(origSgfObject)))
+        return
+
+    else if playMode
       # ready to accept a normal (non-dead stone marking) move
       nextColor = nextPlayerInSgfObject origSgfObject
       onBoardClick = (xy) =>
@@ -206,7 +215,9 @@ BoardAreaDom = React.createClass
           color: nextColor
           x: xy.x
           y: xy.y
-    else
+        return
+
+    else  # not allowing user to make moves/mark dead right now
       onBoardClick = ->
 
     {div} = React.DOM
@@ -437,10 +448,8 @@ stateFromSgfObject = (sgfObject, options={}) ->
       prisoners.white += result.captures.white
   if scoring
     [x, y] = [null, null]
-    if deadFromUi?
-      deadStones = deadFromUi
-    else
-      deadStones = deadStonesFromSgfObject sgfObject, boardState
+    deadStones = deadFromUi ?
+                 deadStonesFromSgfObject sgfObject, boardState, moves: moves
     for [px, py] in deadStones
       switch boardState[py][px]
         when 'black'
@@ -454,11 +463,15 @@ stateFromSgfObject = (sgfObject, options={}) ->
     scores = null
   {boardState, lastPlayed: {x, y}, prisoners, scores}
 
-deadStonesFromSgfObject = (sgfObject, state) ->
+deadStonesFromSgfObject = (sgfObject, state, options={}) ->
   "Read current territories in sgfObject, mark dead stones in `state`
   accordingly, and return an array of points for all dead stones."
+  {moves} = options
   nodes = sgfObject.gameTrees[0].nodes
-  node = nodes[nodes.length-1]
+  nodeIndex = if moves \
+              then nodeNoFromActionNo sgfObject, moves \
+              else nodes.length - 1
+  node = nodes[nodeIndex]
   deadStones = []
   for tag in node.TB or []
     [x, y] = decodeSgfCoord tag
@@ -519,11 +532,23 @@ getEmptyRegions = (state) ->
         regions.push region
   return regions
 
-moveCount = (sgfObject) ->
+isActionNode = (node) -> node.B? or node.W? or node.TB? or node.TW?
+
+nodeNoFromActionNo = (sgfObject, actionNo) ->
+  "find the node index corresponding to the given action number"
+  nodes = sgfObject.gameTrees[0].nodes
+  actionsToGo = actionNo
+  for node, i in nodes
+    if isActionNode(node)
+      actionsToGo -= 1
+    break if actionsToGo <= 0
+  return i
+
+actionCount = (sgfObject) ->
   "Return number of moves (including passes) in sgf object."
   count = 0
   for node in sgfObject.gameTrees[0].nodes
-    if node.B? or node.W? or node.TW? or node.TB?
+    if isActionNode(node)
       count += 1
   count
 
@@ -592,16 +617,21 @@ _lastPassInRun = (nodes) ->
     throw Error "no passes found before resumption node"
   return lastPassSeen
 
-isPassedTwice = (sgfObject) ->
-  # true iff sgf ends with two successive passes
+isPassedTwice = (sgfObject, options={}) ->
+  "true iff sgf ends with two successive passes
+
+  if `moves` is given, limit the game to that many moves."
+  {moves} = options
   nodes = sgfObject.gameTrees[0].nodes
-  len = nodes.length
+  nodeIndex = if moves \
+              then nodeNoFromActionNo sgfObject, moves \
+              else nodes.length - 1
   isPass = (node) -> node.B == '' or node.W == ''
   hasMoveOrResume = (node) -> (typeof node.B == 'string' and node.B != '') or
                               (typeof node.W == 'string' and node.W != '') or
                               node.TCRESUME?
   passesSeen = 0
-  i = len - 1
+  i = nodeIndex
   while i >= 0 and not hasMoveOrResume(nodes[i])
     if isPass(nodes[i])
       passesSeen += 1
