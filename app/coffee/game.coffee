@@ -166,7 +166,9 @@ BoardAreaDom = React.createClass
                  else if @state.proposedMove \
                       then @state.viewingMove + 1 \
                       else @state.viewingMove
-    scoringMode = isPassedTwice sgfObject
+    scoringMode = (@state.viewingMove == null or
+                   @state.viewingMove == moveCount(origSgfObject)) and
+                  isPassedTwice sgfObject
     objState = stateFromSgfObject sgfObject,
                                   moves: moveToShow,
                                   scoring: scoringMode
@@ -521,7 +523,7 @@ moveCount = (sgfObject) ->
   "Return number of moves (including passes) in sgf object."
   count = 0
   for node in sgfObject.gameTrees[0].nodes
-    if node.B or node.W
+    if node.B? or node.W? or node.TW? or node.TB?
       count += 1
   count
 
