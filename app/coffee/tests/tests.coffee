@@ -586,6 +586,15 @@ test "Form is updated with current dead stones", (assert) ->
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
 
+test "Confirm button live while marking dead stones", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
+  # b.b
+  # .b.
+  # bbw
+  tesuji_charm.game.initialize()
+  $confirm_button = $('button.confirm_button')
+  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+
 test "Resume button updates response and submits", (assert) ->
   setInputSgf '(;SZ[3];B[];W[])'
   tesuji_charm.game.initialize()
@@ -608,9 +617,18 @@ test "behaviour changes while viewing past moves", (assert) ->
   # .b.  (white captured at ab)
   # bbw
   tesuji_charm.game.initialize()
+  $confirm_button = $('button.confirm_button')
+
   assert.ok isPointBlackDead($pointAt 0, 0), "initial layout shows dead stones"
   ($pointAt 2, 0).click()
   assert.ok isPointWhiteDead($pointAt 2, 0), "click kills stone"
+  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+
+  setViewMoveNo 0
+  assert.notOk isPointDame($pointAt 1, 0),
+    "regression: points not shown as dame on turn 0"
+  assert.ok $confirm_button.prop('disabled'),
+    "turn 0, confirm button disabled"
 
   setViewMoveNo 6
   assert.notOk isPointDame($pointAt 1, 0),
@@ -621,6 +639,8 @@ test "behaviour changes while viewing past moves", (assert) ->
   ($pointAt 2, 0).click()
   assert.notOk isPointWhiteDead($pointAt 2, 0),
     "earlier move, click does nothing"
+  assert.ok $confirm_button.prop('disabled'),
+    "turn 6, confirm button disabled"
 
   setViewMoveNo 9
   assert.notOk isPointBlackDead($pointAt 0, 0),
@@ -630,12 +650,17 @@ test "behaviour changes while viewing past moves", (assert) ->
   ($pointAt 2, 0).click()
   assert.notOk isPointWhiteDead($pointAt 2, 0),
     "before black stones marked dead, click does nothing"
+  assert.ok $confirm_button.prop('disabled'),
+    "turn 9, confirm button disabled"
 
   setViewMoveNo 10
   assert.ok isPointBlackDead($pointAt 0, 0),
     "return to latest move, dead stones from other player re-marked"
   assert.notOk isPointWhiteDead($pointAt 2, 0),
     "latest move, dead stones we set up before are not re-marked"
+  assert.notOk $confirm_button.prop('disabled'),
+    "latest move, confirm button enabled"
+
   ($pointAt 2, 0).click()
   assert.ok isPointWhiteDead($pointAt 2, 0), "click once again kills stone"
 

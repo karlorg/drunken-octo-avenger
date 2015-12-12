@@ -1,25 +1,5 @@
 (
 ;FF[4]GM[1]
-AP[DGS:1.19.8]
-PC[Dragon Go Server: http://www.dragongoserver.net/]
-DT[2014-12-08,2015-01-21]
-GN[adc-karlnaylor-948890-20150121]
-SO[http://www.dragongoserver.net/game.php?gid=948890]
-PB[Karl Naylor (karlnaylor)]
-PW[Allan (adc)]
-BR[9k]
-WR[11k]
-XM[218]
-GC[Game ID: 948890
-Game Type: GO (1:1)
-Rated: Y
-
-White Start Rating: 11k (+22%) - ELO 1022
-Black Start Rating: 10k (-22%) - ELO 1078
-White End Rating: 11k (+6%) - ELO 1006
-Black End Rating: 9k (+6%) - ELO 1205]
-OT[30 days with 30 days extra per move]
-RU[Japanese]
 SZ[19]
 KM[6.5]
 ;B[pd]
