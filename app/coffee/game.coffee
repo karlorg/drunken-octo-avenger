@@ -17,42 +17,6 @@ exports.setResponseSgf = setResponseSgf = (sgf) ->
 exports.getBlackPrisoners = -> parseInt($('.prisoners.black').text(), 10)
 exports.getWhitePrisoners = -> parseInt($('.prisoners.white').text(), 10)
 
-###
-# setPointColor and helpers
-
-exports.setPointColor = setPointColor = ($td, color) ->
-  $('.stone', $td).remove()
-  $('.territory', $td).remove()
-  [stoneclass, territoryclass] = switch color
-    when 'empty' then ['', '']
-    when 'dame' then ['', 'territory neutral']
-    when 'black' then ['stone black', '']
-    when 'white' then ['stone white', '']
-    when 'blackdead' then ['stone black dead', 'territory white']
-    when 'whitedead' then ['stone white dead', 'territory black']
-    when 'blackscore' then ['', 'territory black']
-    when 'whitescore' then ['', 'territory white']
-  if stoneclass
-    stoneElement = document.createElement 'div'
-    stoneElement.className = stoneclass
-    $td.append stoneElement
-  if territoryclass
-    territoryElement = document.createElement 'div'
-    territoryElement.className = territoryclass
-    $td.append territoryElement
-
-exports.setLastPlayed = setLastPlayed = ($point) ->
-  $('.goban .last-played').remove()
-  lastPlayedElement = document.createElement 'div'
-  lastPlayedElement.className = 'last-played'
-  $point.append lastPlayedElement
-
-removeLastPlayed = ->
-  $('.goban .last-played').remove()
-
-# end of setPointColor helpers
-###
-
 exports.contains_selector = contains_selector = ($context, selector) ->
   "A helper function returns true if the given element/context contains an
    element that satisfies the selector."
@@ -383,30 +347,6 @@ ScoreDom = React.createClass
                   span {className: "prisoners white"}, prisoners.white],
          blackScore, whiteScore]
 
-
-# move navigation ====================================================
-###
-
-_moveNoListeners = []
-
-exports.onViewMoveNo = (callback) ->
-  # _moveNoListeners.push callback
-  callback
-
-exports.offViewMoveNo = ->
-  "Clear all view move no listeners.
-
-  We need this for testing, where initialise() functions get called in many
-  test cases, so we must clean up listeners after each test."
-  _moveNoListeners = []
-
-_isViewingLatestMove = false
-_viewingMoveNo = 0
-
-exports.isViewingLatestMove = -> _isViewingLatestMove
-exports.viewingMoveNo = -> _viewingMoveNo
-###
-
 a1FromSgfTag = (tag) ->
   if typeof tag is 'string'
     tag = [tag]
@@ -416,8 +356,6 @@ a1FromSgfTag = (tag) ->
   colStr = String.fromCharCode(x + 'a'.charCodeAt(0))
   rowStr = y.toString()
   return "#{colStr}#{rowStr}"
-
-# end of move navigation =============================================
 
 isLegalOnSgf = (sgfObject, color, x, y) ->
   {boardState: previousState} = stateFromSgfObject sgfObject
