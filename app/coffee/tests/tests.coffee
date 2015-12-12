@@ -324,6 +324,23 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   assert.notOk $('input#response').val().match(/B\[bb]/),
     "SGF response does not contain black stone"
 
+test "proposing an illegal move does nothing", (assert) ->
+  setInputSgf '(;SZ[4]' +
+              ';AB[ba][ca][ab][bc][cc];AW[cb]' +
+              ';B[db])'
+  # .bb.
+  # b.wb
+  # .bb.
+  # ....
+  tesuji_charm.game.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.notOk isPointWhite($point), "point has not become white"
+  assert.notOk isPointEmpty($pointAt 2, 1),
+    "existing white stone has not been captured"
+  assert.notOk $('input#response').val().match(/W\[bb]/),
+    "SGF response does not contain new stone"
+
 test "captured stones are removed and prisoner counts updated", (assert) ->
   setInputSgf '(;SZ[3];B[ba];W[aa])'
   tesuji_charm.game.initialize()
