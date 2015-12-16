@@ -153,7 +153,6 @@ test "helper function readBoardState and assert.boardState", (assert) ->
                      '...'
                      '.w.']
 
-
 test "initialize creates board from SGF data", (assert) ->
   setInputSgf '(;SZ[3];B[ca];W[bc])'
   tesuji_charm.game.initialize()
@@ -216,6 +215,32 @@ test "can view past board states", (assert) ->
   assert.equal $('.last-played').length, 1, "exactly one last-move marker"
   assert.ok $('.col-1.row-1').find('.last-played').length,
     "last-move marker is at (1,1)"
+
+test "viewing past moves after a resumption", (assert) ->
+  setInputSgf '(;SZ[3];B[bb];W[cc];B[];W[]' +
+              ';TW[aa][ba][ca][ab][bb][cb][ac][bc]' +
+              ';TCRESUME[]B[cb])'
+  tesuji_charm.game.initialize()
+  assert.boardState ['...'
+                     '.bb'
+                     '..w'], "initial board state"
+
+  setViewMoveNo 3  # after black's pass
+  assert.boardState ['...', '.b.', '..w'], "after black pass: board state"
+  assert.notOk isPointDame($pointAt 0, 0), "after black pass: dame not marked"
+
+  setViewMoveNo 4  # after white's pass
+  assert.boardState ['...', '.b.', '..w'], "after white pass: board state"
+  assert.ok isPointDame($pointAt 0, 0), "after white pass: dame marked"
+
+  setViewMoveNo 5  # after marking dead
+  assert.ok isPointWhiteScore($pointAt 0, 0), "after mark dead: points scored"
+
+  setViewMoveNo 6  # after resume
+  assert.boardState ['...', '.bb', '..w'], "after resume: board state"
+  assert.notOk isPointDame($pointAt 0, 0), "after resume: dame not marked"
+  assert.notOk isPointWhiteScore($pointAt 0, 0),
+               "after resume: points not scored"
 
 test "scores do not appear outside of marking mode", (assert) ->
   setInputSgf '(;SZ[3])'

@@ -401,13 +401,15 @@ stateFromSgfObject = (sgfObject, options={}) ->
       boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
-    if node.W
+    else if node.W
       moveNo += 1
       [x, y] = decodeSgfCoord node.W
       result = go_rules.getNewStateAndCaptures('white', x, y, boardState)
       boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
+    else if 'B' of node or 'W' of node or 'TB' of node or 'TW' of node
+      moveNo += 1
   if scoring
     [x, y] = [null, null]
     deadStones = deadFromUi ?
@@ -574,7 +576,7 @@ _lastPassInRun = (nodes) ->
       else
         break
     else
-      break
+      continue
   if lastPassSeen == null
     throw Error "no passes found before resumption node"
   return lastPassSeen
