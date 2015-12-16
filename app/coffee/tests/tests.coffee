@@ -126,7 +126,7 @@ test "test of testing helper function boardFromChars", (assert) ->
 
 module "common game page functions",
   setup: ->
-    setInputSgf ''
+    setInputSgf '(;SZ[3])'
     tesuji_charm.game.initialize()
 
 QUnit.assert.boardState = (chars2d, message) ->
