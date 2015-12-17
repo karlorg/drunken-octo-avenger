@@ -242,8 +242,8 @@ BoardDom = React.createClass
               then "placement #{@props.hoverColor}" \
               else ""
 
-    makermaker = (kind, className) -> (i, j) ->
-      React.DOM.div {className: className, key: kind}
+    makermaker = (kind, className) ->
+      (i, j) -> React.DOM.div {className: className, key: kind}
     makers = {}
     for own kind, className of classNames
       makers[kind] = makermaker(kind, className)
@@ -352,22 +352,22 @@ ScoreDom = React.createClass
     subDivs = [div {key: "blackpris"},
                    ["Black prisoners: ",
                     span {key: 2, className: "prisoners black"},
-                    prisoners.black],
+                         prisoners.black],
                div {key: "whitepris"},
                    ["White prisoners: ",
                     span {key: 2, className: "prisoners white"},
-                    prisoners.white]
+                         prisoners.white]
               ]
 
     if scores?
       subDivs.push div {key: "blackscore"},
                        ["Black score: ",
                         span {key: 2, className: "score black"},
-                        scores.black]
+                             scores.black]
       subDivs.push div {key: "whitescore"},
                        ["White score: ",
                         span {key: 2, className: "score white"},
-                        scores.white]
+                             scores.white]
 
     div {className: "score_block"}, subDivs
 
