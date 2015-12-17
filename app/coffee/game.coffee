@@ -203,87 +203,103 @@ BoardAreaDom = React.createClass
     {div} = React.DOM
     div {},
         [(React.createElement BoardDom,
+                              key: "BoardDom"
                               boardState: boardState
                               hoverColor: nextColor
                               clickCallback: onBoardClick
                               lastPlayed: lastPlayed
                               size: size),
          (React.createElement NavigationDom,
+                              key: "NavigationDom"
                               changeCallback: @onNavigate,
                               sgfObject: origSgfObject,
                               viewingMove: @state.viewingMove),
          (React.createElement ScoreDom,
+                              key: "ScoreDom"
                               prisoners: prisoners
                               scores: scores)]
 
 BoardDom = React.createClass
+
+  divMakers: ->
+    # this is function rather than a constant only because it varies based on
+    # the `hoverColor` prop
+    classNames =
+      topVert: "board_line board_line_vertical"
+      botVert: "board_line board_line_vertical board_line_bottom_vertical"
+      leftHoriz: "board_line board_line_horizontal"
+      rightHoriz: "board_line board_line_horizontal board_line_right_horizontal"
+      handicapPoint: "handicappoint"
+      blackStone: "stone black"
+      whiteStone: "stone white"
+      dame: "territory neutral"
+      blackScore: "territory black"
+      whiteScore: "territory white"
+      blackDead: "stone black dead"
+      whiteDead: "stone white dead"
+      lastPlayedMarker: "last-played"
+      hover: if @props.hoverColor \
+              then "placement #{@props.hoverColor}" \
+              else ""
+
+    makermaker = (kind, className) -> (i, j) ->
+      React.DOM.div {className: className, key: kind}
+    makers = {}
+    for own kind, className of classNames
+      makers[kind] = makermaker(kind, className)
+
+    makers
+
+  boardDivsForPos: (i, j) ->
+    {size} = @props
+    m = @divMakers()
+    result = []
+    if j > 0 then result.push m.topVert(i, j)
+    if j < size - 1 then result.push m.botVert(i, j)
+    if i > 0 then result.push m.leftHoriz(i, j)
+    if i < size - 1 then result.push m.rightHoriz(i, j)
+    if isHandicapPoint(size, j, i) then result.push m.handicapPoint(i, j)
+    result
+
+  stoneDivsForPos: (i, j) ->
+    {boardState, lastPlayed} = @props
+    m = @divMakers()
+    color = boardState[j][i]
+    result = switch color
+      when 'black' then [m.blackStone(i, j)]
+      when 'white' then [m.whiteStone(i, j)]
+      when 'empty' then [m.hover(i, j)]
+      when 'dame' then [m.dame(i, j)]
+      when 'blackscore' then [m.blackScore(i, j)]
+      when 'whitescore' then [m.whiteScore(i, j)]
+      when 'blackdead' then [m.blackDead(i, j), m.whiteScore(i, j)]
+      when 'whitedead' then [m.whiteDead(i, j), m.blackScore(i, j)]
+      else []
+    if i == lastPlayed.x and j == lastPlayed.y
+      result.push m.lastPlayedMarker(i, j)
+    result
+
   render: ->
     # boardState is the complete state to show, with the newly proposed
     # stone included if there is one.  lastPlayed is only used to locate
     # the 'new stone' marker, the stone it refers to should already be in
     # the boardState.
     {boardState, lastPlayed, size} = @props
-
     {div} = React.DOM
-    topVert = div {className: "board_line board_line_vertical"}
-    botVert = div {className: "board_line board_line_vertical
-                               board_line_bottom_vertical"}
-    leftHoriz = div {className: "board_line board_line_horizontal"}
-    rightHoriz = div {className: "board_line board_line_horizontal
-                                  board_line_right_horizontal"}
-    handicapPoint = div {className: "handicappoint" }
-    blackStone = div {className: "stone black"}
-    whiteStone = div {className: "stone white"}
-    dame = div {className: "territory neutral"}
-    blackScore = div {className: "territory black"}
-    whiteScore = div {className: "territory white"}
-    blackDead = div {className: "stone black dead"}
-    whiteDead = div {className: "stone white dead"}
-    lastPlayedMarker = div {className: "last-played"}
-    hover = if @props.hoverColor \
-            then div {className: "placement #{@props.hoverColor}"} \
-            else div {}
 
-    boardDivsForPos = (i, j) ->
-      result = []
-      if j > 0 then result.push topVert
-      if j < size - 1 then result.push botVert
-      if i > 0 then result.push leftHoriz
-      if i < size - 1 then result.push rightHoriz
-      if isHandicapPoint(size, j, i) then result.push handicapPoint
-      result
-
-    stoneDivsForPos = (i, j) ->
-      color = boardState[j][i]
-      result = switch color
-        when 'black' then [blackStone]
-        when 'white' then [whiteStone]
-        when 'empty' then [hover]
-        when 'dame' then [dame]
-        when 'blackscore' then [blackScore]
-        when 'whitescore' then [whiteScore]
-        when 'blackdead' then [blackDead, whiteScore]
-        when 'whitedead' then [whiteDead, blackScore]
-        else []
-      if i == lastPlayed.x and j == lastPlayed.y
-        result.push lastPlayedMarker
-      result
-
-    onClickForPos = (i, j) => (event) =>
-      @props.clickCallback {
-        x: i
-        y: j
-      }
+    onClickForPos = (i, j) =>
+      (event) => @props.clickCallback {x: i, y: j}
 
     div {className: 'goban'},
         for j in [0...size]
-          div {className: 'goban-row'},
+          div {key: j, className: 'goban-row'},
               for i in [0...size]
                 (div {
+                  key: i
                   className: "gopoint row-#{j} col-#{i}"
                   onClick: onClickForPos(i, j)},
-                    (boardDivsForPos i, j),
-                    (stoneDivsForPos i, j))
+                    (@boardDivsForPos i, j),
+                    (@stoneDivsForPos i, j))
 
 NavigationDom = React.createClass
   render: ->
@@ -333,19 +349,27 @@ ScoreDom = React.createClass
   render: ->
     {prisoners, scores} = @props
     {div, span} = React.DOM
+    subDivs = [div {key: "blackpris"},
+                   ["Black prisoners: ",
+                    span {key: 2, className: "prisoners black"},
+                    prisoners.black],
+               div {key: "whitepris"},
+                   ["White prisoners: ",
+                    span {key: 2, className: "prisoners white"},
+                    prisoners.white]
+              ]
+
     if scores?
-      blackScore = div {}, ["Black score: ",
-                            span {className: "score black"}, scores.black]
-      whiteScore = div {}, ["White score: ",
-                            span {className: "score white"}, scores.white]
-    else
-      blackScore = whiteScore = div {}
-    div {className: "score_block"},
-        [div {}, ["Black prisoners: ",
-                  span {className: "prisoners black"}, prisoners.black],
-         div {}, ["White prisoners: ",
-                  span {className: "prisoners white"}, prisoners.white],
-         blackScore, whiteScore]
+      subDivs.push div {key: "blackscore"},
+                       ["Black score: ",
+                        span {key: 2, className: "score black"},
+                        scores.black]
+      subDivs.push div {key: "whitescore"},
+                       ["White score: ",
+                        span {key: 2, className: "score white"},
+                        scores.white]
+
+    div {className: "score_block"}, subDivs
 
 a1FromSgfTag = (tag) ->
   if typeof tag is 'string'
