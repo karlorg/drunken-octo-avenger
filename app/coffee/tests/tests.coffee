@@ -3,7 +3,7 @@
 $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 imageSrc = ($point) -> $point.find('img').attr('src')
 
-contains_selector = tesuji_charm.game_common.contains_selector
+contains_selector = tesuji_charm.game.contains_selector
 
 isPointEmpty = ($point) -> not(contains_selector $point, '.stone,.territory')
 isPointBlack = ($point) -> contains_selector $point, '.stone.black'
@@ -86,33 +86,76 @@ getResponseSgf = -> $('input#response').val()
 QUnit.assert.prisonerCounts = (black, white, message = null) ->
   message = if message then "#{message}: " else ''
   actualBlack = $('.prisoners.black').text()
-  @equal parseInt(actualBlack), black,
+  @equal parseInt(actualBlack, 10), black,
     "#{message}Black prisoners should be #{black}, is #{actualBlack}"
   actualWhite = $('.prisoners.white').text()
-  @equal parseInt(actualWhite), white,
+  @equal parseInt(actualWhite, 10), white,
     "#{message}White prisoners should be #{white}, is #{actualWhite}"
 
 QUnit.assert.scores = (black, white, message = null) ->
   message = if message then "#{message}: " else ''
   actualBlack = $('.score.black').text()
-  @equal parseInt(actualBlack), black,
+  @equal parseInt(actualBlack, 10), black,
     "#{message}Black score should be #{black}, is #{actualBlack}"
   actualWhite = $('.score.white').text()
-  @equal parseInt(actualWhite), white,
+  @equal parseInt(actualWhite, 10), white,
     "#{message}White score should be #{white}, is #{actualWhite}"
 
 # ============================================================================
 
+module "helper function for testing"
+
+boardFromChars = (chars2d) ->
+  "Produce a board state from a character-based shorthand.
+
+  eg. ['.b.', 'bw.', '.b.']"
+  for row in chars2d
+    for char in row
+      switch char
+        when 'b' then 'black'
+        when 'w' then 'white'
+        else 'empty'
+
+test "test of testing helper function boardFromChars", (assert) ->
+  assert.deepEqual (boardFromChars ['.b.', 'bw.', '.b.']),
+                   [['empty', 'black', 'empty']
+                    ['black', 'white', 'empty']
+                    ['empty', 'black', 'empty']]
+
+# ============================================================================
 
 module "common game page functions",
   setup: ->
-    setInputSgf ''
-    tesuji_charm.game_common.initialize()
+    setInputSgf '(;SZ[3])'
+    tesuji_charm.game.initialize()
 
+QUnit.assert.boardState = (chars2d, message) ->
+  expected = boardFromChars chars2d
+  actual = tesuji_charm.game.readBoardState()
+  result = true
+  for row, j in expected
+    for point, i in row
+      (result = false) if actual[j][i] != point
+  @push result, actual, expected, (message or "")
+
+navigationMovesLength = -> $('.move_select').children('option').length
+
+setViewMoveNo = (n) ->
+  select = $('.move_select').val(n).get(0)
+  React.addons.TestUtils.Simulate.input(select, target: select)
+  return
+
+test "helper function readBoardState and assert.boardState", (assert) ->
+  # readBoardState is invoked by the boardState assert
+  setInputSgf '(;SZ[3];B[ca];W[bc])'
+  tesuji_charm.game.initialize()
+  assert.boardState ['..b'
+                     '...'
+                     '.w.']
 
 test "initialize creates board from SGF data", (assert) ->
   setInputSgf '(;SZ[3];B[ca];W[bc])'
-  tesuji_charm.game_common.initialize()
+  tesuji_charm.game.initialize()
   assert.equal $('.goban').length, 1, "exactly one goban element exists"
   assert.ok isPointEmpty($pointAt 0, 0), "(0,0) empty"
   assert.ok isPointBlack($pointAt 2, 0), "(2,0) black"
@@ -120,21 +163,26 @@ test "initialize creates board from SGF data", (assert) ->
   assert.ok $('.row-2.col-2').length == 1, "board is at least 3x3"
   assert.ok $('.row-3.col-3').length == 0, "board is smaller than 4x4"
 
+test "last move correctly indicated", ->
+  setInputSgf '(;SZ[3];B[ab])'
+  tesuji_charm.game.initialize()
+  $point = $pointAt 0, 1
+  ok isPointLastPlayed($point), 'last placed stone indicated'
+
 test "setup stones in SGF (tags AB & AW)", (assert) ->
   # ensure we test both a list of setup stones (AB here) and a single
   # setup stone (AW here) since the smartgame library produces an
   # array for one and a single value for the other
   setInputSgf '(;SZ[3];AB[ba][ab][bc]AW[bb])'
-  tesuji_charm.game_common.initialize()
-  expected = [ [ 'empty', 'black', 'empty' ]
-               [ 'black', 'white', 'empty' ]
-               [ 'empty', 'black', 'empty' ] ]
-  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+  tesuji_charm.game.initialize()
+  assert.boardState ['.b.'
+                     'bw.'
+                     '.b.']
 
 test "prisoner counts set from SGF", (assert) ->
   testSgf = (sgf, black, white) ->
     setInputSgf sgf
-    tesuji_charm.game_common.initialize()
+    tesuji_charm.game.initialize()
     assert.prisonerCounts(black, white)
 
   testSgf '(;SZ[3];AW[ab]B[aa])', 0, 0
@@ -145,24 +193,71 @@ test "prisoner counts set from SGF", (assert) ->
   testSgf '(;SZ[3];AW[ab]B[aa];W[ba])', 1, 0
   testSgf '(;SZ[3];AW[aa]AB[ba]B[ab])', 0, 1
 
-test "helper function readBoardState", (assert) ->
-  setInputSgf '(;SZ[3];B[ca];W[bc])'
-  tesuji_charm.game_common.initialize()
-  expected = [ [ 'empty', 'empty', 'black' ]
-               [ 'empty', 'empty', 'empty' ]
-               [ 'empty', 'white', 'empty' ] ]
-  assert.deepEqual tesuji_charm.game_common.readBoardState(), expected
+test "can view past board states", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa]B[ac];W[ab];B[bb];W[ca])'
+  tesuji_charm.game.initialize()
+  assert.boardState ['b.w'
+                     '.b.'
+                     'b..'], "initial board state"
+
+  setViewMoveNo 0
+  assert.boardState ['...', '...', '...'], "board state at move 0"
+  assert.notOk $('.last-played').length, "no last-move marker on move 0"
+
+  setViewMoveNo 2
+  assert.boardState ['b..', 'w..', 'b..'], "board state at move 2"
+  assert.equal $('.last-played').length, 1, "exactly one last-move marker"
+  assert.ok $('.col-0.row-1').find('.last-played').length,
+    "last-move marker is at (0,1)"
+
+  setViewMoveNo 3
+  assert.boardState ['b..', '.b.', 'b..'], "board state at move 3"
+  assert.equal $('.last-played').length, 1, "exactly one last-move marker"
+  assert.ok $('.col-1.row-1').find('.last-played').length,
+    "last-move marker is at (1,1)"
+
+test "viewing past moves after a resumption", (assert) ->
+  setInputSgf '(;SZ[3];B[bb];W[cc];B[];W[]' +
+              ';TW[aa][ba][ca][ab][bb][cb][ac][bc]' +
+              ';TCRESUME[]B[cb])'
+  tesuji_charm.game.initialize()
+  assert.boardState ['...'
+                     '.bb'
+                     '..w'], "initial board state"
+
+  setViewMoveNo 3  # after black's pass
+  assert.boardState ['...', '.b.', '..w'], "after black pass: board state"
+  assert.notOk isPointDame($pointAt 0, 0), "after black pass: dame not marked"
+
+  setViewMoveNo 4  # after white's pass
+  assert.boardState ['...', '.b.', '..w'], "after white pass: board state"
+  assert.ok isPointDame($pointAt 0, 0), "after white pass: dame marked"
+
+  setViewMoveNo 5  # after marking dead
+  assert.ok isPointWhiteScore($pointAt 0, 0), "after mark dead: points scored"
+
+  setViewMoveNo 6  # after resume
+  assert.boardState ['...', '.bb', '..w'], "after resume: board state"
+  assert.notOk isPointDame($pointAt 0, 0), "after resume: dame not marked"
+  assert.notOk isPointWhiteScore($pointAt 0, 0),
+               "after resume: points not scored"
+
+test "scores do not appear outside of marking mode", (assert) ->
+  setInputSgf '(;SZ[3])'
+  tesuji_charm.game.initialize()
+  assert.notOk $('.score').length, "score class should not appear in page"
 
 
 # ============================================================================
 
 
-module 'Basic game page',
+module 'Game page: playing stones',
   setup: ->
     setInputSgf '(;SZ[3])'
     $('input#response').val ''
     tesuji_charm.onTurn = true
-    tesuji_charm.game_basic.initialize()
+    tesuji_charm.game.initialize()
+
 
 test 'clicking multiple points moves black stone', ->
   $point1 = $pointAt 0, 0
@@ -176,36 +271,40 @@ test 'clicking multiple points moves black stone', ->
   ok isPointEmpty($point1), 'after second click, first clicked point clear'
   ok isPointBlack($point2), 'after second click, second clicked point black'
 
+test "off turn, no hover effects and can't play stones", (assert) ->
+  tesuji_charm.onTurn = false
+  tesuji_charm.game.initialize()
+  oldResponse = getResponseSgf()
+  assert.notOk $('.goban .placement').length, "hover effect is disabled"
+  $point = $pointAt 0, 0
+  $point.click()
+  assert.ok isPointEmpty($point), "no stone placed"
+  equal getResponseSgf(), oldResponse, "server response not changed"
+
 test "white stones play correctly", ->
   setInputSgf '(;SZ[3];B[aa])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
   $point.click()
   ok isPointWhite($point), 'second player should be White'
 
-test "last move correctly indicated", ->
-  setInputSgf '(;SZ[3];B[ab])'
-  tesuji_charm.game_basic.initialize()
-  $point = $pointAt 0, 1
-  ok isPointLastPlayed($point), 'last placed stone indicated'
-
 test "next player correctly determined with info node", ->
   setInputSgf '(;SZ[3])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
   $point.click()
   ok isPointBlack($point), 'first player should be Black despite SGF info node'
 
 test 'clicking multiple points updates hidden form', ->
-  setInputSgf '(;)'
-  tesuji_charm.game_basic.initialize()
+  setInputSgf '(;SZ[3])'
+  tesuji_charm.game.initialize()
   $point1 = $pointAt 0, 0
   $point2 = $pointAt 1, 2
 
   $point1.click()
-  equal getResponseSgf(), '(;B[aa])', "first stone sets correct SGF"
+  equal getResponseSgf(), '(;SZ[3];B[aa])', "first stone sets correct SGF"
   $point2.click()
-  equal getResponseSgf(), '(;B[bc])', "second stone sets correct SGF"
+  equal getResponseSgf(), '(;SZ[3];B[bc])', "second stone sets correct SGF"
 
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
@@ -217,7 +316,7 @@ test 'Confirm button disabled until stone placed', ->
 
 test 'Pass button sets data and submits', ->
   setInputSgf '(;SZ[3])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   form = $('#main_form').get(0)
   oldSubmit = form.submit
   submitCalled = false
@@ -231,7 +330,7 @@ test 'Pass button sets data and submits', ->
 
 test 'Pass move is for correct color', ->
   setInputSgf '(;SZ[3];B[])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   form = $('#main_form').get(0)
   oldSubmit = form.submit
   form.submit = ->
@@ -243,16 +342,33 @@ test 'Pass move is for correct color', ->
 
 test "clicking a pre-existing stone does nothing", (assert) ->
   setInputSgf '(;SZ[3];AW[bb])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
   $point.click()
   assert.notOk isPointBlack($point), "point has not become black"
   assert.notOk $('input#response').val().match(/B\[bb]/),
     "SGF response does not contain black stone"
 
+test "proposing an illegal move does nothing", (assert) ->
+  setInputSgf '(;SZ[4]' +
+              ';AB[ba][ca][ab][bc][cc];AW[cb]' +
+              ';B[db])'
+  # .bb.
+  # b.wb
+  # .bb.
+  # ....
+  tesuji_charm.game.initialize()
+  $point = $pointAt 1, 1
+  $point.click()
+  assert.notOk isPointWhite($point), "point has not become white"
+  assert.notOk isPointEmpty($pointAt 2, 1),
+    "existing white stone has not been captured"
+  assert.notOk $('input#response').val().match(/W\[bb]/),
+    "SGF response does not contain new stone"
+
 test "captured stones are removed and prisoner counts updated", (assert) ->
   setInputSgf '(;SZ[3];B[ba];W[aa])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   assert.prisonerCounts 0, 0
   # now make the capture
   $pointAt(0, 1).click()
@@ -264,7 +380,7 @@ test "prisoner counts with pre-existing prisoners", (assert) ->
   setInputSgf ('(;SZ[5];AB[ab][ee]AW[aa][de]' +
                ';B[ba];W[ed]' +
                ';AB[ce][dd])')
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   assert.prisonerCounts 1, 1
   $pointAt(2, 2).click()
   assert.prisonerCounts 1, 1
@@ -273,56 +389,102 @@ test "prisoner counts with pre-existing prisoners", (assert) ->
 
 test "correct color after resume with two passes (black first)", (assert) ->
   setInputSgf '(;SZ[3];B[];W[];TCRESUME[])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
   $point.click()
   assert.ok isPointBlack($point)
 
 test "correct color after resume with three passes (black first)", (assert) ->
   setInputSgf '(;SZ[3];B[];W[];B[];TCRESUME[])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
   $point.click()
   assert.ok isPointBlack($point)
 
 test "correct color after resume with two passes (white first)", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[];B[];TCRESUME[])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
   $point.click()
   assert.ok isPointWhite($point)
 
 test "correct color after resume with three passes (white first)", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[];B[];W[];TCRESUME[])'
-  tesuji_charm.game_basic.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
   $point.click()
   assert.ok isPointWhite($point)
+
+test "regression: proposed stone not listed in navigation UI", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[bb])'
+  tesuji_charm.game.initialize()
+  assert.equal navigationMovesLength(), 3, 'start with 3 moves listed'
+  $pointAt(2, 2).click()
+  assert.equal navigationMovesLength(), 3, 'still 3 moves with proposed move'
+
+test "behaviour changes while viewing past moves", (assert) ->
+  setInputSgf '(;SZ[3];B[aa];W[bb])'
+  tesuji_charm.game.initialize()
+  $confirm_button = $('button.confirm_button')
+  $point = $pointAt 2, 2
+  $point.click()
+
+  setViewMoveNo 1
+  assert.ok isPointEmpty($point), "proposed stone vanishes on viewing past move"
+  assert.ok $confirm_button.prop('disabled'), "confirm button disabled"
+  assert.notOk $point.find('.placement').length, "hover effect is gone"
+
+  $point.click()
+  assert.ok isPointEmpty($point), "no stone appears"
+
+  setViewMoveNo 2
+  assert.ok $confirm_button.prop('disabled'), "confirm button still disabled"
+  assert.ok isPointEmpty($point), "proposed stone does not reappear"
+  assert.ok $point.find('.placement').length, "hover effect is back"
+
+  $point.click()
+  assert.ok isPointBlack($point), "after returning to end, stone can be placed"
+  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+
+test "proposed stone removed when viewing past moves", (assert) ->
+  initialSgf = '(;SZ[3];B[bb])'
+  setInputSgf initialSgf
+  tesuji_charm.game.initialize()
+  $pointAt(0, 0).click()
+  assert.boardState ['w..', '.b.', '...'], "board state with proposed stone"
+  assert.equal getResponseSgf(), '(;SZ[3];B[bb];W[aa])',
+               "SGF with proposed move"
+  setViewMoveNo 0
+  assert.boardState ['...', '...', '...'], "board state on past move"
+  assert.equal getResponseSgf(), initialSgf,
+               "SGF on turn 0"
+  setViewMoveNo 1
+  assert.boardState ['...', '.b.', '...'], "proposed stone doesn't re-appear"
+  assert.equal getResponseSgf(), initialSgf,
+               "SGF on return to turn 1"
 
 
 # ============================================================================
 
 
-module 'Game page with marking interface',
+module 'Game page: marking dead stones',
   beforeEach: ->
-    $("#qunit-fixture").append $("<div/>",
-                                 id: 'with_scoring'
-                                 class: 'with_scoring')
-    setInputSgf '(;SZ[3])'
+    tesuji_charm.onTurn = true
+    setInputSgf '(;SZ[3];B[];W[])'
 
 test "clicking empty points in marking mode does nothing", (assert) ->
-  tesuji_charm.game_marking.initialize()
+  tesuji_charm.game.initialize()
   $point = $pointAt(1, 1)
   assert.ok isPointDame($point), "centre point starts dame"
   $point.click()
   assert.ok isPointDame($point), "still dame after click"
 
 test "mixed scoring board", (assert) ->
-  setInputSgf '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc])'
-  # b.w
+  setInputSgf '(;SZ[3];B[ba];W[bb];B[ab];W[cb];B[cc];W[bc];B[];W[])'
   # .b.
-  # bbw
-  tesuji_charm.game_marking.initialize()
+  # bww
+  # .w.
+  tesuji_charm.game.initialize()
   assert.ok isPointBlackScore($pointAt(0, 0)), "(0,0) black"
   assert.notOk isPointWhiteScore($pointAt(0, 0)), "(0,0) white"
   for [x, y] in [[0,1], [0,2], [1,0], [1,1], [1,2], [2,0], [2,1]]
@@ -333,11 +495,11 @@ test "mixed scoring board", (assert) ->
 
 test "clicking live stones makes them dead, " + \
      "clicking again brings them back", (assert) ->
-  setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac])'
+  setInputSgf '(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac];W[];B[])'
   # b.w
   # .b.  (white captured at ab)
   # bbw
-  tesuji_charm.game_marking.initialize()
+  tesuji_charm.game.initialize()
   assert.prisonerCounts 0, 1, "initial layout"
   assert.scores 2, 0, "initial layout"
 
@@ -371,11 +533,11 @@ test "clicking live stones makes them dead, " + \
 
 test "killing stones revives neighbouring enemy groups " + \
      "automatically", (assert) ->
-  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc])'
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
   # b.b
   # .b.
   # bbw
-  tesuji_charm.game_marking.initialize()
+  tesuji_charm.game.initialize()
   $pointAt(1, 1).click()
   $pointAt(2, 2).click()
   assert.notOk isPointBlackDead($pointAt 1, 1),
@@ -389,18 +551,47 @@ test "initialization sets initial dead stones from SGF", (assert) ->
   # bww
   # .b.
   # bbw
-  tesuji_charm.game_marking.initialize()
+  tesuji_charm.game.initialize()
   assert.ok isPointBlackDead($pointAt 0, 0), "(0, 0) is dead"
   assert.ok isPointBlackDead($pointAt 1, 1), "(1, 1) is dead"
   assert.ok isPointWhiteScore($pointAt 0, 1), "(0, 1) scores for White"
   assert.ok isPointWhiteScore($pointAt 1, 1), "(1, 1) scores for White"
 
-test "Form is updated with current dead stones", (assert) ->
-  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][ab]AW[cb])'
+test "Form starts with correct SGF when no stones dead", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
   # b.b
   # .b.
   # bbw
-  tesuji_charm.game_marking.initialize()
+  tesuji_charm.game.initialize()
+  expected = ///
+    AB(\[\w\w]){5}  # sanity check: black setup is retained with 5 coords
+    .*              # (don't check white setup as we can't guarantee the order)
+    TB(\[\w\w]){2}  # black territory appears with 2 coords
+    ///
+  actual = $('input#response').val()
+  assert.ok actual.match(expected), "2 black territory coords"
+
+test "Form starts with correct SGF with dead stones", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[];' +
+              'TB[ab][ba][cb][cc])'
+  # b.b
+  # .b.
+  # bbw
+  tesuji_charm.game.initialize()
+  expected = ///
+    AB(\[\w\w]){5}  # sanity check: black setup is retained with 5 coords
+    .*              # (don't check white setup as we can't guarantee the order)
+    TB(\[\w\w]){4}  # black territory appears with 4 coords
+    ///
+  actual = $('input#response').val()
+  assert.ok actual.match(expected), "4 black territory coords"
+
+test "Form is updated with current dead stones", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
+  # b.b
+  # .b.
+  # bbw
+  tesuji_charm.game.initialize()
   $pointAt(1, 1).click()
   # to keep test simple, we just look for right number of elements in
   # each tag so that we can accept any order
@@ -415,14 +606,23 @@ test "Form is updated with current dead stones", (assert) ->
   assert.notOk actual.match(tbPattern), "no TB property in SGF"
 
   # here we check for a specific coord
-  $pointAt(2, 1).click()
-  expected = /TB[\]\[\w]*\[bc]/  # TB, any number of [] and letters, [cc]
+  $pointAt(2, 2).click()
+  expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
 
+test "Confirm button live while marking dead stones", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
+  # b.b
+  # .b.
+  # bbw
+  tesuji_charm.game.initialize()
+  $confirm_button = $('button.confirm_button')
+  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+
 test "Resume button updates response and submits", (assert) ->
   setInputSgf '(;SZ[3];B[];W[])'
-  tesuji_charm.game_marking.initialize()
+  tesuji_charm.game.initialize()
   form = $('#main_form').get(0)
   oldSubmit = form.submit
   submitCalled = false
@@ -434,6 +634,60 @@ test "Resume button updates response and submits", (assert) ->
     "resume button sets SGF in response"
   ok submitCalled, "form submit function called"
   form.submit = oldSubmit
+
+test "behaviour changes while viewing past moves", (assert) ->
+  setInputSgf ('(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac];W[];B[]' +
+               ';TW[aa][ba][ab][bb][cb][ac][bc]')
+  # b.w
+  # .b.  (white captured at ab)
+  # bbw
+  tesuji_charm.game.initialize()
+  $confirm_button = $('button.confirm_button')
+
+  assert.ok isPointBlackDead($pointAt 0, 0), "initial layout shows dead stones"
+  ($pointAt 2, 0).click()
+  assert.ok isPointWhiteDead($pointAt 2, 0), "click kills stone"
+  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+
+  setViewMoveNo 0
+  assert.notOk isPointDame($pointAt 1, 0),
+    "regression: points not shown as dame on turn 0"
+  assert.ok $confirm_button.prop('disabled'),
+    "turn 0, confirm button disabled"
+
+  setViewMoveNo 6
+  assert.notOk isPointDame($pointAt 1, 0),
+    "earlier move, dame points not marked"
+  assert.ok isPointEmpty($pointAt 1, 0), "earlier move, dame points not marked"
+  assert.notOk isPointWhiteDead($pointAt 2, 0),
+    "earlier move, dead stones are unmarked"
+  ($pointAt 2, 0).click()
+  assert.notOk isPointWhiteDead($pointAt 2, 0),
+    "earlier move, click does nothing"
+  assert.ok $confirm_button.prop('disabled'),
+    "turn 6, confirm button disabled"
+
+  setViewMoveNo 9
+  assert.notOk isPointBlackDead($pointAt 0, 0),
+    "before black stones marked dead, black stone not shown as dead"
+  assert.ok isPointDame($pointAt 1, 0),
+    "before black stones marked dead, dame point marked"
+  ($pointAt 2, 0).click()
+  assert.notOk isPointWhiteDead($pointAt 2, 0),
+    "before black stones marked dead, click does nothing"
+  assert.ok $confirm_button.prop('disabled'),
+    "turn 9, confirm button disabled"
+
+  setViewMoveNo 10
+  assert.ok isPointBlackDead($pointAt 0, 0),
+    "return to latest move, dead stones from other player re-marked"
+  assert.notOk isPointWhiteDead($pointAt 2, 0),
+    "latest move, dead stones we set up before are not re-marked"
+  assert.notOk $confirm_button.prop('disabled'),
+    "latest move, confirm button enabled"
+
+  ($pointAt 2, 0).click()
+  assert.ok isPointWhiteDead($pointAt 2, 0), "click once again kills stone"
 
 
 # ============================================================================

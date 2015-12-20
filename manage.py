@@ -130,9 +130,22 @@ def run_test_server():
     app.run(port=port, use_reloader=False)
 
 @manager.command
-def setup_finished_game(black_email, white_email):
+def setup_finished_game(black, white):
     """Create a game in the marking dead stones phase, for manual testing. """
-    main.setup_finished_game_internal(black_email, white_email)
+    load_sgf(os.path.join(config.basedir, 'sgfs', 'test-game.sgf'),
+             black, white)
+
+@manager.command
+def load_sgf(filename, black, white):
+    """Create a game from an SGF file.
+
+    Dangerous; if the SGF doesn't parse you'll get errors when running
+    the server and will have to manually delete the game from the
+    database.
+    """
+    with open(filename) as file:
+        sgf = file.read()
+    main.create_game_internal(black, white, sgf=sgf)
 
 if __name__ == "__main__":
     manager.run()

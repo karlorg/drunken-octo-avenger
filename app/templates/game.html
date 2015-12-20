@@ -205,6 +205,21 @@
     background: #925F7D;
 }
 
+.board_nav_block {
+    width: 94%;
+    margin: 0 auto;
+}
+
+.move_slider {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.score_block {
+    width: 94%;
+    margin: 0 auto;
+}
+
 </style>
 
 <div id="match-info">
@@ -297,18 +312,11 @@
 <script>
  $('.chat-comments').scrollTop($('.chat-comments')[0].scrollHeight);
 </script>
+<script src="/static/react.js"></script>
 <script src="/static/compiled-js/go_rules.js"></script>
 <script src="/static/compiled-js/smartgame.js"></script>
-<script src="/static/compiled-js/game_common.js"></script>
-{% if with_scoring %}
-<script src="/static/compiled-js/game_marking.js"></script>
+<script src="/static/compiled-js/game.js"></script>
 <script>
-window.tesuji_charm.game_marking.initialize();
+window.tesuji_charm.game.initialize();
 </script>
-{% else %}  <!-- if with_scoring -->
-<script src="/static/compiled-js/game_basic.js"></script>
-<script>
-window.tesuji_charm.game_basic.initialize();
-</script>
-{% endif %} <!-- if with_scoring -->
 {% endblock %}

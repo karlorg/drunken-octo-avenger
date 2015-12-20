@@ -14,31 +14,29 @@
 
     <div id="content">
         <div id="board-area">
-            <div id="board">
-                <form id="main_form" method="POST" action="/play/0">
-                    <input type="hidden" id="data"></input>
-                    <input type="hidden" id="response"></input>
-                    <button type="submit"
-                            class="confirm_button" name='confirm_button'>Confirm</button>
-                    <button type="button"
-                            class="pass_button" name='pass_button'>Pass</button>
-                    <button type="button"
-                            class="resign" name='resign_button'>Resign</button>
-                    <button type="button"
-                            class="resume_button" name='resume_button'>Resume</button>
-                </form>
-            </div>
+            <div id="board"></div>
+            <form id="main_form" method="POST" action="/play/0">
+                <input type="hidden" id="data"></input>
+                <input type="hidden" id="response"></input>
+                <button type="submit"
+                        class="confirm_button" name='confirm_button'>Confirm</button>
+                <button type="button"
+                        class="pass_button" name='pass_button'>Pass</button>
+                <button type="button"
+                        class="resign" name='resign_button'>Resign</button>
+                <button type="button"
+                        class="resume_button" name='resume_button'>Resume</button>
+            </form>
         </div>
     </div>
 </div>
 
 <script src="../jquery.js"></script>
+<script src="../react-with-addons.js"></script>
 <script src="../compiled-js/persona.js" data-cover></script>
 <script src="../compiled-js/smartgame.js" data-cover></script>
 <script src="../compiled-js/go_rules.js" data-cover></script>
-<script src="../compiled-js/game_common.js" data-cover></script>
-<script src="../compiled-js/game_basic.js" data-cover></script>
-<script src="../compiled-js/game_marking.js" data-cover></script>
+<script src="../compiled-js/game.js" data-cover></script>
 <script src="qunit.js"></script>
 <script src="blanket.js"></script>
 <script src="../compiled-js/tests/tests.js"></script>
