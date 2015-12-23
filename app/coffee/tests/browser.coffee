@@ -195,7 +195,8 @@ class ClientSideJsTest extends BrowserTest
   description: "Run client-side JS tests and ensure they pass."
   numTests: 1
   testBody: (test) ->
-    casper.thenOpen serverUrl + "/static/tests/tests.html", ->
+    qunitUrl = serverUrl + "/static/tests/tests.html"
+    casper.thenOpen qunitUrl, ->
       predicate = ->
         (casper.exists '.qunit-pass') or (casper.exists '.qunit-fail')
       foundFunc = ->
@@ -398,8 +399,8 @@ class ChallengeTest extends BrowserTest
     casper.thenOpen serverUrl, =>
       @assertNumGames test, 0, 0
 
-
 registerTest new ChallengeTest
+
 
 class PlaceStonesTest extends BrowserTest
   names: ['PlaceStonesTest']
