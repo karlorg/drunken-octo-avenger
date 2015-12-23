@@ -456,7 +456,7 @@ deadStonesFromSgfObject = (sgfObject, state, options={}) ->
   accordingly, and return an array of points for all dead stones."
   {moves} = options
   nodes = sgfObject.gameTrees[0].nodes
-  nodeIndex = if moves \
+  nodeIndex = if moves? \
               then nodeNoFromActionNo sgfObject, moves \
               else nodes.length - 1
   node = nodes[nodeIndex]
@@ -464,12 +464,10 @@ deadStonesFromSgfObject = (sgfObject, state, options={}) ->
   for tag in node.TB or []
     [x, y] = decodeSgfCoord tag
     if state[y][x] == 'white'
-      state[y][x] = 'whitedead'
       deadStones.push [x, y]
   for tag in node.TW or []
     [x, y] = decodeSgfCoord tag
     if state[y][x] == 'black'
-      state[y][x] = 'blackdead'
       deadStones.push [x, y]
   deadStones
 

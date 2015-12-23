@@ -45,7 +45,10 @@ def coffeelint():
 
 @manager.command
 def coffeebuild():
-    return run_command('coffee -c -o app/static/compiled-js app/coffee')
+    return run_command(
+        'coffee -c -o app/static/compiled-js app/coffee &&'
+        'coffee -c -o app/static/compiled-js/tests app/coffee/tests'
+    )
 
 @manager.command
 def test_browser(name):

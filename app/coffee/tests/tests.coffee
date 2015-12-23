@@ -3,6 +3,13 @@
 $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 imageSrc = ($point) -> $point.find('img').attr('src')
 
+# under PhantomJS (our automated browser testing tool), jQuery's
+# `$element.click()` method doesn't trigger React's event handlers
+# (although strangely, it does in FF and Chrome).  So to work around
+# that we use React's TestUtils to simulate clicks instead.
+click$point = ($point) ->
+  React.addons.TestUtils.Simulate.click $point.get(0)
+
 contains_selector = tesuji_charm.game.contains_selector
 
 isPointEmpty = ($point) -> not(contains_selector $point, '.stone,.territory')
@@ -264,10 +271,10 @@ test 'clicking multiple points moves black stone', ->
   $point2 = $pointAt 1, 2
 
   ok isPointEmpty($point1), 'first point is initially empty'
-  $point1.click()
+  click$point $point1
   notOk isPointEmpty($point1), 'after click, no longer empty'
   ok isPointBlack($point1), 'after click, is black stone'
-  $point2.click()
+  click$point $point2
   ok isPointEmpty($point1), 'after second click, first clicked point clear'
   ok isPointBlack($point2), 'after second click, second clicked point black'
 
@@ -277,7 +284,7 @@ test "off turn, no hover effects and can't play stones", (assert) ->
   oldResponse = getResponseSgf()
   assert.notOk $('.goban .placement').length, "hover effect is disabled"
   $point = $pointAt 0, 0
-  $point.click()
+  click$point($point)
   assert.ok isPointEmpty($point), "no stone placed"
   equal getResponseSgf(), oldResponse, "server response not changed"
 
@@ -285,14 +292,14 @@ test "white stones play correctly", ->
   setInputSgf '(;SZ[3];B[aa])'
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   ok isPointWhite($point), 'second player should be White'
 
 test "next player correctly determined with info node", ->
   setInputSgf '(;SZ[3])'
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   ok isPointBlack($point), 'first player should be Black despite SGF info node'
 
 test 'clicking multiple points updates hidden form', ->
@@ -301,16 +308,16 @@ test 'clicking multiple points updates hidden form', ->
   $point1 = $pointAt 0, 0
   $point2 = $pointAt 1, 2
 
-  $point1.click()
+  click$point $point1
   equal getResponseSgf(), '(;SZ[3];B[aa])', "first stone sets correct SGF"
-  $point2.click()
+  click$point $point2
   equal getResponseSgf(), '(;SZ[3];B[bc])', "second stone sets correct SGF"
 
 test 'Confirm button disabled until stone placed', ->
   $button = $('button.confirm_button')
   equal $button.prop('disabled'), true,
     'starts out disabled'
-  $('.goban .gopoint').first().click()
+  click$point $pointAt(0, 0)
   equal $button.prop('disabled'), false,
     'enabled after stone placed'
 
@@ -344,7 +351,7 @@ test "clicking a pre-existing stone does nothing", (assert) ->
   setInputSgf '(;SZ[3];AW[bb])'
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   assert.notOk isPointBlack($point), "point has not become black"
   assert.notOk $('input#response').val().match(/B\[bb]/),
     "SGF response does not contain black stone"
@@ -359,7 +366,7 @@ test "proposing an illegal move does nothing", (assert) ->
   # ....
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   assert.notOk isPointWhite($point), "point has not become white"
   assert.notOk isPointEmpty($pointAt 2, 1),
     "existing white stone has not been captured"
@@ -371,7 +378,7 @@ test "captured stones are removed and prisoner counts updated", (assert) ->
   tesuji_charm.game.initialize()
   assert.prisonerCounts 0, 0
   # now make the capture
-  $pointAt(0, 1).click()
+  click$point($pointAt(0, 1))
   # corner should be blank now
   assert.ok isPointEmpty($pointAt(0, 0)), "corner point is now empty"
   assert.prisonerCounts 0, 1
@@ -382,44 +389,44 @@ test "prisoner counts with pre-existing prisoners", (assert) ->
                ';AB[ce][dd])')
   tesuji_charm.game.initialize()
   assert.prisonerCounts 1, 1
-  $pointAt(2, 2).click()
+  click$point($pointAt(2, 2))
   assert.prisonerCounts 1, 1
-  $pointAt(4, 4).click()
+  click$point($pointAt(4, 4))
   assert.prisonerCounts 1, 2
 
 test "correct color after resume with two passes (black first)", (assert) ->
   setInputSgf '(;SZ[3];B[];W[];TCRESUME[])'
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   assert.ok isPointBlack($point)
 
 test "correct color after resume with three passes (black first)", (assert) ->
   setInputSgf '(;SZ[3];B[];W[];B[];TCRESUME[])'
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   assert.ok isPointBlack($point)
 
 test "correct color after resume with two passes (white first)", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[];B[];TCRESUME[])'
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   assert.ok isPointWhite($point)
 
 test "correct color after resume with three passes (white first)", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[];B[];W[];TCRESUME[])'
   tesuji_charm.game.initialize()
   $point = $pointAt 1, 1
-  $point.click()
+  click$point($point)
   assert.ok isPointWhite($point)
 
 test "regression: proposed stone not listed in navigation UI", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[bb])'
   tesuji_charm.game.initialize()
   assert.equal navigationMovesLength(), 3, 'start with 3 moves listed'
-  $pointAt(2, 2).click()
+  click$point($pointAt(2, 2))
   assert.equal navigationMovesLength(), 3, 'still 3 moves with proposed move'
 
 test "behaviour changes while viewing past moves", (assert) ->
@@ -427,14 +434,14 @@ test "behaviour changes while viewing past moves", (assert) ->
   tesuji_charm.game.initialize()
   $confirm_button = $('button.confirm_button')
   $point = $pointAt 2, 2
-  $point.click()
+  click$point($point)
 
   setViewMoveNo 1
   assert.ok isPointEmpty($point), "proposed stone vanishes on viewing past move"
   assert.ok $confirm_button.prop('disabled'), "confirm button disabled"
   assert.notOk $point.find('.placement').length, "hover effect is gone"
 
-  $point.click()
+  click$point($point)
   assert.ok isPointEmpty($point), "no stone appears"
 
   setViewMoveNo 2
@@ -442,7 +449,7 @@ test "behaviour changes while viewing past moves", (assert) ->
   assert.ok isPointEmpty($point), "proposed stone does not reappear"
   assert.ok $point.find('.placement').length, "hover effect is back"
 
-  $point.click()
+  click$point($point)
   assert.ok isPointBlack($point), "after returning to end, stone can be placed"
   assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
 
@@ -450,7 +457,7 @@ test "proposed stone removed when viewing past moves", (assert) ->
   initialSgf = '(;SZ[3];B[bb])'
   setInputSgf initialSgf
   tesuji_charm.game.initialize()
-  $pointAt(0, 0).click()
+  click$point($pointAt(0, 0))
   assert.boardState ['w..', '.b.', '...'], "board state with proposed stone"
   assert.equal getResponseSgf(), '(;SZ[3];B[bb];W[aa])',
                "SGF with proposed move"
@@ -476,7 +483,7 @@ test "clicking empty points in marking mode does nothing", (assert) ->
   tesuji_charm.game.initialize()
   $point = $pointAt(1, 1)
   assert.ok isPointDame($point), "centre point starts dame"
-  $point.click()
+  click$point($point)
   assert.ok isPointDame($point), "still dame after click"
 
 test "mixed scoring board", (assert) ->
@@ -503,7 +510,7 @@ test "clicking live stones makes them dead, " + \
   assert.prisonerCounts 0, 1, "initial layout"
   assert.scores 2, 0, "initial layout"
 
-  $pointAt(1, 1).click()
+  click$point($pointAt(1, 1))
   assert.ok isPointBlackDead($pointAt(1, 1)),
     "clicked stone (1, 1) is marked dead"
   assert.ok isPointWhiteScore($pointAt(1, 1)),
@@ -517,7 +524,7 @@ test "clicking live stones makes them dead, " + \
   assert.prisonerCounts 4, 1, "black marked dead"
   assert.scores 1, 11, "black marked dead"
 
-  $pointAt(1, 1).click()
+  click$point($pointAt(1, 1))
   assert.ok isPointBlack($pointAt(1, 1)),
     "clicked stone (1, 1) is live again"
   assert.notOk isPointWhiteScore($pointAt(1, 1)),
@@ -538,8 +545,8 @@ test "killing stones revives neighbouring enemy groups " + \
   # .b.
   # bbw
   tesuji_charm.game.initialize()
-  $pointAt(1, 1).click()
-  $pointAt(2, 2).click()
+  click$point($pointAt(1, 1))
+  click$point($pointAt(2, 2))
   assert.notOk isPointBlackDead($pointAt 1, 1),
     "first clicked stone (1, 1) is no longer dead"
   assert.notOk isPointBlackDead($pointAt 0, 0),
@@ -592,7 +599,7 @@ test "Form is updated with current dead stones", (assert) ->
   # .b.
   # bbw
   tesuji_charm.game.initialize()
-  $pointAt(1, 1).click()
+  click$point($pointAt(1, 1))
   # to keep test simple, we just look for right number of elements in
   # each tag so that we can accept any order
   expected = ///
@@ -606,7 +613,7 @@ test "Form is updated with current dead stones", (assert) ->
   assert.notOk actual.match(tbPattern), "no TB property in SGF"
 
   # here we check for a specific coord
-  $pointAt(2, 2).click()
+  click$point($pointAt(2, 2))
   expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
@@ -645,7 +652,7 @@ test "behaviour changes while viewing past moves", (assert) ->
   $confirm_button = $('button.confirm_button')
 
   assert.ok isPointBlackDead($pointAt 0, 0), "initial layout shows dead stones"
-  ($pointAt 2, 0).click()
+  click$point $pointAt(2, 0)
   assert.ok isPointWhiteDead($pointAt 2, 0), "click kills stone"
   assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
 
@@ -686,7 +693,7 @@ test "behaviour changes while viewing past moves", (assert) ->
   assert.notOk $confirm_button.prop('disabled'),
     "latest move, confirm button enabled"
 
-  ($pointAt 2, 0).click()
+  click$point $pointAt(2, 0)
   assert.ok isPointWhiteDead($pointAt 2, 0), "click once again kills stone"
 
 
