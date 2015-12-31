@@ -303,47 +303,52 @@ BoardDom = React.createClass
 
 NavigationDom = React.createClass
   render: ->
-    {sgfObject, viewingMove} = @props
-
-    options = [n: 0, text: 'Start']
-    maxMoves = null
-    do ->
-      moveNo = 0
-      for node in sgfObject.gameTrees[0].nodes
-        if node.B?
-          moveNo += 1
-          options.push n: moveNo, text: 'B ' + (a1FromSgfTag(node.B) or 'pass')
-        else if node.W?
-          moveNo += 1
-          options.push n: moveNo, text: 'W ' + (a1FromSgfTag(node.W) or 'pass')
-        else if node.TB? or node.TW?
-          moveNo += 1
-          options.push n: moveNo, text: 'Mark dead'
-      maxMoves = moveNo
-
-    reactOption = (option) ->
-      {n, text} = option
-      React.DOM.option {key: n, value: n},
-                       ["Move #{n}: #{text}"]
-
-    onChange = (event) =>
-      @props.changeCallback parseInt(event.target.value, 10)
-
-    # hack for Firefox, which won't fire change/input event on
-    # keyboard updates to select boxes until the focus is removed
-    onKeyUp = (event) ->
-      event.target.blur()
-      event.target.focus()
-
     {div, select} = React.DOM
     div {className: 'board_nav_block'},
         (select {
           className: 'move_select',
-          onChange: onChange
-          onInput: onChange
-          onKeyUp: onKeyUp
-          value: viewingMove ? maxMoves},
-                (reactOption o for o in options))
+          onChange: @onSelectChange
+          onInput: @onSelectChange
+          onKeyUp: @onSelectKeyUp
+          value: @getViewingMove()}, @getOptions())
+
+  onSelectChange: (event) ->
+    @props.changeCallback parseInt(event.target.value, 10)
+
+  # hack for Firefox, which won't fire change/input event on
+  # keyboard updates to select boxes until the focus is removed
+  onSelectKeyUp: (event) ->
+    event.target.blur()
+    event.target.focus()
+
+  getViewingMove: -> @props.viewingMove ? actionCount @props.sgfObject
+
+  getOptions: ->
+    makeOption = (optionSpec) ->
+      {n, text} = optionSpec
+      React.DOM.option {key: n, value: n},
+                      ["Move #{n}: #{text}"]
+
+    actionNodes =
+      node for node in @props.sgfObject.gameTrees[0].nodes \
+                    when isActionNode node
+
+    getActionText = (node) ->
+      if node.B?
+        return 'B ' + (a1FromSgfTag(node.B) or 'pass')
+      else if node.W?
+        return 'W ' + (a1FromSgfTag(node.W) or 'pass')
+      else if node.TB? or node.TW?
+        return 'Mark dead'
+      else
+        throw new Error "unrecognised action node"
+
+    optionSpecs = [n: 0, text: 'Start'].concat(
+      for node, i in actionNodes
+        n: i+1, text: getActionText node
+    )
+
+    (makeOption o for o in optionSpecs)
 
 ScoreDom = React.createClass
   render: ->
@@ -407,7 +412,8 @@ stateFromSgfObject = (sgfObject, options={}) ->
   prisoners = { black: 0, white: 0 }
   moveNo = 0
   for node in sgfObject.gameTrees[0].nodes
-    break if moves? and moveNo >= moves
+    if isActionNode node then moveNo += 1
+    break if moves? and moveNo > moves
     if node.AB
       coords = if Array.isArray(node.AB) then node.AB else [node.AB]
       for coordStr in coords
@@ -419,21 +425,17 @@ stateFromSgfObject = (sgfObject, options={}) ->
         [x, y] = decodeSgfCoord coordStr
         boardState[y][x] = 'white'
     if node.B
-      moveNo += 1
       [x, y] = decodeSgfCoord node.B
       result = go_rules.getNewStateAndCaptures('black', x, y, boardState)
       boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
     else if node.W
-      moveNo += 1
       [x, y] = decodeSgfCoord node.W
       result = go_rules.getNewStateAndCaptures('white', x, y, boardState)
       boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
-    else if 'B' of node or 'W' of node or 'TB' of node or 'TW' of node
-      moveNo += 1
   if scoring
     [x, y] = [null, null]
     deadStones = deadFromUi ?
