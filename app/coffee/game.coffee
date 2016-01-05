@@ -97,8 +97,10 @@ BoardAreaDom = React.createClass
     proposedMove: null
     viewingMove: null
 
-  componentDidMount: -> @updateNonReactElements()
-  componentDidUpdate: -> @updateNonReactElements()
+  componentWillMount: -> @invalidateCache()
+  componentWillUpdate: -> @invalidateCache()
+  componentDidMount: -> @updateNonReact()
+  componentDidUpdate: -> @updateNonReact()
 
   render: ->
     {div} = React.DOM
@@ -176,16 +178,26 @@ BoardAreaDom = React.createClass
   getSize: -> parseInt(@props.sgfObject.gameTrees[0].nodes[0].SZ, 10) or 19
 
   getStateObject: ->
-    stateFromSgfObject @getSgfWithNewMove(),
-                       moves: @getMoveToShow(),
-                       scoring: @getMode().showScoring,
-                       deadStones: if @getMode().scoring \
-                                   then @state.deadStones \
-                                   else null
+    unless @cache? and @cache.stateObject?
+      @getAndCacheStateObject()
+    @cache.stateObject
+
+  getAndCacheStateObject: ->
+    x = stateFromSgfObject @getSgfWithNewMove(),
+                           moves: @getMoveToShow(),
+                           scoring: @getMode().showScoring,
+                           deadStones: if @getMode().scoring \
+                                       then @state.deadStones \
+                                       else null
+    @cache = {} unless @cache
+    @cache.stateObject = x
+
   getBoardState: -> @getStateObject().boardState
   getLastPlayed: -> @getStateObject().lastPlayed
   getPrisoners: -> @getStateObject().prisoners
   getScores: -> @getStateObject().scores
+
+  invalidateCache: -> @cache = {}
 
   # on-board-click callback when ready to play a new stone
   onBoardClickPlay: (xy) ->
@@ -208,7 +220,7 @@ BoardAreaDom = React.createClass
       proposedMove: null
       viewingMove: newViewingMove
 
-  updateNonReactElements: ->
+  updateNonReact: ->
     @updateConfirmButton()
     @updateResponseForm()
     return
@@ -440,13 +452,15 @@ stateFromSgfObject = (sgfObject, options={}) ->
         boardState[y][x] = 'white'
     if node.B
       [x, y] = decodeSgfCoord node.B
-      result = go_rules.getNewStateAndCaptures('black', x, y, boardState)
+      result = go_rules.getNewStateAndCaptures('black', x, y, boardState,
+                                               destructive: true)
       boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
     else if node.W
       [x, y] = decodeSgfCoord node.W
-      result = go_rules.getNewStateAndCaptures('white', x, y, boardState)
+      result = go_rules.getNewStateAndCaptures('white', x, y, boardState,
+                                               destructive: true)
       boardState = result.state
       prisoners.black += result.captures.black
       prisoners.white += result.captures.white
