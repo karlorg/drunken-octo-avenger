@@ -4,11 +4,18 @@ tesuji_charm = window.tesuji_charm
 tesuji_charm.go_rules ?= {}
 go_rules = tesuji_charm.go_rules
 
-go_rules.getNewStateAndCaptures = (color, x, y, state) ->
+go_rules.getNewStateAndCaptures = (color, x, y, state, options) ->
   # given a color stone to play at (x,y), return the new board state
+  #
+  # When option `destructive` is true, code is more performant but may
+  # destroy the previous value of `state`.
   if state[y][x] isnt 'empty'
     throw Error 'illegal move'
-  newState = $.extend(true, [], state)  # deep copy
+  destructive = options?.destructive ? false
+  if destructive
+    newState = state
+  else
+    newState = $.extend(true, [], state)  # deep copy
   newState[y][x] = color
   captures = { black: 0, white: 0 }
 
