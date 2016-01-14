@@ -1,11 +1,3 @@
-form#login_form {
-  display: inline;
-}
-
-.sign_in {
-  float: right;
-}
-
 table.goban {
     border-collapse: collapse;
 }
