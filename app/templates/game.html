@@ -245,7 +245,7 @@
 <div id="board-area">
 <div id="board"></div>
 {% if on_turn %}
-<form id="main_form"
+<form id="main_form" class="form-group"
       method="POST" action="{{ url_for('play', game_no=game_no) }}">
     {{ form.hidden_tag() }}
     <button type="submit" class="form-control btn btn-default confirm_button"

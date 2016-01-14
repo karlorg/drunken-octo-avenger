@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% set active_page = "challenge" %}
 {% block content %}
-<form method="POST" action="{{ url_for('challenge') }}">
+<form method="POST" action="{{ url_for('challenge') }}" class="form-group">
     {{ form.csrf_token }}
-    {{ form.opponent.label }} {{ form.opponent(size=30) }}
-    <input id="send_challenge" type="submit" value="Send challenge">
+    {{ form.opponent(class="form-control", placeholder="Opponent's email or username") }}
+    <input id="send_challenge" type="submit" value="Send challenge",
+           class="form-control btn btn-default">
 </form>
 {% endblock %}
