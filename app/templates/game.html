@@ -272,23 +272,23 @@
 </div> <!-- end of board-area -->
 
 <div class="game-chat">
-    <div class="chat-comments">
+    <ul class="chat-comments list-group">
       {% for comment in comments %}
         {% if comment.speaker == black_user %}
-           <div class="chat-comment-black">
+          {% set chat_class = "chat-comment-black" %}
         {% elif comment.speaker == white_user %}
-           <div class="chat-comment-white">
+          {% set chat_class = "chat-comment-white" %}
         {% else %}
-           <div class="chat-comment-anonymous">
-        {% endif %}
-        {{comment.content}}</div>
+          {% set chat_class = "chat-comment-anonymous" %}
+        {% endif %}<!-- end if comment.speaker ... -->
+        <li class="{{chat_class}} list-group-item">{{comment.content}}</li>
       {% endfor %}
-    </div>
-<form id="chat-form"
+    </ul><!-- /.chat-comments -->
+    <form id="chat-form"
       method="POST" action="{{ url_for('comment', game_no=game_no) }}">
     {{ chatform.hidden_tag() }}
-    {{ chatform.comment.label }} {{ chatform.comment() }}
-    <button type="submit"
+    {{ chatform.comment(placeholder="Comment ...", class="form-control") }}
+    <button type="submit" class="form-control btn btn-default"
             class="comment_button" name='comment_button'>Comment</button>
 </form>
 
