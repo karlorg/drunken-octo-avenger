@@ -1,56 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+  <!-- Bootstrap Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
 <link href="/static/index.css" rel="stylesheet" type="text/css">
 <!-- following meta is needed by Persona -->
 <meta http-equiv="X-UA-Compatible" content="IE=Edge">
 <title>Go</title>
-</head>
-<body>
-
 <style>
-.alpha-alert {
-    background:#d9542b;
-    display:block;
-    padding: 5px;
-    border:5px solid #CCC;
-    width:960px;
-    margin:0 auto;
+body {
+  padding-top: 50px;
+}
+.lead-content {
+  padding: 40px 15px;
+  text-align: center;
 }
 </style>
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Tesuji Charm</a>
+    </div><!-- /.navbar-header -->
+    <div id="navbar" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav">
+        <li {% if active_page == 'frontpage' %} class="active"{% endif%}>
+            <a href="{{ url_for('front_page') }}">Welcome</a></li>
+        <li {% if active_page == 'status' %} class="active"{% endif%}>
+            <a href="{{url_for('status')}}">Status</a></li>
+      </ul>
+      {% if current_user %}
+      <div class="logged_in_user">Logged in as: {{ current_user }}</div>
+      {% if current_persona_email %}
+      <a href="#" id="logout">Log out</a>
+      {% else %}  <!-- else current_persona_email -->
+      <a href="/logout" id="logout">Log out</a>
+      {% endif %}  <!-- end current_persona_email -->
 
-<div class="alpha-alert" style="overflow:auto;">
-Caution: the site you are viewing is very much a site in the initial stages of
-development. The goal is to eventually have a web site suitable for turn-based
-Go games. We are not there yet, and things will likely change. You can start a
-game against a friend, but there is a chance that your game will simply be
-dropped at some point. This is very much, use with no expectations.
-</div>
-
-{% if current_user %}
-<div class="logged_in_user">Logged in as: {{ current_user }}</div>
-{% if current_persona_email %}
-<a href="#" id="logout">Log out</a>
-{% else %}  <!-- else current_persona_email -->
-<a href="/logout" id="logout">Log out</a>
-{% endif %}  <!-- end current_persona_email -->
-
-{% else %}  <!-- else current_user -->
-<a href="#" id="persona_login">Login with Persona</a>
-<div class="sign_in">
-    <a id="new_account" href="{{ url_for('create_account') }}">Sign up</a>
-    or sign in:
-    <form id="login_form"
-          action="{{ url_for('login') }}" method="POST">
+      {% else %}  <!-- else current_user -->
+      <a href="#" id="persona_login">Login with Persona</a>
+      <div class="sign_in">
+        <a id="new_account" href="{{ url_for('create_account') }}">Sign up</a>
+        or sign in:
+        <form id="login_form"
+        action="{{ url_for('login') }}" method="POST">
         {{ login_form.hidden_tag() }}
         {{ login_form.username(size=15,
-                               placeholder=login_form.username.description) }}
-        {{ login_form.password(size=15,
-                               placeholder=login_form.password.description) }}
-        <input id="login_submit" type="submit" name="login" value="Login" \>
-    </form>
+          placeholder=login_form.username.description) }}
+          {{ login_form.password(size=15,
+            placeholder=login_form.password.description) }}
+            <input id="login_submit" type="submit" name="login" value="Login" \>
+          </form>
+        </div>
+        {% endif %}
+    </div><!--/.nav-collapse -->
+  </div><!-- /.container -->
+</nav>
+
+<div class="container">
+<div class="lead-content">
+{% with messages = get_flashed_messages(with_categories=true) %}
+<div class="alert alert-danger alert-dismissible" role="alert">
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+  Caution: the site you are viewing is very much a site in the initial stages of
+  development. The goal is to eventually have a web site suitable for turn-based
+  Go games. We are not there yet, and things will likely change. You can start a
+  game against a friend, but there is a chance that your game will simply be
+  dropped at some point. This is very much, use with no expectations.
 </div>
-{% endif %}
+   {% if messages %}
+     {% for category, message in messages %}
+
+       <div class="alert alert-{{category|flash_bootstrap_category}} alert-dismissible" role="alert">
+         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+         {{message}}
+       </div><!-- /.alert -->
+     {% endfor %}
+   {% endif %}
+{% endwith %}
+
+{% block lead_content %}
+{% endblock %}
+</div><!-- /.lead-content -->
 
 {% if current_user %}
 <div id="main_menu">
@@ -73,6 +117,8 @@ dropped at some point. This is very much, use with no expectations.
 
 {% block content %}
 {% endblock %}
+
+</div><!-- /#
 
 <script>
 window.tesuji_charm = {

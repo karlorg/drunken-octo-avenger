@@ -53,6 +53,15 @@ def redirect_url(default='front_page'):
            request.referrer or \
            url_for(default)
 
+@app.template_filter('flash_bootstrap_category')
+def flash_bootstrap_category(flash_category):
+    return {'success': 'success',
+            'info': 'info',
+            'warning': 'warning',
+            'error': 'danger',
+            'danger': 'danger'}.get(flash_category, 'info')
+
+
 # Views
 #
 # Since view functions tend to have side-effects and to depend on global state,
@@ -610,7 +619,7 @@ class GameComment(db.Model):
     pub_date = db.Column(db.DateTime)
     speaker = db.Column(db.String(length=254))
     game_id = db.Column(db.Integer, db.ForeignKey('games.id'))
-    game = db.relationship('Game', 
+    game = db.relationship('Game',
                            backref=db.backref('comments', lazy='dynamic'))
     content = db.Column(db.Text())
 
