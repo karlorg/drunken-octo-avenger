@@ -4,10 +4,13 @@
 
 {% if size is undefined %}
     {% set size = 19 %}
-    {% set board_size = 20 * size %}
+    {% set board_size = (20 * size) %}
 {% endif %}
 
 <style>
+.goban * {
+  box-sizing: content-box;
+}
 
 .goban {
     width: {{board_size}}px;
@@ -17,6 +20,7 @@
     padding: 10px;
     resize: both;
     overflow: auto;
+    box-sizing: content-box;
 }
 
 .goban-row{
