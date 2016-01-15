@@ -26,6 +26,8 @@ import werkzeug.security as ws
 from wtforms import HiddenField, IntegerField, PasswordField, StringField
 from wtforms.validators import DataRequired
 from wtforms.widgets import HiddenInput
+import wtforms
+import threading
 
 from config import DOMAIN
 from app import go
@@ -43,6 +45,11 @@ if app.debug:
     logging.basicConfig(level=logging.DEBUG)
 db = SQLAlchemy(app)
 
+def async(f):
+    def wrapper(*args, **kwargs):
+        thr = threading.Thread(target=f, args=args, kwargs=kwargs)
+        thr.start()
+    return wrapper
 
 def redirect_url(default='front_page'):
     """ A simple helper function to redirect the user back to where they came
@@ -226,6 +233,77 @@ def user_to_move_in_game(game):
     next_in_game = {go.Color.black: game.black,
                     go.Color.white: game.white}[black_or_white]
     return next_in_game
+
+
+class FeedbackForm(Form):
+    feedback_name = wtforms.StringField("Name:")
+    feedback_email = wtforms.StringField("Email:")
+    feedback_text = wtforms.TextAreaField("Feedback:")
+
+
+@async
+def send_email_message_mailgun(email):
+    sandbox = app.config['MAILGUN_SANDBOX']
+    url = "https://api.mailgun.net/v3/{0}/messages".format(sandbox)
+    sender_address = "mailgun@{0}".format(sandbox)
+    if email.sender_name is not None:
+        sender = "{0} <{1}>".format(email.sender_name, sender_address)
+    else:
+        sender = sender_address
+    api_key = app.config['MAILGUN_API_KEY']
+    return requests.post(url,
+                         auth=("api", api_key),
+                         data={"from": sender,
+                               "to": email.recipients,
+                               "subject": email.subject,
+                               "text": email.body})
+
+
+class Email(object):
+    """ Simple representation of an email message to be sent."""
+
+    def __init__(self, subject, body, sender_name, recipients):
+        self.subject = subject
+        self.body = body
+        self.sender_name = sender_name
+        self.recipients = recipients
+
+
+def send_email_message(email):
+    # We don't want to actually send the message every time we're testing.
+    # Note that if we really wish to record the emails and check that the
+    # correct ones were "sent" out, then we have to do something a bit clever
+    # because this code will be executed in a different process to the
+    # test code. We could have some kind of test-only route that returns the
+    # list of emails sent as a JSON object or something.
+    if not app.config['TESTING']:
+        send_email_message_mailgun(email)
+
+
+@app.route('/give_feedback', methods=['POST'])
+def give_feedback():
+    form = FeedbackForm()
+    if not form.validate_on_submit():
+        message = ('Feedback form has not been validated.'
+                   'Sorry it was probably my fault')
+        flash(message, 'error')
+        return redirect(redirect_url())
+    feedback_email = form.feedback_email.data.lstrip()
+    feedback_name = form.feedback_name.data.lstrip()
+    feedback_content = form.feedback_text.data
+    subject = 'Feedback for Tesuji Charm'
+    sender_name = 'Tesuji Charm Feedback Form'
+    recipients = app.config['ADMINS']
+    message_body = """
+    You got some feedback from the 'tesuji-charm' web application.
+    Sender's name = {0}
+    Sender's email = {1}
+    Content: {2}
+    """.format(feedback_name, feedback_email, feedback_content)
+    email = Email(subject, message_body, sender_name, recipients)
+    send_email_message(email)
+    flash("Thanks for your feedback!", 'info')
+    return redirect(redirect_url())
 
 
 @app.route('/login', methods=['POST'])
@@ -546,6 +624,7 @@ def render_template_with_basics(template_name_or_list, **context):
             current_user=user,
             current_persona_email=persona_email,
             login_form=LoginForm(),
+            feedback_form=FeedbackForm(),
             **context)
 
 def max_with_sentinel(sentinel, *iterables):

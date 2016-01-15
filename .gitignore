@@ -11,6 +11,8 @@ htmlcov
 venv/
 *-venv/
 
+set-secrets.*sh
+
 Cakefile.js
 app/coffee/*.js
 app/static/compiled-js/
