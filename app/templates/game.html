@@ -289,12 +289,12 @@
       {% endfor %}
     </ul><!-- /.chat-comments -->
     <form id="chat-form"
-      method="POST" action="{{ url_for('comment', game_no=game_no) }}">
-    {{ chatform.hidden_tag() }}
-    {{ chatform.comment(placeholder="Comment ...", class="form-control") }}
-    <button type="submit" class="form-control btn btn-default"
-            class="comment_button" name='comment_button'>Comment</button>
-</form>
+          method="POST" action="{{ url_for('comment', game_no=game_no) }}">
+      {{ chatform.hidden_tag() }}
+      {{ chatform.comment(placeholder="Comment ...", class="form-control") }}
+      <button type="submit" class="form-control btn btn-default comment_button"
+              name='comment_button'>Comment</button>
+    </form>
 
 </div><!-- end of game-chat -->
 </div><!-- end of content -->
