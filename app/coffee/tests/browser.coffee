@@ -346,7 +346,7 @@ class StatusTest extends BrowserTest
     assertNumGames = (player, players_turn, players_wait) =>
       createLoginSession player
       @assertNumGames test, players_turn, players_wait
-      
+
     # player one has two games in which it's her turn, and one other
     assertNumGames ONE_EMAIL, 2, 1
     # player two has no games in which it's her turn, and one other
@@ -376,7 +376,7 @@ class ChallengeTest extends BrowserTest
     casper.thenClick '#challenge_link', ->
       form_values = 'input[name="opponent"]' : TOUYA_EMAIL
       # The final 'true' argument means that the form is submitted.
-      @fillSelectors 'form', form_values, true
+      @fillSelectors 'form#challenge-form', form_values, true
 
     # both players load the front page and see links to the same game
 
@@ -480,6 +480,8 @@ class BasicChatTest extends BrowserTest
       form_values = 'input[name="comment"]' : MY_CHAT[0]
       # The final 'true' argument means that the form is submitted.
       @fillSelectors 'form#chat-form', form_values, true
+      comments_selector = '.game-chat .chat-comments .chat-comment-black'
+      casper.waitForSelector comments_selector
 
     createLoginSession TWO_EMAIL
     casper.thenOpen serverUrl, =>
@@ -489,7 +491,7 @@ class BasicChatTest extends BrowserTest
       # on the game page is a game chat.
       test.assertExists '.game-chat', 'The game chat does exist.'
       comments_selector = '.game-chat .chat-comments .chat-comment-black'
-      comments = test.assertSelectorHasText comments_selector, MY_CHAT[0],
+      test.assertSelectorHasText comments_selector, MY_CHAT[0],
                  "Player one's comment has appeared in the chat area."
 
       form_values = 'input[name="comment"]' : MY_CHAT[1]
