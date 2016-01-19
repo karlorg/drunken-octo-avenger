@@ -97,6 +97,11 @@ class BrowserTest
       $("td.row-#{y}.col-#{x}").css('background-image')),
         x, y
 
+  check_flashed_message: (test, expected_message, category) ->
+    selector = "div.alert.alert-#{category}"
+    test.assertSelectorHasText selector, expected_message,
+        'Checking flashed message'
+
   numberJQSelector: (selector) ->
     " Caspers test.assertExist is great but only works with CSS selectors,
       not JQuery selectors, hence this helper function, which can be used with
@@ -500,6 +505,27 @@ class BasicChatTest extends BrowserTest
 
 
 registerTest new BasicChatTest
+
+class FeedbackTest extends BrowserTest
+  names: ['FeedbackTest']
+  description: "Tests the feedback mechanism."
+  numTests: 2
+
+  testBody: (test) ->
+    casper.thenOpen serverUrl, ->
+      test.assertExists '#feedback-link'
+    casper.thenClick '#feedback-link', ->
+      # casper.waitUntilVisible 'form#give_feedback'
+      form_values =
+        'input[name="feedback_email"]' : 'avid_user@google.com'
+        'input[name="feedback_name"]' : 'Avid User'
+        'textarea[name="feedback_text"]' : 'I think this site is great.'
+      # The final 'true' argument means that the form is submitted.
+      @fillSelectors 'form#give-feedback', form_values, true
+    casper.then =>
+      @check_flashed_message test, 'Thanks for your feedback!', 'info'
+
+registerTest new FeedbackTest
 
 # TODO A test which attempts a XSS attack, the script should be escaped.
 

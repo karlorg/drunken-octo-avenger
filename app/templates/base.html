@@ -62,7 +62,8 @@ body {
             <a id="new_account" href="{{ url_for('create_account') }}">Sign up</a>
           </li>
         {% endif %}<!-- end (not) current_user -->
-        <li><a href="#" data-toggle="modal" data-target="#feedback-modal">Give Feedback</a></li>
+        <li><a href="#" id="feedback-link"
+               data-toggle="modal" data-target="#feedback-modal">Give Feedback</a></li>
       </ul>
       {% if not current_user %}
       <div class="sign_in">
