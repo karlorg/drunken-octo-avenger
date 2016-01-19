@@ -313,11 +313,11 @@ def login():
         users = (db.session.query(User)
                  .filter_by(username=form.username.data).all())
         if len(users) == 0:
-            flash('Username not found')
+            flash('Username not found', 'error')
             return redirect(redirect_url())
         user = users[0]
         if not user.check_password(form.password.data):
-            flash('Password incorrect')
+            flash('Password incorrect', 'error')
             return redirect(redirect_url())
         set_logged_in_user(form.username.data)
         return redirect(redirect_url())
@@ -330,7 +330,7 @@ def create_account():
     form = CreateAccountForm()
     if form.validate_on_submit():
         if form.password1.data != form.password2.data:
-            flash("Passwords don't match")
+            flash("Passwords do not match", 'error')
             return render_template_with_basics('create_account.html',
                                                form=form)
         user = User(username=form.username.data,

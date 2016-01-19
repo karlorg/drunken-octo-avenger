@@ -97,10 +97,10 @@ class BrowserTest
       $("td.row-#{y}.col-#{x}").css('background-image')),
         x, y
 
-  check_flashed_message: (test, expected_message, category) ->
+  check_flashed_message: (test, expected_message, category,
+                          test_message = 'Checking flashed message') ->
     selector = "div.alert.alert-#{category}"
-    test.assertSelectorHasText selector, expected_message,
-        'Checking flashed message'
+    test.assertSelectorHasText selector, expected_message, test_message
 
   numberJQSelector: (selector) ->
     " Caspers test.assertExist is great but only works with CSS selectors,
@@ -249,18 +249,17 @@ class NativeLoginTest extends BrowserTest
   numTests: 14
   testBody: (test) ->
     deleteUser 'darrenlamb'
-
     casper.thenOpen serverUrl, ->
       @fill 'form#login_form', {
         username: 'darrenlamb'
         password: 'iknowandy'
         }, true  # true = submit form
-    casper.then ->
+    casper.then =>
       # Darren is not known to us; he is returned to the login form
       # and sees a message that his username is not found
       test.assertExists '#login_form',
         "After trying to log in without an account, returned to login form"
-      test.assertTextExists 'not found',
+      @check_flashed_message test, 'Username not found', 'danger',
         "After trying to log in without an account, message appears"
 
     # he sets up a new account
@@ -272,10 +271,10 @@ class NativeLoginTest extends BrowserTest
         password2: 'imdarrenlamb'
         }, true  # true = submit form
     # he is returned to the new account form with an error message
-    casper.then ->
+    casper.then =>
       test.assertExists 'form#new_account_form',
         "Darren tried non-matching passwords, is returned to form"
-      test.assertTextExists "don't match",
+      @check_flashed_message test, "Passwords do not match", 'danger',
         "Darren is warned about his passwords not matching"
       # he is not logged in
       test.assertDoesntExist '#logout'
@@ -293,7 +292,8 @@ class NativeLoginTest extends BrowserTest
       test.assertExists '#logout',
         "Darren logged in automatically, logout button appears"
       # and shows Darren's username
-      test.assertTextExists 'darrenlamb',
+      user_menu_selector = '#user-dropdown-menu a'
+      test.assertSelectorHasText user_menu_selector, 'darrenlamb',
         "Darren logged in for first time, his name appears"
 
     # he logs out
@@ -310,10 +310,10 @@ class NativeLoginTest extends BrowserTest
         username: 'darrenlamb'
         password: 'imdarrenlamb'
         }, true  # true = submit form
-    casper.then ->
+    casper.then =>
       test.assertDoesntExist '#logout',
         "After trying incorrect password, logout button doesn't appear"
-      test.assertTextExists "incorrect",
+      @check_flashed_message test, 'Password incorrect', 'danger',
         "After trying incorrect password, a message to that effect appears"
       test.assertExists 'form#login_form',
         "After trying incorrect password, login form is presented again"

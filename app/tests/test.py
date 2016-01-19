@@ -299,7 +299,7 @@ class TestCreateAccountIntegrated(TestWithDb):
 
     def test_non_matching_passwords(self):
         with main.app.test_client() as test_client:
-            with self.assert_flashes("don't match"):
+            with self.assert_flashes("do not match"):
                 with self.patch_render_template() as mock_render:
                     test_client.post(url_for('create_account'),
                                      data=dict(username='freddy',
