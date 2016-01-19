@@ -10,7 +10,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 DOMAIN = os.environ.get('TESUJI_CHARM_DOMAIN', 'localhost')
 MAILGUN_SANDBOX = os.environ.get('MAILGUN_SANDBOX')
 MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY')
-ADMINS = os.environ.get('TESUJI_CHARM_ADMINS', ['allan.clark@gmail.com'])
+admin_string = os.environ.get('TESUJI_CHARM_ADMINS', 'allan.clark@gmail.com')
+ADMINS = admin_string.split(',')
 
 DEBUG = True
 
