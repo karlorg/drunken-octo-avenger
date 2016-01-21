@@ -5,9 +5,14 @@
 {% if size is undefined %}
     {% set size = 19 %}
     {% set board_size = (20 * size) %}
+    {% set board_well_size = (board_size + 80) %}
 {% endif %}
 
 <style>
+#match-column{
+  min-width: {{board_well_size}}px;
+}
+
 .goban * {
   box-sizing: content-box;
 }
@@ -15,7 +20,9 @@
 .goban {
     width: {{board_size}}px;
     height: {{board_size}}px;
-    margin: 10px;
+    margin: 0 auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
     border: 2px solid;
     padding: 10px;
     resize: both;
@@ -219,7 +226,7 @@
 
 <div class="container">
   <div class="row">
-    <div class="col-xs-5 well" id="match-column">
+    <div class="col-xs-12 col-md-5" id="match-column">
       <div id="match-info">
         {% if color_turn == 'black' %}
           {% set black_text_property = 'underline' %}
@@ -267,7 +274,7 @@
         {% endif %}  <!-- if on_turn -->
       </div> <!-- /#board-area -->
     </div> <!-- /#match-column -->
-    <div class="col-xs-7 well" id="chat-column">
+    <div class="col-xs-12 col-md-7 well" id="chat-column">
       <div class="game-chat">
         <ul class="chat-comments list-group">
           {% for comment in comments %}
