@@ -43,24 +43,26 @@ body {
               <a href="{{url_for('status')}}">Status</a></li>
           <li{% if active_page == 'challenge' %} class="active"{% endif%}>
               <a href="{{ url_for('challenge') }}" id='challenge_link'>Challenge</a></li>
-          <li class="dropdown" id="user-dropdown-menu">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                {{current_user}} <b class="caret"></b></a>
-              <ul class="dropdown-menu">
-                <li>{% if current_persona_email %}
-                      <a href="#" id="logout">Log out</a>
-                    {% else %}  <!-- else current_persona_email -->
-                      <a href="/logout" id="logout">Log out</a>
-                    {% endif %}  <!-- end current_persona_email -->
-                  </li>
-              </ul>
-          </li>
         {% else %} <!-- so if not current_user -->
           <li {% if active_page == 'frontpage' %} class="active"{% endif%}>
               <a href="{{ url_for('front_page') }}">Welcome</a></li>
         {% endif %}<!-- end (not) current_user -->
         <li><a href="#" id="feedback-link"
                data-toggle="modal" data-target="#feedback-modal">Give Feedback</a></li>
+        {% if current_user %}
+          <li class="dropdown" id="user-dropdown-menu">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+              {{current_user}} <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li>{% if current_persona_email %}
+                  <a href="#" id="logout">Log out</a>
+                  {% else %}  <!-- else current_persona_email -->
+                  <a href="/logout" id="logout">Log out</a>
+                  {% endif %}  <!-- end current_persona_email -->
+                </li>
+              </ul>
+            </li>
+        {% endif %} <!-- end if current_user -->
       </ul>
       {% if not current_user %}
       <div class="sign_in">
@@ -80,9 +82,10 @@ body {
         </form>
         <ul class="nav navbar-nav pull-right">
           <li {% if active_page == 'create_account' %} class="active"{% endif%}>
-            <a href="{{url_for('create_account')}}">Register or:</a></li>
+            <a href="{{url_for('create_account')}}">Register</a></li>
           </ul>
       </div> <!-- /.sign_in -->
+      {% else %}
       {% endif %}<!-- end not current_user -->
     </div><!--/.nav-collapse -->
   </div><!-- /.container -->
