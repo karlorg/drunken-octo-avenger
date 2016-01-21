@@ -152,6 +152,10 @@ setViewMoveNo = (n) ->
   React.addons.TestUtils.Simulate.input(select, target: select)
   return
 
+getViewMoveNo = ->
+  select = $('.move_select')
+  return parseInt(select.val(), 10)
+
 test "helper function readBoardState and assert.boardState", (assert) ->
   # readBoardState is invoked by the boardState assert
   setInputSgf '(;SZ[3];B[ca];W[bc])'
@@ -222,6 +226,14 @@ test "can view past board states", (assert) ->
   assert.equal $('.last-played').length, 1, "exactly one last-move marker"
   assert.ok $('.col-1.row-1').find('.last-played').length,
     "last-move marker is at (1,1)"
+
+  $('.reset_button').click()
+  assert.equal getViewMoveNo(), 4, "reset button takes us to move 4"
+  assert.boardState ['b.w'
+                     '.b.'
+                     'b..'], "reset to initial board state"
+  assert.ok $('.col-2.row-0').find('.last-played').length,
+    "last-move marker is at (2,0)"
 
 test "viewing past moves after a resumption", (assert) ->
   setInputSgf '(;SZ[3];B[bb];W[cc];B[];W[]' +
@@ -312,6 +324,16 @@ test 'clicking multiple points updates hidden form', ->
   equal getResponseSgf(), '(;SZ[3];B[aa])', "first stone sets correct SGF"
   click$point $point2
   equal getResponseSgf(), '(;SZ[3];B[bc])', "second stone sets correct SGF"
+
+test "Reset button removes proposed stone", (assert) ->
+  setInputSgf '(;SZ[3])'
+  tesuji_charm.game.initialize()
+  $point = $pointAt 0, 0
+  click$point $point
+  assert.ok isPointBlack($point), "proposed stone present before reset"
+
+  $('.reset_button').click()
+  assert.ok isPointEmpty($point), "gone after reset"
 
 test 'Submit button disabled until stone placed', ->
   $button = $('button.submit_button')
@@ -617,6 +639,21 @@ test "Form is updated with current dead stones", (assert) ->
   expected = /TB[\]\[\w]*\[cc]/  # TB, any number of [] and letters, [cc]
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
+
+test "Reset button restores previous markings", (assert) ->
+  setInputSgf ('(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac];W[];B[]' +
+               ';TW[aa][ba][ab][bb][cb][ac][bc]')
+  # b.w
+  # .b.  (white captured at ab)
+  # bbw
+  tesuji_charm.game.initialize()
+  $point = $pointAt 1, 1
+  $reset_button = $('button.reset_button')
+  click$point $pointAt(1, 1)
+  assert.ok isPointBlack($point), "black stone revived after click"
+
+  $reset_button.click()
+  assert.ok isPointBlackDead($point), "black stone dead after reset"
 
 test "Submit button live while marking dead stones", (assert) ->
   setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'

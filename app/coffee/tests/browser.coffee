@@ -829,8 +829,8 @@ class PassAndScoringTest extends BrowserTest
 
     # game is now finished
     casper.thenOpen serverUrl, =>
-      test.assertDoesntExist (@lastGameSelector true)
-      test.assertDoesntExist (@lastGameSelector false)
+      test.assertDoesntExist (@lastGameSelector true), "no games on turn"
+      test.assertDoesntExist (@lastGameSelector false), "no games off turn"
 
 registerTest new PassAndScoringTest
 
