@@ -221,19 +221,19 @@ BoardAreaDom = React.createClass
       viewingMove: newViewingMove
 
   updateNonReact: ->
-    @updateConfirmButton()
+    @updateSubmitButton()
     @updateResponseForm()
     return
 
-  updateConfirmButton: ->
-    # enable/disable confirm button depending on current state
+  updateSubmitButton: ->
+    # enable/disable submit button depending on current state
     if @getMode().scoring
       enabled = true
     else if @getMode().play and @state.proposedMove != null
       enabled = true
     else
       enabled = false
-    $('.confirm_button').prop 'disabled', not enabled
+    $('.submit_button').prop 'disabled', not enabled
     return
 
   updateResponseForm: ->
