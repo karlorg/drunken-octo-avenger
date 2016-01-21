@@ -252,16 +252,16 @@
           <form id="main_form" class="form-group"
                 method="POST" action="{{ url_for('play', game_no=game_no) }}">
             {{ form.hidden_tag() }}
-            <button type="submit" class="form-control btn btn-default confirm_button"
+            <button type="submit" class="form-control btn btn-success confirm_button"
                     name='confirm_button'>Confirm</button>
 
           {% if with_scoring %}
             <button type="button" class="form-control btn btn-default resume_button"
                     name='resume_button'>Resume</button>
           {% else %}  <!-- if with_scoring -->
-            <button type="button" class="form-control btn btn-default pass_button"
+            <button type="button" class="form-control btn btn-warning pass_button"
                     name='pass_button'>Pass</button>
-            <button type="submit" class="form-control btn btn-default resign_button"
+            <button type="submit" class="form-control btn btn-danger resign_button"
                     name='resign_button'>Resign</button>
           {% endif %}  <!-- if with_scoring -->
           </form><!-- /#main_form -->
