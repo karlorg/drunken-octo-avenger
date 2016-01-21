@@ -82,7 +82,7 @@ body {
         </form>
         <ul class="nav navbar-nav pull-right">
           <li {% if active_page == 'create_account' %} class="active"{% endif%}>
-            <a href="{{url_for('create_account')}}">Register</a></li>
+            <a id="new_account" href="{{url_for('create_account')}}">Register</a></li>
           </ul>
       </div> <!-- /.sign_in -->
       {% else %}
