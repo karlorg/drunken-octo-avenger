@@ -340,6 +340,7 @@ def create_account():
         set_logged_in_user(form.username.data)
         return redirect('/')
     else:
+        flash('Sign-up form incomplete.', 'error')
         return render_template_with_basics('create_account.html',
                                            form=form)
 
