@@ -149,17 +149,6 @@
   box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
 }
 
-#board-area{
-   float:left;
-   background: #598385;
-}
-
-.game-chat{
-   width: 50%;
-   float: left;
-   background: #C96253;
-}
-
 .chat-comments{
     max-height: {{board_size}}px;
     overflow-y: auto;
@@ -207,6 +196,8 @@
 
 #match-info{
     background: #925F7D;
+    padding: 0.5em;
+    text-align: center;
 }
 
 .board_nav_block {
@@ -226,78 +217,81 @@
 
 </style>
 
-<div id="match-info">
-       {% if color_turn == 'black' %}
-            {% set black_text_property = 'underline' %}
-            {% set white_text_property = 'none' %}
-       {% elif color_turn == 'white' %}
-            {% set black_text_property = 'none' %}
-            {% set white_text_property = 'underline' %}
-       {% else %}
-            {% set black_text_property = 'none' %}
-            {% set white_text_property = 'none' %}
-       {% endif %}
-       <span style="color:black; text-decoration:{{black_text_property}};">{{black_user}}</span>
-       <div style="display:inline"><div class="stone-image" style="background:#000000"></div>
-                                   <span style="color:#f52712;"> VS </span>
-                                   <div class="stone-image" style="background:#ffffff"></div>
-       </div>
-       <span style="color:white; text-decoration:{{white_text_property}};">{{white_user}}</span>
-</div><!-- end of match info -->
-
-<div id="content">
-<div id="board-area">
-<div id="board"></div>
-{% if on_turn %}
-<form id="main_form" class="form-group"
-      method="POST" action="{{ url_for('play', game_no=game_no) }}">
-    {{ form.hidden_tag() }}
-    <button type="submit" class="form-control btn btn-default confirm_button"
-            name='confirm_button'>Confirm</button>
-
-    {% if with_scoring %}
-    <button type="button" class="form-control btn btn-default resume_button"
-            name='resume_button'>Resume</button>
-    {% else %}  <!-- if with_scoring -->
-    <button type="button" class="form-control btn btn-default pass_button"
-            name='pass_button'>Pass</button>
-    <button type="submit" class="form-control btn btn-default resign_button"
-            name='resign_button'>Resign</button>
-    {% endif %}  <!-- if with_scoring -->
-
-</form>
-{% else %}  <!-- if on_turn -->
-<form method="POST" action="/404">
-    <!-- provide a form to supply the hidden data field -->
-    {{ form.hidden_tag() }}
-</form>
-{% endif %}  <!-- if on_turn -->
-
-</div> <!-- end of board-area -->
-
-<div class="game-chat">
-    <ul class="chat-comments list-group">
-      {% for comment in comments %}
-        {% if comment.speaker == black_user %}
-          {% set chat_class = "chat-comment-black" %}
-        {% elif comment.speaker == white_user %}
-          {% set chat_class = "chat-comment-white" %}
+<div class="container">
+  <div class="row">
+    <div class="col-xs-5 well" id="match-column">
+      <div id="match-info">
+        {% if color_turn == 'black' %}
+          {% set black_text_property = 'underline' %}
+          {% set white_text_property = 'none' %}
+        {% elif color_turn == 'white' %}
+          {% set black_text_property = 'none' %}
+          {% set white_text_property = 'underline' %}
         {% else %}
-          {% set chat_class = "chat-comment-anonymous" %}
-        {% endif %}<!-- end if comment.speaker ... -->
-        <li class="{{chat_class}} list-group-item">{{comment.content}}</li>
-      {% endfor %}
-    </ul><!-- /.chat-comments -->
-    <form id="chat-form"
-          method="POST" action="{{ url_for('comment', game_no=game_no) }}">
-      {{ chatform.hidden_tag() }}
-      {{ chatform.comment(placeholder="Comment ...", class="form-control") }}
-      <button type="submit" class="form-control btn btn-default comment_button"
-              name='comment_button'>Comment</button>
-    </form>
+          {% set black_text_property = 'none' %}
+          {% set white_text_property = 'none' %}
+        {% endif %}
+        <span style="color:black; text-decoration:{{black_text_property}};">{{black_user}}</span>
+        <div style="display:inline">
+          <div class="stone-image" style="background:#000000"></div>
+          <span style="color:#f52712;"> VS </span>
+          <div class="stone-image" style="background:#ffffff"></div>
+        </div>
+        <span style="color:white; text-decoration:{{white_text_property}};">{{white_user}}</span>
+      </div><!-- /#match info -->
+      <div id="board-area">
+        <div id="board"></div>
+        {% if on_turn %}
+          <form id="main_form" class="form-group"
+                method="POST" action="{{ url_for('play', game_no=game_no) }}">
+            {{ form.hidden_tag() }}
+            <button type="submit" class="form-control btn btn-default confirm_button"
+                    name='confirm_button'>Confirm</button>
 
-</div><!-- end of game-chat -->
-</div><!-- end of content -->
+          {% if with_scoring %}
+            <button type="button" class="form-control btn btn-default resume_button"
+                    name='resume_button'>Resume</button>
+          {% else %}  <!-- if with_scoring -->
+            <button type="button" class="form-control btn btn-default pass_button"
+                    name='pass_button'>Pass</button>
+            <button type="submit" class="form-control btn btn-default resign_button"
+                    name='resign_button'>Resign</button>
+          {% endif %}  <!-- if with_scoring -->
+          </form><!-- /#main_form -->
+        {% else %}  <!-- if on_turn -->
+          <form method="POST" action="/404">
+              <!-- provide a form to supply the hidden data field -->
+              <!-- TODO: Karl, can you explain this more? Why is the required? -->
+              {{ form.hidden_tag() }}
+          </form>
+        {% endif %}  <!-- if on_turn -->
+      </div> <!-- /#board-area -->
+    </div> <!-- /#match-column -->
+    <div class="col-xs-7 well" id="chat-column">
+      <div class="game-chat">
+        <ul class="chat-comments list-group">
+          {% for comment in comments %}
+            {% if comment.speaker == black_user %}
+              {% set chat_class = "chat-comment-black" %}
+            {% elif comment.speaker == white_user %}
+              {% set chat_class = "chat-comment-white" %}
+            {% else %}
+              {% set chat_class = "chat-comment-anonymous" %}
+            {% endif %}<!-- end if comment.speaker ... -->
+            <li class="{{chat_class}} list-group-item">{{comment.content}}</li>
+          {% endfor %}
+        </ul><!-- /.chat-comments -->
+        <form id="chat-form"
+              method="POST" action="{{ url_for('comment', game_no=game_no) }}">
+            {{ chatform.hidden_tag() }}
+            {{ chatform.comment(placeholder="Comment ...", class="form-control") }}
+            <button type="submit" class="form-control btn btn-default comment_button"
+                    name='comment_button'>Comment</button>
+        </form>
+      </div><!-- /.game-chat -->
+    </div><!-- /#chat-column -->
+  </div><!-- /.row -->
+</div><!-- /.container -->
 
 {% endblock %}
 
