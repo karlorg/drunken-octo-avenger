@@ -116,35 +116,35 @@ body {
 
 
 <div class="container">
-<div class="lead-content">
-{% with messages = get_flashed_messages(with_categories=true) %}
-<div class="alert alert-danger alert-dismissible" role="alert">
-  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-  Caution: the site you are viewing is very much a site in the initial stages of
-  development. The goal is to eventually have a web site suitable for turn-based
-  Go games. We are not there yet, and things will likely change. You can start a
-  game against a friend, but there is a chance that your game will simply be
-  dropped at some point. This is very much, use with no expectations.
-</div>
-   {% if messages %}
-     {% for category, message in messages %}
-
-       <div class="alert alert-{{category|flash_bootstrap_category}} alert-dismissible" role="alert">
-         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+  <div class="lead-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    <div class="alert alert-danger alert-dismissible" role="alert">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      Caution: the site you are viewing is very much a site in the initial stages of
+      development. The goal is to eventually have a web site suitable for turn-based
+      Go games. We are not there yet, and things will likely change. You can start a
+      game against a friend, but there is a chance that your game will simply be
+      dropped at some point. This is very much, use with no expectations.
+    </div><!-- ./alert -->
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{category|flash_bootstrap_category}} alert-dismissible" role="alert">
+         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+           <span aria-hidden="true">&times;</span></button>
          {{message}}
-       </div><!-- /.alert -->
-     {% endfor %}
-   {% endif %}<!-- end if messages -->
-{% endwith %}<!-- end with messages -->
+        </div><!-- /.alert -->
+      {% endfor %}
+    {% endif %}<!-- end if messages -->
+    {% endwith %}<!-- end with messages -->
 
-{% block lead_content %}
-{% endblock %}
-</div><!-- /.lead-content -->
+    {% block lead_content %}
+    {% endblock %}
+  </div><!-- /.lead-content -->
 
-{% block content %}
-{% endblock %}
+  {% block content %}
+  {% endblock %}
+</div><!-- ./container -->
 
-</div>
 <script>
 window.tesuji_charm = {
     currentUserEmail: "{{ current_user }}",
