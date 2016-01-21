@@ -268,7 +268,7 @@
         {% else %}  <!-- if on_turn -->
           <form method="POST" action="/404">
               <!-- provide a form to supply the hidden data field -->
-              <!-- TODO: Karl, can you explain this more? Why is the required? -->
+              <!-- TODO: Karl, can you explain this more? Why is this required? -->
               {{ form.hidden_tag() }}
           </form>
         {% endif %}  <!-- if on_turn -->
