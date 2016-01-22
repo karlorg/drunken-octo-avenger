@@ -343,12 +343,14 @@ NavigationDom = React.createClass
     {button, div, select} = React.DOM
     div {className: 'board_nav_block'},
         [(select {
-           className: 'move_select',
+           key: 'movelist'
+           className: 'move_select'
            onChange: @onSelectChange
            onInput: @onSelectChange
            onKeyUp: @onSelectKeyUp
            value: @getViewingMove()}, @getOptions()),
          (button {
+           key: 'resetbutton'
            className: 'reset_button'
            disabled: @props.resetWouldDoNothing
            onClick: @props.resetCallback}, "Reset view to latest move")]
