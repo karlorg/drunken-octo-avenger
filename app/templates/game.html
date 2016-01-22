@@ -252,7 +252,7 @@
           <form id="main_form" class="form-group"
                 method="POST" action="{{ url_for('play', game_no=game_no) }}">
             {{ form.hidden_tag() }}
-            <button type="submit" class="form-control btn btn-default submit_button"
+            <button type="submit" class="form-control btn btn-success submit_button"
                     name='submit_button'>Submit</button>
 
           {% if with_scoring %}
