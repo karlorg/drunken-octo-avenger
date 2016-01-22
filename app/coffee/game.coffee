@@ -97,6 +97,13 @@ BoardAreaDom = React.createClass
     proposedMove: null
     viewingMove: null
 
+  isInInitialState: ->
+    # not a React method but placed it next to getInitialState for
+    # easy visual comparison
+    (@state.deadStones is null and
+     @state.proposedMove is null and
+     @state.viewingMove is null)
+
   componentWillMount: -> @invalidateCache()
   componentWillUpdate: -> @invalidateCache()
   componentDidMount: -> @updateNonReact()
@@ -115,6 +122,8 @@ BoardAreaDom = React.createClass
          (React.createElement NavigationDom,
                               key: "NavigationDom"
                               changeCallback: @onNavigate,
+                              resetCallback: @onReset,
+                              resetWouldDoNothing: @isInInitialState(),
                               sgfObject: @props.sgfObject,
                               viewingMove: @state.viewingMove),
          (React.createElement ScoreDom,
@@ -220,20 +229,22 @@ BoardAreaDom = React.createClass
       proposedMove: null
       viewingMove: newViewingMove
 
+  onReset: -> @setState @getInitialState()
+
   updateNonReact: ->
-    @updateConfirmButton()
+    @updateSubmitButton()
     @updateResponseForm()
     return
 
-  updateConfirmButton: ->
-    # enable/disable confirm button depending on current state
+  updateSubmitButton: ->
+    # enable/disable submit button depending on current state
     if @getMode().scoring
       enabled = true
     else if @getMode().play and @state.proposedMove != null
       enabled = true
     else
       enabled = false
-    $('.confirm_button').prop 'disabled', not enabled
+    $('.submit_button').prop 'disabled', not enabled
     return
 
   updateResponseForm: ->
@@ -329,14 +340,18 @@ BoardDom = React.createClass
 
 NavigationDom = React.createClass
   render: ->
-    {div, select} = React.DOM
+    {button, div, select} = React.DOM
     div {className: 'board_nav_block'},
-        (select {
-          className: 'move_select',
-          onChange: @onSelectChange
-          onInput: @onSelectChange
-          onKeyUp: @onSelectKeyUp
-          value: @getViewingMove()}, @getOptions())
+        [(select {
+           className: 'move_select',
+           onChange: @onSelectChange
+           onInput: @onSelectChange
+           onKeyUp: @onSelectKeyUp
+           value: @getViewingMove()}, @getOptions()),
+         (button {
+           className: 'reset_button'
+           disabled: @props.resetWouldDoNothing
+           onClick: @props.resetCallback}, "Reset view to latest move")]
 
   onSelectChange: (event) ->
     @props.changeCallback parseInt(event.target.value, 10)

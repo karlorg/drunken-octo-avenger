@@ -438,9 +438,9 @@ class PlaceStonesTest extends BrowserTest
       # there are the initial stones set in 'createGame'
       @assertStonePointCounts test, initialEmptyCount, 3, 1,
         "Black opens the game"
-      # no (usable) confirm button appears yet
-      test.assertDoesntExist '.confirm_button:enabled',
-                             'no usable confirm button appears'
+      # no (usable) submit button appears yet
+      test.assertDoesntExist '.submit_button:enabled',
+                             'no usable submit button appears'
 
       # the 3x3 block at top left is as we specified
       @assertPointIsEmpty test, 0, 0
@@ -567,17 +567,17 @@ class GameInterfaceTest extends BrowserTest
           'async': false
           'success': -> result = true
         return result), 'an image on the board can be loaded'
-      # no (usable) confirm button appears yet
-      test.assertDoesntExist '.confirm_button:enabled',
-                             'no usable confirm button appears'
+      # no (usable) submit button appears yet
+      test.assertDoesntExist '.submit_button:enabled',
+                             'no usable submit button appears'
 
     # user clicks an empty spot, which is a link
     casper.thenClick pointSelector(1, 1), =>
       # the board updates to show a stone there and other stones captured
       @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
         "Black places a stone capturing two white stones"
-      # a confirm button is now available
-      test.assertExists '.confirm_button:enabled'
+      # a submit button is now available
+      test.assertExists '.submit_button:enabled'
 
     # we click a different point
     casper.thenClick pointSelector(15, 3), =>
@@ -588,13 +588,13 @@ class GameInterfaceTest extends BrowserTest
       @assertPointIsWhite test, 1, 0
 
     # we click the capturing point again, as we'll want to see what happens when
-    # we confirm a capturing move
+    # we submit a capturing move
     casper.thenClick pointSelector(1, 1), =>
       @assertStonePointCounts test, initialEmptyCount+1, 3, 0,
         "Black clicks capture for second time"
 
-    # we confirm this new move
-    casper.thenClick '.confirm_button', =>
+    # we submit this new move
+    casper.thenClick '.submit_button', =>
       # now we're taken back to the status page
       @assertNumGames test, 1, 1
 
@@ -630,8 +630,8 @@ class GameInterfaceTest extends BrowserTest
       @assertStonePointCounts test, initialEmptyCount, 3, 1,
         "White clicks an empty point, white stone appears"
 
-    # confirm move
-    casper.thenClick '.confirm_button'
+    # submit move
+    casper.thenClick '.submit_button'
     # reload front page and get the other game
     # (it should be the first listed under 'not your turn')
     casper.thenOpen serverUrl
@@ -669,7 +669,7 @@ class PassAndScoringTest extends BrowserTest
     # White plays (0,0)
     goToGame WHITE_EMAIL
     casper.thenClick pointSelector(0, 0)
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
     # Black opens the game
     goToGame BLACK_EMAIL, =>
       # there are currently no prisoners
@@ -677,13 +677,13 @@ class PassAndScoringTest extends BrowserTest
     casper.thenClick pointSelector(1, 0), =>
       # the captured white stone is reflected in the prisoner counts
       @assertPrisoners test, { black: 0, white: 1 }
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
 
     # White plays one more stone (to get the game back to the state in which
     # this test was originally written)
     goToGame WHITE_EMAIL
     casper.thenClick pointSelector(3, 0)
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
 
     # black opens the game and passes
     goToGame BLACK_EMAIL
@@ -747,8 +747,8 @@ class PassAndScoringTest extends BrowserTest
         dame: 0
         blackscore: 19*19 - 12
         whitescore: 0
-    # Black confirms this pleasing result
-    casper.thenClick '.confirm_button'
+    # Black submits this pleasing result
+    casper.thenClick '.submit_button'
     # Black then revisits the same game off-turn to bask in the glory of his
     # big win
     casper.thenOpen serverUrl
@@ -788,7 +788,7 @@ class PassAndScoringTest extends BrowserTest
         blackscore: 19*19 - 12
     # White prepares a counter-proposal, and sends it back to Black
     casper.thenClick (pointSelector 1, 1)
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
 
     # Black logs in and opens the game
     goToGame BLACK_EMAIL, =>
@@ -798,9 +798,9 @@ class PassAndScoringTest extends BrowserTest
         black: 9
         white: 7
         blackdead: 3
-    # Black reverts the proposal and confirms
+    # Black reverts the proposal and submits
     casper.thenClick (pointSelector 3, 1)
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
 
     # seeing the reverted proposal, White resumes play
     goToGame WHITE_EMAIL
@@ -809,7 +809,7 @@ class PassAndScoringTest extends BrowserTest
     # White being the last to pass, Black has the turn
     goToGame BLACK_EMAIL
     casper.thenClick (pointSelector 2, 1)
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
     # White is ready to give this up
     goToGame WHITE_EMAIL
     casper.thenClick '.pass_button'
@@ -822,15 +822,15 @@ class PassAndScoringTest extends BrowserTest
         black: 4 + 9
         white: 7
     casper.thenClick (pointSelector 3, 0)
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
     goToGame BLACK_EMAIL
     # finally, Black accepts White's proposal
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
 
     # game is now finished
     casper.thenOpen serverUrl, =>
-      test.assertDoesntExist (@lastGameSelector true)
-      test.assertDoesntExist (@lastGameSelector false)
+      test.assertDoesntExist (@lastGameSelector true), "no games on turn"
+      test.assertDoesntExist (@lastGameSelector false), "no games off turn"
 
 registerTest new PassAndScoringTest
 
@@ -887,14 +887,14 @@ class FinishedGamesTest extends BrowserTest
       @assertPrisoners test, black: 14, white: 18
       @assertScores test, black: 117, white: 89
       @assertGeneralPointCounts test,
-        label: "before confirming dead stones"
+        label: "before submitting dead stones"
         blackdead: 14
         whitedead: 18
         blackscore: 117 - 18
         whitescore: 89 - 14
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
     goToGame WHITE_EMAIL
-    casper.thenClick '.confirm_button'
+    casper.thenClick '.submit_button'
 
     casper.thenOpen serverUrl
     casper.thenClick '.finished_games_link', ->

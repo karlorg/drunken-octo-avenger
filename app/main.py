@@ -34,10 +34,6 @@ from app import go
 from app import sgftools
 
 
-IMG_PATH_EMPTY = '/static/images/goban/e.gif'
-IMG_PATH_BLACK = '/static/images/goban/b.gif'
-IMG_PATH_WHITE = '/static/images/goban/w.gif'
-
 app = Flask(__name__)
 app.config.from_object('config')
 app.jinja_env.undefined = jinja2.StrictUndefined

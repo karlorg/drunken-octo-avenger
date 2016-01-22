@@ -152,6 +152,10 @@ setViewMoveNo = (n) ->
   React.addons.TestUtils.Simulate.input(select, target: select)
   return
 
+getViewMoveNo = ->
+  select = $('.move_select')
+  return parseInt(select.val(), 10)
+
 test "helper function readBoardState and assert.boardState", (assert) ->
   # readBoardState is invoked by the boardState assert
   setInputSgf '(;SZ[3];B[ca];W[bc])'
@@ -222,6 +226,14 @@ test "can view past board states", (assert) ->
   assert.equal $('.last-played').length, 1, "exactly one last-move marker"
   assert.ok $('.col-1.row-1').find('.last-played').length,
     "last-move marker is at (1,1)"
+
+  $('.reset_button').click()
+  assert.equal getViewMoveNo(), 4, "reset button takes us to move 4"
+  assert.boardState ['b.w'
+                     '.b.'
+                     'b..'], "reset to initial board state"
+  assert.ok $('.col-2.row-0').find('.last-played').length,
+    "last-move marker is at (2,0)"
 
 test "viewing past moves after a resumption", (assert) ->
   setInputSgf '(;SZ[3];B[bb];W[cc];B[];W[]' +
@@ -313,8 +325,18 @@ test 'clicking multiple points updates hidden form', ->
   click$point $point2
   equal getResponseSgf(), '(;SZ[3];B[bc])', "second stone sets correct SGF"
 
-test 'Confirm button disabled until stone placed', ->
-  $button = $('button.confirm_button')
+test "Reset button removes proposed stone", (assert) ->
+  setInputSgf '(;SZ[3])'
+  tesuji_charm.game.initialize()
+  $point = $pointAt 0, 0
+  click$point $point
+  assert.ok isPointBlack($point), "proposed stone present before reset"
+
+  $('.reset_button').click()
+  assert.ok isPointEmpty($point), "gone after reset"
+
+test 'Submit button disabled until stone placed', ->
+  $button = $('button.submit_button')
   equal $button.prop('disabled'), true,
     'starts out disabled'
   click$point $pointAt(0, 0)
@@ -432,26 +454,26 @@ test "regression: proposed stone not listed in navigation UI", (assert) ->
 test "behaviour changes while viewing past moves", (assert) ->
   setInputSgf '(;SZ[3];B[aa];W[bb])'
   tesuji_charm.game.initialize()
-  $confirm_button = $('button.confirm_button')
+  $submit_button = $('button.submit_button')
   $point = $pointAt 2, 2
   click$point($point)
 
   setViewMoveNo 1
   assert.ok isPointEmpty($point), "proposed stone vanishes on viewing past move"
-  assert.ok $confirm_button.prop('disabled'), "confirm button disabled"
+  assert.ok $submit_button.prop('disabled'), "submit button disabled"
   assert.notOk $point.find('.placement').length, "hover effect is gone"
 
   click$point($point)
   assert.ok isPointEmpty($point), "no stone appears"
 
   setViewMoveNo 2
-  assert.ok $confirm_button.prop('disabled'), "confirm button still disabled"
+  assert.ok $submit_button.prop('disabled'), "submit button still disabled"
   assert.ok isPointEmpty($point), "proposed stone does not reappear"
   assert.ok $point.find('.placement').length, "hover effect is back"
 
   click$point($point)
   assert.ok isPointBlack($point), "after returning to end, stone can be placed"
-  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+  assert.notOk $submit_button.prop('disabled'), "submit button enabled"
 
 test "proposed stone removed when viewing past moves", (assert) ->
   initialSgf = '(;SZ[3];B[bb])'
@@ -618,14 +640,29 @@ test "Form is updated with current dead stones", (assert) ->
   actual = $('input#response').val()
   assert.ok actual.match(expected), "dead white stone found as black territory"
 
-test "Confirm button live while marking dead stones", (assert) ->
+test "Reset button restores previous markings", (assert) ->
+  setInputSgf ('(;SZ[3];B[aa];W[ab];B[bb];W[ca];B[bc];W[cc];B[ac];W[];B[]' +
+               ';TW[aa][ba][ab][bb][cb][ac][bc]')
+  # b.w
+  # .b.  (white captured at ab)
+  # bbw
+  tesuji_charm.game.initialize()
+  $point = $pointAt 1, 1
+  $reset_button = $('button.reset_button')
+  click$point $pointAt(1, 1)
+  assert.ok isPointBlack($point), "black stone revived after click"
+
+  $reset_button.click()
+  assert.ok isPointBlackDead($point), "black stone dead after reset"
+
+test "Submit button live while marking dead stones", (assert) ->
   setInputSgf '(;SZ[3];AB[aa][ca][bb][ac][bc]AW[cc];B[];W[])'
   # b.b
   # .b.
   # bbw
   tesuji_charm.game.initialize()
-  $confirm_button = $('button.confirm_button')
-  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+  $submit_button = $('button.submit_button')
+  assert.notOk $submit_button.prop('disabled'), "submit button enabled"
 
 test "Resume button updates response and submits", (assert) ->
   setInputSgf '(;SZ[3];B[];W[])'
@@ -649,18 +686,18 @@ test "behaviour changes while viewing past moves", (assert) ->
   # .b.  (white captured at ab)
   # bbw
   tesuji_charm.game.initialize()
-  $confirm_button = $('button.confirm_button')
+  $submit_button = $('button.submit_button')
 
   assert.ok isPointBlackDead($pointAt 0, 0), "initial layout shows dead stones"
   click$point $pointAt(2, 0)
   assert.ok isPointWhiteDead($pointAt 2, 0), "click kills stone"
-  assert.notOk $confirm_button.prop('disabled'), "confirm button enabled"
+  assert.notOk $submit_button.prop('disabled'), "submit button enabled"
 
   setViewMoveNo 0
   assert.notOk isPointDame($pointAt 1, 0),
     "regression: points not shown as dame on turn 0"
-  assert.ok $confirm_button.prop('disabled'),
-    "turn 0, confirm button disabled"
+  assert.ok $submit_button.prop('disabled'),
+    "turn 0, submit button disabled"
 
   setViewMoveNo 6
   assert.notOk isPointDame($pointAt 1, 0),
@@ -671,8 +708,8 @@ test "behaviour changes while viewing past moves", (assert) ->
   ($pointAt 2, 0).click()
   assert.notOk isPointWhiteDead($pointAt 2, 0),
     "earlier move, click does nothing"
-  assert.ok $confirm_button.prop('disabled'),
-    "turn 6, confirm button disabled"
+  assert.ok $submit_button.prop('disabled'),
+    "turn 6, submit button disabled"
 
   setViewMoveNo 9
   assert.notOk isPointBlackDead($pointAt 0, 0),
@@ -682,16 +719,16 @@ test "behaviour changes while viewing past moves", (assert) ->
   ($pointAt 2, 0).click()
   assert.notOk isPointWhiteDead($pointAt 2, 0),
     "before black stones marked dead, click does nothing"
-  assert.ok $confirm_button.prop('disabled'),
-    "turn 9, confirm button disabled"
+  assert.ok $submit_button.prop('disabled'),
+    "turn 9, submit button disabled"
 
   setViewMoveNo 10
   assert.ok isPointBlackDead($pointAt 0, 0),
     "return to latest move, dead stones from other player re-marked"
   assert.notOk isPointWhiteDead($pointAt 2, 0),
     "latest move, dead stones we set up before are not re-marked"
-  assert.notOk $confirm_button.prop('disabled'),
-    "latest move, confirm button enabled"
+  assert.notOk $submit_button.prop('disabled'),
+    "latest move, submit button enabled"
 
   click$point $pointAt(2, 0)
   assert.ok isPointWhiteDead($pointAt 2, 0), "click once again kills stone"
