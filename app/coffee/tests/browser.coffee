@@ -272,12 +272,13 @@ class NativeLoginTest extends BrowserTest
         }, true  # true = submit form
     # he is returned to the new account form with an error message
     casper.then =>
-      test.assertExists 'form#new_account_form',
-        "Darren tried non-matching passwords, is returned to form"
-      @check_flashed_message test, "Passwords do not match", 'danger',
-        "Darren is warned about his passwords not matching"
-      # he is not logged in
-      test.assertDoesntExist '#logout'
+      casper.waitForText 'Passwords do not match', =>
+        test.assertExists 'form#new_account_form',
+          "Darren tried non-matching passwords, is returned to form"
+        @check_flashed_message test, "Passwords do not match", 'danger',
+          "Darren is warned about his passwords not matching"
+        # he is not logged in
+        test.assertDoesntExist '#logout'
 
     # he tries again with matching passwords
     casper.then ->
@@ -287,7 +288,7 @@ class NativeLoginTest extends BrowserTest
         password2: 'iknowandy'
         }, true  # true = submit form
     # Darren is automatically logged in
-    casper.then ->
+    casper.waitForSelector '#logout', ->
       # the next page has a logout button
       test.assertExists '#logout',
         "Darren logged in automatically, logout button appears"
@@ -387,7 +388,7 @@ class ChallengeTest extends BrowserTest
 
     shindous_game_link = null
     # Shindou
-    casper.thenOpen serverUrl, =>
+    casper.waitForSelector '#your_turn_games', =>
       @assertNumGames test, 0, 1
       shindous_game_link = @getLastGameLink false
 
@@ -515,7 +516,6 @@ class FeedbackTest extends BrowserTest
     casper.thenOpen serverUrl, ->
       test.assertExists '#feedback-link'
     casper.thenClick '#feedback-link', ->
-      # casper.waitUntilVisible 'form#give_feedback'
       form_values =
         'input[name="feedback_email"]' : 'avid_user@google.com'
         'input[name="feedback_name"]' : 'Avid User'
