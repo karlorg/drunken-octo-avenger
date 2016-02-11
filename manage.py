@@ -39,9 +39,20 @@ def run_command(command):
     result = os.system(command)
     return 0 if result == 0 else 1
 
+def spawn_command(command):
+    """Start a shell command in a new process, return immediately."""
+    import shlex
+    import subprocess
+    cmd_args = shlex.split(command)
+    return subprocess.Popen(cmd_args)
+
 @manager.command
 def coffeelint():
     return run_command('coffeelint app/coffee')
+
+coffee_dirs = [
+    'app/coffee', 'app/coffee/tests'
+]
 
 @manager.command
 def coffeebuild():
@@ -49,6 +60,39 @@ def coffeebuild():
         'coffee -c -o app/static/compiled-js app/coffee &&'
         'coffee -c -o app/static/compiled-js/tests app/coffee/tests'
     )
+
+@manager.command
+def coffeewatch():
+    import glob
+    import time
+    processes = []
+    for src_dir in coffee_dirs:
+        target_dir = src_dir.replace('app/coffee', 'app/static/compiled-js')
+        # produce a list of .coffee files so as not to pick up temp
+        # backup files like `#file.coffee#` and `file.coffee~`
+        src_files = ' '.join(
+            glob.glob("{src_dir}/*.coffee".format(**locals()))
+        )
+        cmd = "coffee -cwo {target_dir} {src_files}".format(**locals())
+        processes.append(spawn_command(cmd))
+    # abort if any subprocess stops
+
+    def poll_processes():
+        for process in processes:
+            if process.poll() is not None:
+                print("A coffee process died!")
+                return process.returncode
+        return None
+
+    failure_code = None
+    while failure_code is None:
+        failure_code = poll_processes()
+        time.sleep(0.1)
+
+    # kill all remaining processes
+    for process in processes:
+        process.terminate()
+    return failure_code
 
 @manager.command
 def test_browser(name):
