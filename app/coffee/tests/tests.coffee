@@ -180,6 +180,12 @@ test "last move correctly indicated", ->
   $point = $pointAt 0, 1
   ok isPointLastPlayed($point), 'last placed stone indicated'
 
+test "no last move marker after a pass", ->
+  setInputSgf '(;SZ[3];B[ab];W[])'
+  tesuji_charm.game.initialize()
+  $point = $pointAt 0, 1
+  notOk isPointLastPlayed($point), 'no last placed stone indicated'
+
 test "setup stones in SGF (tags AB & AW)", (assert) ->
   # ensure we test both a list of setup stones (AB here) and a single
   # setup stone (AW here) since the smartgame library produces an

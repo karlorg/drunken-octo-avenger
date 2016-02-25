@@ -467,20 +467,26 @@ stateFromSgfObject = (sgfObject, options={}) ->
       for coordStr in coords
         [x, y] = decodeSgfCoord coordStr
         boardState[y][x] = 'white'
-    if node.B
-      [x, y] = decodeSgfCoord node.B
-      result = go_rules.getNewStateAndCaptures('black', x, y, boardState,
-                                               destructive: true)
-      boardState = result.state
-      prisoners.black += result.captures.black
-      prisoners.white += result.captures.white
-    else if node.W
-      [x, y] = decodeSgfCoord node.W
-      result = go_rules.getNewStateAndCaptures('white', x, y, boardState,
-                                               destructive: true)
-      boardState = result.state
-      prisoners.black += result.captures.black
-      prisoners.white += result.captures.white
+    if node.B?
+      if node.B == ''
+        [x, y] = [null, null]
+      else
+        [x, y] = decodeSgfCoord node.B
+        result = go_rules.getNewStateAndCaptures('black', x, y, boardState,
+                                                destructive: true)
+        boardState = result.state
+        prisoners.black += result.captures.black
+        prisoners.white += result.captures.white
+    else if node.W?
+      if node.W == ''
+        [x, y] = [null, null]
+      else
+        [x, y] = decodeSgfCoord node.W
+        result = go_rules.getNewStateAndCaptures('white', x, y, boardState,
+                                                destructive: true)
+        boardState = result.state
+        prisoners.black += result.captures.black
+        prisoners.white += result.captures.white
   if scoring
     [x, y] = [null, null]
     deadStones = deadFromUi ?
