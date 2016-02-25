@@ -62,13 +62,6 @@ exports.readBoardState = readBoardState = ->
     result[row][col] = colorFromDom $this
   return result
 
-isHandicapPoint = (size, row, column) ->
-  switch size
-    when 19 then row in [3,9,15] and column in [3,9,15]
-    when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
-    when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
-    else false
-
 exports.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
 
@@ -258,70 +251,12 @@ BoardAreaDom = React.createClass
 
 BoardDom = React.createClass
 
-  divMakers: ->
-    # this is function rather than a constant only because it varies based on
-    # the `hoverColor` prop
-    classNames =
-      topVert: "board_line board_line_vertical"
-      botVert: "board_line board_line_vertical board_line_bottom_vertical"
-      leftHoriz: "board_line board_line_horizontal"
-      rightHoriz: "board_line board_line_horizontal board_line_right_horizontal"
-      handicapPoint: "handicappoint"
-      blackStone: "stone black"
-      whiteStone: "stone white"
-      dame: "territory neutral"
-      blackScore: "territory black"
-      whiteScore: "territory white"
-      blackDead: "stone black dead"
-      whiteDead: "stone white dead"
-      lastPlayedMarker: "last-played"
-      hover: if @props.hoverColor \
-              then "placement #{@props.hoverColor}" \
-              else ""
-
-    makermaker = (kind, className) ->
-      (i, j) -> React.DOM.div {className: className, key: kind}
-    makers = {}
-    for own kind, className of classNames
-      makers[kind] = makermaker(kind, className)
-
-    makers
-
-  boardDivsForPos: (i, j) ->
-    {size} = @props
-    m = @divMakers()
-    result = []
-    if j > 0 then result.push m.topVert(i, j)
-    if j < size - 1 then result.push m.botVert(i, j)
-    if i > 0 then result.push m.leftHoriz(i, j)
-    if i < size - 1 then result.push m.rightHoriz(i, j)
-    if isHandicapPoint(size, j, i) then result.push m.handicapPoint(i, j)
-    result
-
-  stoneDivsForPos: (i, j) ->
-    {boardState, lastPlayed} = @props
-    m = @divMakers()
-    color = boardState[j][i]
-    result = switch color
-      when 'black' then [m.blackStone(i, j)]
-      when 'white' then [m.whiteStone(i, j)]
-      when 'empty' then [m.hover(i, j)]
-      when 'dame' then [m.dame(i, j)]
-      when 'blackscore' then [m.blackScore(i, j)]
-      when 'whitescore' then [m.whiteScore(i, j)]
-      when 'blackdead' then [m.blackDead(i, j), m.whiteScore(i, j)]
-      when 'whitedead' then [m.whiteDead(i, j), m.blackScore(i, j)]
-      else []
-    if i == lastPlayed.x and j == lastPlayed.y
-      result.push m.lastPlayedMarker(i, j)
-    result
-
   render: ->
     # boardState is the complete state to show, with the newly proposed
     # stone included if there is one.  lastPlayed is only used to locate
     # the 'new stone' marker, the stone it refers to should already be in
     # the boardState.
-    {boardState, lastPlayed, size} = @props
+    {size} = @props
     {div} = React.DOM
 
     onClickForPos = (i, j) =>
@@ -335,8 +270,112 @@ BoardDom = React.createClass
                   key: i
                   className: "gopoint row-#{j} col-#{i}"
                   onClick: onClickForPos(i, j)},
-                    (@boardDivsForPos i, j),
-                    (@stoneDivsForPos i, j))
+                    (@boardPointDomForPos i, j),
+                    (@stoneDomForPos i, j))
+
+  boardPointDomForPos: (i, j) ->
+    {size} = @props
+    React.createElement BoardPointDom,
+                        key: 'point'
+                        size: size
+                        x: i
+                        y: j
+
+  stoneDomForPos: (i, j) ->
+    {boardState, hoverColor, lastPlayed} = @props
+    color = boardState[j][i]
+    isLastPlayed = (i == lastPlayed.x and j == lastPlayed.y)
+    React.createElement StoneDom,
+                        key: 'stone'
+                        color: color
+                        hoverColor: hoverColor
+                        isLastPlayed: isLastPlayed
+
+BoardPointDom = React.createClass
+
+  render: ->
+    {size, x, y} = @props
+    m = @divMakers()
+    contents = []
+    if y > 0 then contents.push m.topVert()
+    if y < size - 1 then contents.push m.botVert()
+    if x > 0 then contents.push m.leftHoriz()
+    if x < size - 1 then contents.push m.rightHoriz()
+    if @isHandicapPoint() then contents.push m.handicapPoint()
+    React.DOM.div {}, contents
+
+  shouldComponentUpdate: -> false
+
+  isHandicapPoint: ->
+    {size, x: column, y: row} = @props
+    switch size
+      when 19 then row in [3,9,15] and column in [3,9,15]
+      when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
+      when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
+      else false
+
+  divMakers: ->
+    classNames =
+      topVert: "board_line board_line_vertical"
+      botVert: "board_line board_line_vertical board_line_bottom_vertical"
+      leftHoriz: "board_line board_line_horizontal"
+      rightHoriz: "board_line board_line_horizontal board_line_right_horizontal"
+      handicapPoint: "handicappoint"
+
+    makermaker = (kind, className) ->
+      -> React.DOM.div {className: className, key: kind}
+    makers = {}
+    for own kind, className of classNames
+      makers[kind] = makermaker(kind, className)
+
+    makers
+
+StoneDom = React.createClass
+
+  render: ->
+    {color, isLastPlayed} = @props
+    m = @divMakers()
+    contents = switch color
+      when 'black' then [m.blackStone()]
+      when 'white' then [m.whiteStone()]
+      when 'empty' then [m.hover()]
+      when 'dame' then [m.dame()]
+      when 'blackscore' then [m.blackScore()]
+      when 'whitescore' then [m.whiteScore()]
+      when 'blackdead' then [m.blackDead(), m.whiteScore()]
+      when 'whitedead' then [m.whiteDead(), m.blackScore()]
+      else []
+    if isLastPlayed
+      contents.push m.lastPlayedMarker()
+    React.DOM.div {style: {width: '100%', height: '100%'}}, contents
+
+  shouldComponentUpdate: (nextProps) ->
+    (@props.color != nextProps.color or
+     @props.isLastPlayed != nextProps.isLastPlayed or
+     (nextProps.color == 'empty' and
+      (@props.hoverColor != nextProps.hoverColor)))
+
+  divMakers: ->
+    classNames =
+      blackStone: "stone black"
+      whiteStone: "stone white"
+      dame: "territory neutral"
+      blackScore: "territory black"
+      whiteScore: "territory white"
+      blackDead: "stone black dead"
+      whiteDead: "stone white dead"
+      lastPlayedMarker: "last-played"
+      hover: if @props.hoverColor \
+              then "placement #{@props.hoverColor}" \
+              else ""
+
+    makermaker = (kind, className) ->
+      -> React.DOM.div {className: className, key: kind}
+    makers = {}
+    for own kind, className of classNames
+      makers[kind] = makermaker(kind, className)
+
+    makers
 
 NavigationDom = React.createClass
   render: ->
