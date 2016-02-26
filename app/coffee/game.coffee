@@ -251,6 +251,10 @@ BoardAreaDom = React.createClass
 
 BoardDom = React.createClass
 
+  componentWillMount: ->
+    @initOnClicks()
+    return
+
   render: ->
     # boardState is the complete state to show, with the newly proposed
     # stone included if there is one.  lastPlayed is only used to locate
@@ -259,9 +263,6 @@ BoardDom = React.createClass
     {size} = @props
     {div} = React.DOM
 
-    onClickForPos = (i, j) =>
-      (event) => @props.clickCallback {x: i, y: j}
-
     div {className: 'goban'},
         for j in [0...size]
           div {key: j, className: 'goban-row'},
@@ -269,7 +270,7 @@ BoardDom = React.createClass
                 (div {
                   key: i
                   className: "gopoint row-#{j} col-#{i}"
-                  onClick: onClickForPos(i, j)},
+                  onClick: @onClickForPos(i, j)},
                     (@boardPointDomForPos i, j),
                     (@stoneDomForPos i, j))
 
@@ -290,6 +291,30 @@ BoardDom = React.createClass
                         color: color
                         hoverColor: hoverColor
                         isLastPlayed: isLastPlayed
+
+  initOnClicks: ->
+    # we cache an on-click callback function for each point on the
+    # board, so that every time this component updates, the same
+    # callback will be used for each point.
+    #
+    # Without caching, I believe React would see the callback functions
+    # changing each time render() was called.  And I can't see a way to have
+    # a single callback function and still pass the clicked coordinates back
+    # to the listener.
+    return if @onClicks?
+
+    # this factory is used to prevent JS from linking i and j to the
+    # loop variables instead of their values.
+    makeCb = (i, j) =>
+      (event) => @props.clickCallback {x: i, y: j}
+    {size} = @props
+    @onClicks = {}
+    for j in [0...size]
+      for i in [0...size]
+        @onClicks["#{j}-#{i}"] = makeCb i, j
+    return
+
+  onClickForPos: (i, j) -> @onClicks["#{j}-#{i}"]
 
 BoardPointDom = React.createClass
 
