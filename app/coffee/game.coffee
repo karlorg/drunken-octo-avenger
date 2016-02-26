@@ -251,11 +251,92 @@ BoardAreaDom = React.createClass
 
 BoardDom = React.createClass
 
-  componentWillMount: ->
-    @initOnClicks()
+  render: ->
+    # all we render is a simple div that will have its
+    # shouldComponentUpdate always return false, and therefore never
+    # be touched by React after initial rendering.  The actual
+    # rendering work is done manually, by this object, in our
+    # componentDidX methods.
+    React.createElement NonReactBoard
+
+  componentDidMount: ->
+    console.log 'new board mounted'
+    @renderGrid()
+    @renderStones()
     return
 
-  render: ->
+  componentDidUpdate: ->
+    @renderStones()
+
+  renderGrid: ->
+    topVertical = '<div class="board_line board_line_vertical"></div>'
+    bottomVertical = '<div class="board_line board_line_vertical
+                                  board_line_bottom_vertical"></div>'
+    leftHorizontal = '<div class="board_line board_line_horizontal"></div>'
+    rightHorizontal = '<div class="board_line board_line_horizontal
+                                    board_line_right_horizontal"></div>'
+
+    {size} = @props
+    $goban = $('<div>').addClass('goban')
+    for j in [0...size]
+      $row = $('<div>').addClass('goban-row')
+      for i in [0...size]
+        $point = $('<div>').addClass("gopoint row-#{j} col-#{i}")
+        if j > 0
+          $point.append $(topVertical)
+        if j < size - 1
+          $point.append $(bottomVertical)
+        if i > 0
+          $point.append $(leftHorizontal)
+        if i < size - 1
+          $point.append $(rightHorizontal)
+        $row.append $point
+      $goban.append $row
+
+    $('#non-react-board').append $goban
+
+  renderStones: ->
+    for rowArray, row in @props.boardState
+      for color, col in rowArray
+        @setPointColor ($pointAt col, row), color
+    @setLastPlayed()
+    return
+
+  setPointColor: ($td, color) ->
+    hoverClass = if @props.hoverColor \
+                 then "placement #{@props.hoverColor}" \
+                 else ""
+
+    $('.stone', $td).remove()
+    $('.territory', $td).remove()
+    [stoneclass, territoryclass] = switch color
+      when 'empty' then [hoverClass, '']
+      when 'dame' then ['', 'territory neutral']
+      when 'black' then ['stone black', '']
+      when 'white' then ['stone white', '']
+      when 'blackdead' then ['stone black dead', 'territory white']
+      when 'whitedead' then ['stone white dead', 'territory black']
+      when 'blackscore' then ['', 'territory black']
+      when 'whitescore' then ['', 'territory white']
+    if stoneclass
+      stoneElement = document.createElement 'div'
+      stoneElement.className = stoneclass
+      $td.append stoneElement
+    if territoryclass
+      territoryElement = document.createElement 'div'
+      territoryElement.className = territoryclass
+      $td.append territoryElement
+
+  setLastPlayed: ->
+    $('.goban .last-played').remove()
+    {lastPlayed: {x, y}} = @props
+    if x != null and y != null
+      $point = $pointAt x, y
+      $lp = $('<div>').addClass('last-played')
+      $point.append $lp
+    return
+
+  oldrender: ->
     # boardState is the complete state to show, with the newly proposed
     # stone included if there is one.  lastPlayed is only used to locate
     # the 'new stone' marker, the stone it refers to should already be in
@@ -315,6 +396,13 @@ BoardDom = React.createClass
     return
 
   onClickForPos: (i, j) -> @onClicks["#{j}-#{i}"]
+
+NonReactBoard = React.createClass
+
+  shouldComponentUpdate: -> false
+
+  render: ->
+    React.DOM.div {id: 'non-react-board'}
 
 BoardPointDom = React.createClass
 
