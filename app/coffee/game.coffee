@@ -269,6 +269,9 @@ BoardDom = React.createClass
     @renderStones()
 
   renderGrid: ->
+    makeCb = (i, j) =>
+      (event) => @props.clickCallback {x: i, y: j}
+
     topVertical = '<div class="board_line board_line_vertical"></div>'
     bottomVertical = '<div class="board_line board_line_vertical
                                   board_line_bottom_vertical"></div>'
@@ -282,6 +285,7 @@ BoardDom = React.createClass
       $row = $('<div>').addClass('goban-row')
       for i in [0...size]
         $point = $('<div>').addClass("gopoint row-#{j} col-#{i}")
+        $point.click (makeCb i, j)
         if j > 0
           $point.append $(topVertical)
         if j < size - 1
