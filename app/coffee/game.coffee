@@ -278,6 +278,7 @@ BoardDom = React.createClass
     leftHorizontal = '<div class="board_line board_line_horizontal"></div>'
     rightHorizontal = '<div class="board_line board_line_horizontal
                                     board_line_right_horizontal"></div>'
+    handicapPoint = '<div class="handicappoint"></div>'
 
     {size} = @props
     $goban = $('<div>').addClass('goban')
@@ -294,10 +295,19 @@ BoardDom = React.createClass
           $point.append $(leftHorizontal)
         if i < size - 1
           $point.append $(rightHorizontal)
+        if @isHandicapPoint(i, j, size)
+          $point.append $(handicapPoint)
         $row.append $point
       $goban.append $row
 
     $('#non-react-board').append $goban
+
+  isHandicapPoint: (column, row, size) ->
+    switch size
+      when 19 then row in [3,9,15] and column in [3,9,15]
+      when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
+      when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
+      else false
 
   initCurrentStones: ->
     # we'll keep a record of what the current board looks like so that we don't
