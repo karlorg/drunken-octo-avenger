@@ -251,156 +251,136 @@ BoardAreaDom = React.createClass
 
 BoardDom = React.createClass
 
-  componentWillMount: ->
-    @initOnClicks()
+  render: ->
+    # all we render is a simple div that will have its
+    # shouldComponentUpdate always return false, and therefore never
+    # be touched by React after initial rendering.  The actual
+    # rendering work is done manually, by this object, in our
+    # componentDidX methods.
+    React.createElement NonReactBoard
+
+  componentDidMount: ->
+    @renderGrid()
+    @initCurrentStones()
+    @renderStones()
     return
 
-  render: ->
-    # boardState is the complete state to show, with the newly proposed
-    # stone included if there is one.  lastPlayed is only used to locate
-    # the 'new stone' marker, the stone it refers to should already be in
-    # the boardState.
-    {size} = @props
-    {div} = React.DOM
+  componentDidUpdate: ->
+    @renderStones()
 
-    div {className: 'goban'},
-        for j in [0...size]
-          div {key: j, className: 'goban-row'},
-              for i in [0...size]
-                (div {
-                  key: i
-                  className: "gopoint row-#{j} col-#{i}"
-                  onClick: @onClickForPos(i, j)},
-                    (@boardPointDomForPos i, j),
-                    (@stoneDomForPos i, j))
-
-  boardPointDomForPos: (i, j) ->
-    {size} = @props
-    React.createElement BoardPointDom,
-                        key: 'point'
-                        size: size
-                        x: i
-                        y: j
-
-  stoneDomForPos: (i, j) ->
-    {boardState, hoverColor, lastPlayed} = @props
-    color = boardState[j][i]
-    isLastPlayed = (i == lastPlayed.x and j == lastPlayed.y)
-    React.createElement StoneDom,
-                        key: 'stone'
-                        color: color
-                        hoverColor: hoverColor
-                        isLastPlayed: isLastPlayed
-
-  initOnClicks: ->
-    # we cache an on-click callback function for each point on the
-    # board, so that every time this component updates, the same
-    # callback will be used for each point.
-    #
-    # Without caching, I believe React would see the callback functions
-    # changing each time render() was called.  And I can't see a way to have
-    # a single callback function and still pass the clicked coordinates back
-    # to the listener.
-    return if @onClicks?
-
-    # this factory is used to prevent JS from linking i and j to the
-    # loop variables instead of their values.
+  renderGrid: ->
     makeCb = (i, j) =>
       (event) => @props.clickCallback {x: i, y: j}
+
+    topVertical = '<div class="board_line board_line_vertical"></div>'
+    bottomVertical = '<div class="board_line board_line_vertical
+                                  board_line_bottom_vertical"></div>'
+    leftHorizontal = '<div class="board_line board_line_horizontal"></div>'
+    rightHorizontal = '<div class="board_line board_line_horizontal
+                                    board_line_right_horizontal"></div>'
+
     {size} = @props
-    @onClicks = {}
+    $goban = $('<div>').addClass('goban')
     for j in [0...size]
+      $row = $('<div>').addClass('goban-row')
       for i in [0...size]
-        @onClicks["#{j}-#{i}"] = makeCb i, j
+        $point = $('<div>').addClass("gopoint row-#{j} col-#{i}")
+        $point.click (makeCb i, j)
+        if j > 0
+          $point.append $(topVertical)
+        if j < size - 1
+          $point.append $(bottomVertical)
+        if i > 0
+          $point.append $(leftHorizontal)
+        if i < size - 1
+          $point.append $(rightHorizontal)
+        $row.append $point
+      $goban.append $row
+
+    $('#non-react-board').append $goban
+
+  initCurrentStones: ->
+    # we'll keep a record of what the current board looks like so that we don't
+    # have to use expensive DOM queries
+    {size} = @props
+    @currentStones = (('none' for i in [0...size]) for j in [0...size])
+
+  hasStoneChanged: (x, y, color) ->
+    @currentStones[y][x] != @currentStonesCode(color)
+
+  saveCurrentStone: (x, y, color) ->
+    @currentStones[y][x] = @currentStonesCode(color)
+
+  currentStonesCode: (color) ->
+    # we actually save some extra information besides just color in the
+    # current stones map; this function provides a string encoding that
+    # information.
+    #
+    # The idea is to ensure that two strings produced by this function are
+    # true iff no changes are needed.
+    if color is 'empty'
+      "#{color} #{@props.hoverColor}"
+    else
+      color
+
+  renderStones: ->
+    for rowArray, row in @props.boardState
+      for color, col in rowArray
+        @setPointColor col, row, color
+    @setLastPlayed()
     return
 
-  onClickForPos: (i, j) -> @onClicks["#{j}-#{i}"]
+  setPointColor: (x, y, color) ->
+    return unless @hasStoneChanged(x, y, color)
+    @clearPoint x, y
+    @addDivsForPoint x, y, color
+    @saveCurrentStone x, y, color
 
-BoardPointDom = React.createClass
+  clearPoint: (x, y) ->
+    $td = $pointAt x, y
+    $('.placement', $td).remove()
+    $('.stone', $td).remove()
+    $('.territory', $td).remove()
+    return
 
-  render: ->
-    {size, x, y} = @props
-    m = @divMakers()
-    contents = []
-    if y > 0 then contents.push m.topVert()
-    if y < size - 1 then contents.push m.botVert()
-    if x > 0 then contents.push m.leftHoriz()
-    if x < size - 1 then contents.push m.rightHoriz()
-    if @isHandicapPoint() then contents.push m.handicapPoint()
-    React.DOM.div {}, contents
+  addDivsForPoint: (x, y, color) ->
+    $td = $pointAt x, y
+    for classNames in @getDivClassNames color
+      $td.append $('<div>').addClass(classNames)
+    return
+
+  getDivClassNames: (color) ->
+    # return a list of strings; each string is a set of class names
+    # for a single div, ie. ['a b', 'c'] indicates two divs, a
+    # `div.a.b` and a `div.c`.
+    hoverClass = if @props.hoverColor \
+                 then "placement #{@props.hoverColor}" \
+                 else ""
+    switch color
+      when 'empty' then [hoverClass]
+      when 'dame' then ['territory neutral']
+      when 'black' then ['stone black']
+      when 'white' then ['stone white']
+      when 'blackdead' then ['stone black dead', 'territory white']
+      when 'whitedead' then ['stone white dead', 'territory black']
+      when 'blackscore' then ['territory black']
+      when 'whitescore' then ['territory white']
+
+  setLastPlayed: ->
+    $('.goban .last-played').remove()
+    {lastPlayed: {x, y}} = @props
+    if x != null and y != null
+      $point = $pointAt x, y
+      $lp = $('<div>').addClass('last-played')
+      $point.append $lp
+    return
+
+NonReactBoard = React.createClass
 
   shouldComponentUpdate: -> false
 
-  isHandicapPoint: ->
-    {size, x: column, y: row} = @props
-    switch size
-      when 19 then row in [3,9,15] and column in [3,9,15]
-      when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
-      when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
-      else false
-
-  divMakers: ->
-    classNames =
-      topVert: "board_line board_line_vertical"
-      botVert: "board_line board_line_vertical board_line_bottom_vertical"
-      leftHoriz: "board_line board_line_horizontal"
-      rightHoriz: "board_line board_line_horizontal board_line_right_horizontal"
-      handicapPoint: "handicappoint"
-
-    makermaker = (kind, className) ->
-      -> React.DOM.div {className: className, key: kind}
-    makers = {}
-    for own kind, className of classNames
-      makers[kind] = makermaker(kind, className)
-
-    makers
-
-StoneDom = React.createClass
-
   render: ->
-    {color, isLastPlayed} = @props
-    m = @divMakers()
-    contents = switch color
-      when 'black' then [m.blackStone()]
-      when 'white' then [m.whiteStone()]
-      when 'empty' then [m.hover()]
-      when 'dame' then [m.dame()]
-      when 'blackscore' then [m.blackScore()]
-      when 'whitescore' then [m.whiteScore()]
-      when 'blackdead' then [m.blackDead(), m.whiteScore()]
-      when 'whitedead' then [m.whiteDead(), m.blackScore()]
-      else []
-    if isLastPlayed
-      contents.push m.lastPlayedMarker()
-    React.DOM.div {style: {width: '100%', height: '100%'}}, contents
-
-  shouldComponentUpdate: (nextProps) ->
-    (@props.color != nextProps.color or
-     @props.isLastPlayed != nextProps.isLastPlayed or
-     (nextProps.color == 'empty' and
-      (@props.hoverColor != nextProps.hoverColor)))
-
-  divMakers: ->
-    classNames =
-      blackStone: "stone black"
-      whiteStone: "stone white"
-      dame: "territory neutral"
-      blackScore: "territory black"
-      whiteScore: "territory white"
-      blackDead: "stone black dead"
-      whiteDead: "stone white dead"
-      lastPlayedMarker: "last-played"
-      hover: if @props.hoverColor \
-              then "placement #{@props.hoverColor}" \
-              else ""
-
-    makermaker = (kind, className) ->
-      -> React.DOM.div {className: className, key: kind}
-    makers = {}
-    for own kind, className of classNames
-      makers[kind] = makermaker(kind, className)
-
-    makers
+    React.DOM.div {id: 'non-react-board'}
 
 NavigationDom = React.createClass
   render: ->
