@@ -302,7 +302,7 @@ BoardDom = React.createClass
     @currentStones = (('none' for i in [0...size]) for j in [0...size])
 
   hasStoneChanged: (x, y, color) ->
-    @currentStones[y][x] == @currentStonesCode(color)
+    @currentStones[y][x] != @currentStonesCode(color)
 
   saveCurrentStone: (x, y, color) ->
     @currentStones[y][x] = @currentStonesCode(color)
@@ -311,6 +311,9 @@ BoardDom = React.createClass
     # we actually save some extra information besides just color in the
     # current stones map; this function provides a string encoding that
     # information.
+    #
+    # The idea is to ensure that two strings produced by this function are
+    # true iff no changes are needed.
     if color is 'empty'
       "#{color} #{@props.hoverColor}"
     else
@@ -324,35 +327,40 @@ BoardDom = React.createClass
     return
 
   setPointColor: (x, y, color) ->
-    return if @hasStoneChanged(x, y, color)
-    {hoverColor} = @props
-    $td = $pointAt x, y
-    hoverClass = if @props.hoverColor \
-                 then "placement #{hoverColor}" \
-                 else ""
+    return unless @hasStoneChanged(x, y, color)
+    @clearPoint x, y
+    @addDivsForPoint x, y, color
+    @saveCurrentStone x, y, color
 
+  clearPoint: (x, y) ->
+    $td = $pointAt x, y
     $('.placement', $td).remove()
     $('.stone', $td).remove()
     $('.territory', $td).remove()
-    [stoneclass, territoryclass] = switch color
-      when 'empty' then [hoverClass, '']
-      when 'dame' then ['', 'territory neutral']
-      when 'black' then ['stone black', '']
-      when 'white' then ['stone white', '']
+    return
+
+  addDivsForPoint: (x, y, color) ->
+    $td = $pointAt x, y
+    for classNames in @getDivClassNames color
+      $td.append $('<div>').addClass(classNames)
+    return
+
+  getDivClassNames: (color) ->
+    # return a list of strings; each string is a set of class names
+    # for a single div, ie. ['a b', 'c'] indicates two divs, a
+    # `div.a.b` and a `div.c`.
+    hoverClass = if @props.hoverColor \
+                 then "placement #{@props.hoverColor}" \
+                 else ""
+    switch color
+      when 'empty' then [hoverClass]
+      when 'dame' then ['territory neutral']
+      when 'black' then ['stone black']
+      when 'white' then ['stone white']
       when 'blackdead' then ['stone black dead', 'territory white']
       when 'whitedead' then ['stone white dead', 'territory black']
-      when 'blackscore' then ['', 'territory black']
-      when 'whitescore' then ['', 'territory white']
-    if stoneclass
-      stoneElement = document.createElement 'div'
-      stoneElement.className = stoneclass
-      $td.append stoneElement
-    if territoryclass
-      territoryElement = document.createElement 'div'
-      territoryElement.className = territoryclass
-      $td.append territoryElement
-
-    @saveCurrentStone(x, y, color)
+      when 'blackscore' then ['territory black']
+      when 'whitescore' then ['territory white']
 
   setLastPlayed: ->
     $('.goban .last-played').remove()
