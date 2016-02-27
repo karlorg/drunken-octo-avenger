@@ -260,8 +260,8 @@ BoardDom = React.createClass
     React.createElement NonReactBoard
 
   componentDidMount: ->
-    console.log 'new board mounted'
     @renderGrid()
+    @initCurrentStones()
     @renderStones()
     return
 
@@ -295,18 +295,43 @@ BoardDom = React.createClass
 
     $('#non-react-board').append $goban
 
+  initCurrentStones: ->
+    # we'll keep a record of what the current board looks like so that we don't
+    # have to use expensive DOM queries
+    {size} = @props
+    @currentStones = (('none' for i in [0...size]) for j in [0...size])
+
+  hasStoneChanged: (x, y, color) ->
+    @currentStones[y][x] == @currentStonesCode(color)
+
+  saveCurrentStone: (x, y, color) ->
+    @currentStones[y][x] = @currentStonesCode(color)
+
+  currentStonesCode: (color) ->
+    # we actually save some extra information besides just color in the
+    # current stones map; this function provides a string encoding that
+    # information.
+    if color is 'empty'
+      "#{color} #{@props.hoverColor}"
+    else
+      color
+
   renderStones: ->
     for rowArray, row in @props.boardState
       for color, col in rowArray
-        @setPointColor ($pointAt col, row), color
+        @setPointColor col, row, color
     @setLastPlayed()
     return
 
-  setPointColor: ($td, color) ->
+  setPointColor: (x, y, color) ->
+    return if @hasStoneChanged(x, y, color)
+    {hoverColor} = @props
+    $td = $pointAt x, y
     hoverClass = if @props.hoverColor \
-                 then "placement #{@props.hoverColor}" \
+                 then "placement #{hoverColor}" \
                  else ""
 
+    $('.placement', $td).remove()
     $('.stone', $td).remove()
     $('.territory', $td).remove()
     [stoneclass, territoryclass] = switch color
@@ -326,6 +351,8 @@ BoardDom = React.createClass
       territoryElement = document.createElement 'div'
       territoryElement.className = territoryclass
       $td.append territoryElement
+
+    @saveCurrentStone(x, y, color)
 
   setLastPlayed: ->
     $('.goban .last-played').remove()
