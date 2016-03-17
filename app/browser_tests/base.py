@@ -82,7 +82,7 @@ class SeleniumTest(LiveServerTestCase):
         return app
 
     def setUp(self):
-        self.browser = webdriver.Firefox()
+        self.browser = webdriver.PhantomJS()
 
     def tearDown(self):
         self.browser.quit()
