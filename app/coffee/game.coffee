@@ -62,13 +62,6 @@ exports.readBoardState = readBoardState = ->
     result[row][col] = colorFromDom $this
   return result
 
-isHandicapPoint = (size, row, column) ->
-  switch size
-    when 19 then row in [3,9,15] and column in [3,9,15]
-    when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
-    when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
-    else false
-
 exports.initialize = (sgfObject = null, newStoneColor = null) ->
   sgfObject or= smartgame.parse(getInputSgf() or '(;SZ[19])')
 
@@ -258,97 +251,160 @@ BoardAreaDom = React.createClass
 
 BoardDom = React.createClass
 
-  divMakers: ->
-    # this is function rather than a constant only because it varies based on
-    # the `hoverColor` prop
-    classNames =
-      topVert: "board_line board_line_vertical"
-      botVert: "board_line board_line_vertical board_line_bottom_vertical"
-      leftHoriz: "board_line board_line_horizontal"
-      rightHoriz: "board_line board_line_horizontal board_line_right_horizontal"
-      handicapPoint: "handicappoint"
-      blackStone: "stone black"
-      whiteStone: "stone white"
-      dame: "territory neutral"
-      blackScore: "territory black"
-      whiteScore: "territory white"
-      blackDead: "stone black dead"
-      whiteDead: "stone white dead"
-      lastPlayedMarker: "last-played"
-      hover: if @props.hoverColor \
-              then "placement #{@props.hoverColor}" \
-              else ""
-
-    makermaker = (kind, className) ->
-      (i, j) -> React.DOM.div {className: className, key: kind}
-    makers = {}
-    for own kind, className of classNames
-      makers[kind] = makermaker(kind, className)
-
-    makers
-
-  boardDivsForPos: (i, j) ->
-    {size} = @props
-    m = @divMakers()
-    result = []
-    if j > 0 then result.push m.topVert(i, j)
-    if j < size - 1 then result.push m.botVert(i, j)
-    if i > 0 then result.push m.leftHoriz(i, j)
-    if i < size - 1 then result.push m.rightHoriz(i, j)
-    if isHandicapPoint(size, j, i) then result.push m.handicapPoint(i, j)
-    result
-
-  stoneDivsForPos: (i, j) ->
-    {boardState, lastPlayed} = @props
-    m = @divMakers()
-    color = boardState[j][i]
-    result = switch color
-      when 'black' then [m.blackStone(i, j)]
-      when 'white' then [m.whiteStone(i, j)]
-      when 'empty' then [m.hover(i, j)]
-      when 'dame' then [m.dame(i, j)]
-      when 'blackscore' then [m.blackScore(i, j)]
-      when 'whitescore' then [m.whiteScore(i, j)]
-      when 'blackdead' then [m.blackDead(i, j), m.whiteScore(i, j)]
-      when 'whitedead' then [m.whiteDead(i, j), m.blackScore(i, j)]
-      else []
-    if i == lastPlayed.x and j == lastPlayed.y
-      result.push m.lastPlayedMarker(i, j)
-    result
-
   render: ->
-    # boardState is the complete state to show, with the newly proposed
-    # stone included if there is one.  lastPlayed is only used to locate
-    # the 'new stone' marker, the stone it refers to should already be in
-    # the boardState.
-    {boardState, lastPlayed, size} = @props
-    {div} = React.DOM
+    # all we render is a simple div that will have its
+    # shouldComponentUpdate always return false, and therefore never
+    # be touched by React after initial rendering.  The actual
+    # rendering work is done manually, by this object, in our
+    # componentDidX methods.
+    React.createElement NonReactBoard
 
-    onClickForPos = (i, j) =>
+  componentDidMount: ->
+    @renderGrid()
+    @initCurrentStones()
+    @renderStones()
+    return
+
+  componentDidUpdate: ->
+    @renderStones()
+
+  renderGrid: ->
+    makeCb = (i, j) =>
       (event) => @props.clickCallback {x: i, y: j}
 
-    div {className: 'goban'},
-        for j in [0...size]
-          div {key: j, className: 'goban-row'},
-              for i in [0...size]
-                (div {
-                  key: i
-                  className: "gopoint row-#{j} col-#{i}"
-                  onClick: onClickForPos(i, j)},
-                    (@boardDivsForPos i, j),
-                    (@stoneDivsForPos i, j))
+    topVertical = '<div class="board_line board_line_vertical"></div>'
+    bottomVertical = '<div class="board_line board_line_vertical
+                                  board_line_bottom_vertical"></div>'
+    leftHorizontal = '<div class="board_line board_line_horizontal"></div>'
+    rightHorizontal = '<div class="board_line board_line_horizontal
+                                    board_line_right_horizontal"></div>'
+    handicapPoint = '<div class="handicappoint"></div>'
+
+    {size} = @props
+    $goban = $('<div>').addClass('goban')
+    for j in [0...size]
+      $row = $('<div>').addClass('goban-row')
+      for i in [0...size]
+        $point = $('<div>').addClass("gopoint row-#{j} col-#{i}")
+        $point.click (makeCb i, j)
+        if j > 0
+          $point.append $(topVertical)
+        if j < size - 1
+          $point.append $(bottomVertical)
+        if i > 0
+          $point.append $(leftHorizontal)
+        if i < size - 1
+          $point.append $(rightHorizontal)
+        if @isHandicapPoint(i, j, size)
+          $point.append $(handicapPoint)
+        $row.append $point
+      $goban.append $row
+
+    $('#non-react-board').append $goban
+
+  isHandicapPoint: (column, row, size) ->
+    switch size
+      when 19 then row in [3,9,15] and column in [3,9,15]
+      when 13 then (row in [3,9] and column in [3,9]) or row == column == 6
+      when 9 then (row in [2,6] and column in [2,6]) or row == column == 4
+      else false
+
+  initCurrentStones: ->
+    # we'll keep a record of what the current board looks like so that we don't
+    # have to use expensive DOM queries
+    {size} = @props
+    @currentStones = (('none' for i in [0...size]) for j in [0...size])
+
+  hasStoneChanged: (x, y, color) ->
+    @currentStones[y][x] != @currentStonesCode(color)
+
+  saveCurrentStone: (x, y, color) ->
+    @currentStones[y][x] = @currentStonesCode(color)
+
+  currentStonesCode: (color) ->
+    # we actually save some extra information besides just color in the
+    # current stones map; this function provides a string encoding that
+    # information.
+    #
+    # The idea is to ensure that two strings produced by this function are
+    # true iff no changes are needed.
+    if color is 'empty'
+      "#{color} #{@props.hoverColor}"
+    else
+      color
+
+  renderStones: ->
+    for rowArray, row in @props.boardState
+      for color, col in rowArray
+        @setPointColor col, row, color
+    @setLastPlayed()
+    return
+
+  setPointColor: (x, y, color) ->
+    return unless @hasStoneChanged(x, y, color)
+    @clearPoint x, y
+    @addDivsForPoint x, y, color
+    @saveCurrentStone x, y, color
+
+  clearPoint: (x, y) ->
+    $td = $pointAt x, y
+    $('.placement', $td).remove()
+    $('.stone', $td).remove()
+    $('.territory', $td).remove()
+    return
+
+  addDivsForPoint: (x, y, color) ->
+    $td = $pointAt x, y
+    for classNames in @getDivClassNames color
+      $td.append $('<div>').addClass(classNames)
+    return
+
+  getDivClassNames: (color) ->
+    # return a list of strings; each string is a set of class names
+    # for a single div, ie. ['a b', 'c'] indicates two divs, a
+    # `div.a.b` and a `div.c`.
+    hoverClass = if @props.hoverColor \
+                 then "placement #{@props.hoverColor}" \
+                 else ""
+    switch color
+      when 'empty' then [hoverClass]
+      when 'dame' then ['territory neutral']
+      when 'black' then ['stone black']
+      when 'white' then ['stone white']
+      when 'blackdead' then ['stone black dead', 'territory white']
+      when 'whitedead' then ['stone white dead', 'territory black']
+      when 'blackscore' then ['territory black']
+      when 'whitescore' then ['territory white']
+
+  setLastPlayed: ->
+    $('.goban .last-played').remove()
+    {lastPlayed: {x, y}} = @props
+    if x != null and y != null
+      $point = $pointAt x, y
+      $lp = $('<div>').addClass('last-played')
+      $point.append $lp
+    return
+
+NonReactBoard = React.createClass
+
+  shouldComponentUpdate: -> false
+
+  render: ->
+    React.DOM.div {id: 'non-react-board'}
 
 NavigationDom = React.createClass
   render: ->
     {button, div, select} = React.DOM
     div {className: 'board_nav_block'},
         [(select {
-           className: 'move_select',
+           key: 'movelist'
+           className: 'move_select'
            onChange: @onSelectChange
            onInput: @onSelectChange
            onKeyUp: @onSelectKeyUp
            value: @getViewingMove()}, @getOptions()),
          (button {
+           key: 'resetbutton'
            className: 'reset_button'
            disabled: @props.resetWouldDoNothing
            onClick: @props.resetCallback}, "Reset view to latest move")]
@@ -465,20 +521,26 @@ stateFromSgfObject = (sgfObject, options={}) ->
       for coordStr in coords
         [x, y] = decodeSgfCoord coordStr
         boardState[y][x] = 'white'
-    if node.B
-      [x, y] = decodeSgfCoord node.B
-      result = go_rules.getNewStateAndCaptures('black', x, y, boardState,
-                                               destructive: true)
-      boardState = result.state
-      prisoners.black += result.captures.black
-      prisoners.white += result.captures.white
-    else if node.W
-      [x, y] = decodeSgfCoord node.W
-      result = go_rules.getNewStateAndCaptures('white', x, y, boardState,
-                                               destructive: true)
-      boardState = result.state
-      prisoners.black += result.captures.black
-      prisoners.white += result.captures.white
+    if node.B?
+      if node.B == ''
+        [x, y] = [null, null]
+      else
+        [x, y] = decodeSgfCoord node.B
+        result = go_rules.getNewStateAndCaptures('black', x, y, boardState,
+                                                destructive: true)
+        boardState = result.state
+        prisoners.black += result.captures.black
+        prisoners.white += result.captures.white
+    else if node.W?
+      if node.W == ''
+        [x, y] = [null, null]
+      else
+        [x, y] = decodeSgfCoord node.W
+        result = go_rules.getNewStateAndCaptures('white', x, y, boardState,
+                                                destructive: true)
+        boardState = result.state
+        prisoners.black += result.captures.black
+        prisoners.white += result.captures.white
   if scoring
     [x, y] = [null, null]
     deadStones = deadFromUi ?

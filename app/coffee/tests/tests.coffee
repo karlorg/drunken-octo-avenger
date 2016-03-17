@@ -3,12 +3,11 @@
 $pointAt = (x, y) -> $(".row-#{y}.col-#{x}")
 imageSrc = ($point) -> $point.find('img').attr('src')
 
-# under PhantomJS (our automated browser testing tool), jQuery's
-# `$element.click()` method doesn't trigger React's event handlers
-# (although strangely, it does in FF and Chrome).  So to work around
-# that we use React's TestUtils to simulate clicks instead.
+# this click$point function appeared when the board was controlled by React;
+# jQuery clicks would not trigger React callbacks.  Now the board is updated
+# by custom code we just use a jQuery click event as you'd expect.
 click$point = ($point) ->
-  React.addons.TestUtils.Simulate.click $point.get(0)
+  $point.click()
 
 contains_selector = tesuji_charm.game.contains_selector
 
@@ -179,6 +178,12 @@ test "last move correctly indicated", ->
   tesuji_charm.game.initialize()
   $point = $pointAt 0, 1
   ok isPointLastPlayed($point), 'last placed stone indicated'
+
+test "no last move marker after a pass", ->
+  setInputSgf '(;SZ[3];B[ab];W[])'
+  tesuji_charm.game.initialize()
+  $point = $pointAt 0, 1
+  notOk isPointLastPlayed($point), 'no last placed stone indicated'
 
 test "setup stones in SGF (tags AB & AW)", (assert) ->
   # ensure we test both a list of setup stones (AB here) and a single
