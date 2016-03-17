@@ -364,10 +364,20 @@ class TestStatusIntegrated(TestWithDb):
         self.assert_redirects(response, '/')
 
     def test_games_come_out_sorted(self):
-        """Regression test: going via dictionaries can break sorting"""
+        """Game with longest time since move should be first."""
+        games = []
         for i in range(5):
-            self.add_game(black='some@one.com', white='some@two.com')
-            self.add_game(black='some@two.com', white='some@one.com')
+            games.append(
+                self.add_game(black='some@one.com', white='some@two.com'))
+            games.append(
+                self.add_game(black='some@two.com', white='some@one.com'))
+        # play a couple stones so the expected order is not identical to
+        # creation order
+        for n in [3, 7, 8]:
+            with self.set_user(games[n].black) as test_client:
+                test_client.post(url_for('play', game_no=games[n].id),
+                                 data=dict(response="(;B[bc])"))
+
         with self.set_user('some@one.com') as test_client:
             with self.patch_render_template() as mock_render:
 
@@ -378,7 +388,7 @@ class TestStatusIntegrated(TestWithDb):
         not_your_turn_games = kwargs['not_your_turn_games']
 
         def game_key(game):
-            return game.id
+            return game.last_move_time
         self.assertEqual(
                 your_turn_games,
                 sorted(your_turn_games, key=game_key))
