@@ -149,6 +149,7 @@ def play(game_no):
         flash("Invalid request.")
         return redirect(url_for('game', game_no=game_no))
     game.sgf = arguments['response']
+    game.last_move_time = datetime.now()
     _check_gameover_and_update(game)
     db.session.commit()
     return redirect(redirect_url())
