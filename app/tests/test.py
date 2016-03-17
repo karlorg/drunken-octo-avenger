@@ -266,6 +266,7 @@ class TestChallengeIntegrated(TestWithDb):
         with self.set_user('white@white.com') as test_client:
             test_client.post('/challenge', data=dict(
                 opponent='black@black.com'))
+        db.session.rollback()  # to catch missing commits
         game = db.session.query(Game).one()
         self.assertEqual(game.white, 'white@white.com')
         self.assertEqual(game.black, 'black@black.com')
@@ -451,11 +452,14 @@ class TestResignIntegrated(TestWithDb):
 
     def test_nothing_happens_off_turn(self):
         game = self.add_game()
+        game_no = game.id
         self.assertFalse(game.finished,
                          "game should not initially be finished")
         with self.set_user(game.white) as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(resign_button='resign'))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
         self.assertFalse(game.finished,
                          "game should not be finished")
 
@@ -465,6 +469,8 @@ class TestPlayIntegrated(TestWithDb):
     def test_can_add_stones_and_passes_to_two_games(self):
         game1 = self.add_game()
         game2 = self.add_game()
+        game1_no = game1.id
+        game2_no = game2.id
         with self.patch_render_template():
             with self.set_user('black@black.com') as test_client:
                 test_client.post(url_for('play', game_no=game1.id),
@@ -478,6 +484,9 @@ class TestPlayIntegrated(TestWithDb):
             with self.set_user('black@black.com') as test_client:
                 test_client.post(url_for('play', game_no=game1.id),
                                  data=dict(response="(;B[pd];W[pp];B[])"))
+        db.session.rollback()  # to catch missing commits
+        game1 = db.session.query(Game).filter_by(id=game1_no).one()
+        game2 = db.session.query(Game).filter_by(id=game2_no).one()
         self.assertEqual(game1.sgf, "(;B[pd];W[pp];B[])")
         self.assertEqual(game2.sgf, "(;B[jj])")
 
@@ -516,18 +525,24 @@ class TestPlayIntegrated(TestWithDb):
 
     def test_works_with_setup_stones(self):
         game = self.add_game("(;AW[ba])")
+        game_no = game.id
         with self.set_user('black@black.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response="(;AW[ba]B[bc])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
         self.assertEqual(game.sgf, "(;AW[ba]B[bc])")
 
     def test_rejects_invalid_move(self):
         game = self.add_game("(;AW[ba])")
+        game_no = game.id
         with self.set_user('black@black.com') as test_client:
             with self.assert_flashes('invalid'):
                 response = test_client.post(
                     url_for('play', game_no=game.id),
                     data=dict(response="(;AW[ba]B[ba])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
         self.assertEqual(game.sgf, "(;AW[ba])")
         self.assert_redirects(response, url_for('game', game_no=game.id))
 
@@ -539,12 +554,15 @@ class TestPlayIntegrated(TestWithDb):
 
     def test_counts_passes_toward_turn_count(self):
         game = self.add_game("(;)")
+        game_no = game.id
         with self.set_user('black@black.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response="(;B[])"))
         with self.set_user('white@white.com') as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response="(;B[];W[pp])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
         self.assertEqual(game.sgf, "(;B[];W[pp])")
 
     def test_two_identical_deadstones_end_game(self):
@@ -559,6 +577,7 @@ class TestPlayIntegrated(TestWithDb):
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response=new_sgf))
 
+        db.session.rollback()  # to catch missing commits
         new_game = db.session.query(Game).filter_by(id=game.id).one()
         self.assertEqual(new_game.sgf, new_sgf)
         self.assertTrue(new_game.finished,
@@ -577,6 +596,7 @@ class TestPlayIntegrated(TestWithDb):
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(response=new_sgf))
 
+        db.session.rollback()  # to catch missing commits
         new_game = db.session.query(Game).filter_by(id=game.id).one()
         self.assertEqual(new_game.sgf, new_sgf)
         self.assertFalse(new_game.finished,
