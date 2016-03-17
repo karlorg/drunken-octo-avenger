@@ -39,9 +39,58 @@ def run_command(command):
     result = os.system(command)
     return 0 if result == 0 else 1
 
+def spawn_command(command):
+    """Start a shell command in a new process, return immediately."""
+    import shlex
+    import subprocess
+    cmd_args = shlex.split(command)
+    return subprocess.Popen(cmd_args)
+
+def spawn_commands_and_wait_forever(*cmds, **kwargs):
+    """Spawn each of `cmds` as a subprocess, wait until any of them stops.
+
+    This is intended for commands that you expect to run forever, so
+    any command stopping is considered an error and all of them will
+    then be aborted.
+
+    If `error_msg` is given as a keyword arg, display that message if any
+    subprocess stops.
+
+    If a keyboard interrupt is received, end all processes and return 0.
+    """
+    import time
+    error_msg = kwargs.get('error_msg', '')
+
+    processes = []
+    for cmd in cmds:
+        processes.append(spawn_command(cmd))
+
+    def poll_processes():
+        for process in processes:
+            if process.poll() is not None:
+                print(error_msg)
+                return process.returncode
+        return None
+
+    try:
+        failure_code = None
+        while failure_code is None:
+            failure_code = poll_processes()
+            time.sleep(0.1)
+        return failure_code
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        for process in processes:
+            process.terminate()
+
 @manager.command
 def coffeelint():
     return run_command('coffeelint app/coffee')
+
+coffee_dirs = [
+    'app/coffee', 'app/coffee/tests'
+]
 
 @manager.command
 def coffeebuild():
@@ -49,6 +98,23 @@ def coffeebuild():
         'coffee -c -o app/static/compiled-js app/coffee &&'
         'coffee -c -o app/static/compiled-js/tests app/coffee/tests'
     )
+
+@manager.command
+def coffeewatch():
+    """Continuously compile any changed coffeescript files."""
+    import glob
+    cmds = []
+    for src_dir in coffee_dirs:
+        target_dir = src_dir.replace('app/coffee', 'app/static/compiled-js')
+        # produce a list of .coffee files so as not to pick up temp
+        # backup files like `#file.coffee#` and `file.coffee~`
+        src_files = ' '.join(
+            glob.glob("{src_dir}/*.coffee".format(**locals()))
+        )
+        cmd = "coffee -cwo {target_dir} {src_files}".format(**locals())
+        cmds.append(cmd)
+    return spawn_commands_and_wait_forever(*cmds,
+                                           error_msg="A coffee process died!")
 
 @manager.command
 def test_browser(name):
