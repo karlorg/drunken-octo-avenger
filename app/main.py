@@ -136,6 +136,7 @@ def play(game_no):
     arguments = request.form.to_dict()
     if 'resign_button' in arguments:
         game.finished = True
+        db.session.commit()
         return redirect(redirect_url())
     try:
         go.check_continuation(old_sgf=game.sgf,
