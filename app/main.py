@@ -165,6 +165,7 @@ def challenge():
     if form.validate_on_submit():
         game = Game(black=form.opponent.data,
                     white=logged_in_user(),
+                    last_move_time=datetime.now(),
                     sgf="(;)")
         db.session.add(game)
         db.session.commit()
@@ -484,7 +485,8 @@ def create_game_internal(black, white,
         if not stones:
             stones = []
         sgf = sgf_from_text_map(stones)
-    game = Game(black=black, white=white, sgf=sgf)
+    game = Game(black=black, white=white, sgf=sgf,
+                last_move_time=datetime.now())
     db.session.add(game)
     db.session.commit()
     return game

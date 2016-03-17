@@ -262,6 +262,8 @@ class TestChallengeIntegrated(TestWithDb):
         # should not raise
 
     def test_good_post_creates_game(self):
+        from datetime import datetime
+        time0 = datetime.now()
         assert Game.query.all() == []
         with self.set_user('white@white.com') as test_client:
             test_client.post('/challenge', data=dict(
@@ -272,6 +274,8 @@ class TestChallengeIntegrated(TestWithDb):
         self.assertEqual(game.black, 'black@black.com')
         self.assertIn("(;", game.sgf)
         self.assertFalse(game.finished)
+        self.assertIsNotNone(game.last_move_time)
+        self.assertLess(time0, game.last_move_time)
 
 
 class TestCreateAccountIntegrated(TestWithDb):
