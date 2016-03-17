@@ -438,11 +438,14 @@ class TestResignIntegrated(TestWithDb):
 
     def test_sets_finished(self):
         game = self.add_game()
+        game_no = game.id
         self.assertFalse(game.finished,
                          "game should not initially be finished")
         with self.set_user(game.black) as test_client:
             test_client.post(url_for('play', game_no=game.id),
                              data=dict(resign_button='resign'))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
         self.assertTrue(game.finished,
                         "game should be finished after resign posted")
 
