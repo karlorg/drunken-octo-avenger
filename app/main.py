@@ -687,6 +687,7 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
     finished = db.Column(db.Boolean(), server_default="0")
+    last_move_time = db.Column(db.DateTime())
 
     def __repr__(self):
         return "<Game {no}, {b} vs. {w}>".format(

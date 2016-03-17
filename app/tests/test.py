@@ -490,6 +490,38 @@ class TestPlayIntegrated(TestWithDb):
         self.assertEqual(game1.sgf, "(;B[pd];W[pp];B[])")
         self.assertEqual(game2.sgf, "(;B[jj])")
 
+    def test_sets_last_move_timestamp(self):
+        from datetime import datetime
+        from time import sleep
+        time0 = datetime.now()
+        game = self.add_game()
+        game_no = game.id
+
+        sleep(0.001)
+        with self.patch_render_template():
+            with self.set_user('black@black.com') as test_client:
+                test_client.post(url_for('play', game_no=game_no),
+                                 data=dict(response="(;B[pd])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
+        time1 = game.last_move_time
+        self.assertIsNotNone(time1)
+        self.assertLess(time0, time1,
+                        "first timestamp later than start of test")
+
+        sleep(0.001)
+        with self.patch_render_template():
+            with self.set_user('white@white.com') as test_client:
+                test_client.post(url_for('play', game_no=game_no),
+                                 data=dict(response="(;B[pd];W[cc])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
+        time2 = game.last_move_time
+        self.assertIsNotNone(time2)
+        self.assertLess(time1, time2,
+                        "second timestamp later than first")
+
+
     def test_redirects_to_home_if_not_logged_in(self):
         game = self.add_game()
         with main.app.test_client() as test_client:
