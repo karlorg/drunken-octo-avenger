@@ -187,15 +187,20 @@ def status():
 def get_status_lists(user):
     """Return two lists of games for the player, split by on-turn or not.
 
+    Sorts game lists with most time since last move first.
+
     Accesses database.
     """
     player_games = get_player_games(user)
 
+    def sort_key(game):
+        return game.last_move_time
     your_turn_games = [g for g in player_games
                        if user_to_move_in_game(g) == user]
     not_your_turn_games = [g for g in player_games
                            if user_to_move_in_game(g) != user]
-    return (your_turn_games, not_your_turn_games)
+    return (sorted(your_turn_games, key=sort_key),
+            sorted(not_your_turn_games, key=sort_key))
 
 def get_player_games(user):
     """Returns the list of games in which `user` is involved.
