@@ -617,22 +617,6 @@ class TestPlayIntegrated(TestWithDb):
         assert 'move_no=' not in str(response.get_data())
 
 
-class TestStorage(TestWithDb):
-
-    def test_handles_large_sgf(self):
-        # this will hopefully fail if we switch from SQLite to a backend that
-        # actually restricts the length of string fields; in which case, we
-        # probably would have to save SGFs in files or something.
-        with open('app/tests/adc-karlnaylor-948890-20150121.sgf') as test_file:
-            test_sgf = test_file.read()
-        saved = Game(black='black@black.com', white='white@white.com',
-                     sgf=test_sgf)
-        db.session.add(saved)
-        db.session.commit()
-        returned = db.session.query(Game).filter_by(id=saved.id).one()
-        self.assertEqual(returned.sgf, saved.sgf)
-
-
 class TestSgfFromTextMap(unittest.TestCase):
 
     def test_empty_map(self):
