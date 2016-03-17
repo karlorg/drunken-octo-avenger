@@ -262,6 +262,8 @@ class TestChallengeIntegrated(TestWithDb):
         # should not raise
 
     def test_good_post_creates_game(self):
+        from datetime import datetime
+        time0 = datetime.now()
         assert Game.query.all() == []
         with self.set_user('white@white.com') as test_client:
             test_client.post('/challenge', data=dict(
@@ -272,6 +274,8 @@ class TestChallengeIntegrated(TestWithDb):
         self.assertEqual(game.black, 'black@black.com')
         self.assertIn("(;", game.sgf)
         self.assertFalse(game.finished)
+        self.assertIsNotNone(game.last_move_time)
+        self.assertLess(time0, game.last_move_time)
 
 
 class TestCreateAccountIntegrated(TestWithDb):
@@ -360,10 +364,20 @@ class TestStatusIntegrated(TestWithDb):
         self.assert_redirects(response, '/')
 
     def test_games_come_out_sorted(self):
-        """Regression test: going via dictionaries can break sorting"""
+        """Game with longest time since move should be first."""
+        games = []
         for i in range(5):
-            self.add_game(black='some@one.com', white='some@two.com')
-            self.add_game(black='some@two.com', white='some@one.com')
+            games.append(
+                self.add_game(black='some@one.com', white='some@two.com'))
+            games.append(
+                self.add_game(black='some@two.com', white='some@one.com'))
+        # play a couple stones so the expected order is not identical to
+        # creation order
+        for n in [3, 7, 8]:
+            with self.set_user(games[n].black) as test_client:
+                test_client.post(url_for('play', game_no=games[n].id),
+                                 data=dict(response="(;B[bc])"))
+
         with self.set_user('some@one.com') as test_client:
             with self.patch_render_template() as mock_render:
 
@@ -374,7 +388,7 @@ class TestStatusIntegrated(TestWithDb):
         not_your_turn_games = kwargs['not_your_turn_games']
 
         def game_key(game):
-            return game.id
+            return game.last_move_time
         self.assertEqual(
                 your_turn_games,
                 sorted(your_turn_games, key=game_key))
@@ -489,6 +503,38 @@ class TestPlayIntegrated(TestWithDb):
         game2 = db.session.query(Game).filter_by(id=game2_no).one()
         self.assertEqual(game1.sgf, "(;B[pd];W[pp];B[])")
         self.assertEqual(game2.sgf, "(;B[jj])")
+
+    def test_sets_last_move_timestamp(self):
+        from datetime import datetime
+        from time import sleep
+        time0 = datetime.now()
+        game = self.add_game()
+        game_no = game.id
+
+        sleep(0.001)
+        with self.patch_render_template():
+            with self.set_user('black@black.com') as test_client:
+                test_client.post(url_for('play', game_no=game_no),
+                                 data=dict(response="(;B[pd])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
+        time1 = game.last_move_time
+        self.assertIsNotNone(time1)
+        self.assertLess(time0, time1,
+                        "first timestamp later than start of test")
+
+        sleep(0.001)
+        with self.patch_render_template():
+            with self.set_user('white@white.com') as test_client:
+                test_client.post(url_for('play', game_no=game_no),
+                                 data=dict(response="(;B[pd];W[cc])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
+        time2 = game.last_move_time
+        self.assertIsNotNone(time2)
+        self.assertLess(time1, time2,
+                        "second timestamp later than first")
+
 
     def test_redirects_to_home_if_not_logged_in(self):
         game = self.add_game()

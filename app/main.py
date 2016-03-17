@@ -149,6 +149,7 @@ def play(game_no):
         flash("Invalid request.")
         return redirect(url_for('game', game_no=game_no))
     game.sgf = arguments['response']
+    game.last_move_time = datetime.now()
     _check_gameover_and_update(game)
     db.session.commit()
     return redirect(redirect_url())
@@ -164,6 +165,7 @@ def challenge():
     if form.validate_on_submit():
         game = Game(black=form.opponent.data,
                     white=logged_in_user(),
+                    last_move_time=datetime.now(),
                     sgf="(;)")
         db.session.add(game)
         db.session.commit()
@@ -185,15 +187,20 @@ def status():
 def get_status_lists(user):
     """Return two lists of games for the player, split by on-turn or not.
 
+    Sorts game lists with most time since last move first.
+
     Accesses database.
     """
     player_games = get_player_games(user)
 
+    def sort_key(game):
+        return game.last_move_time
     your_turn_games = [g for g in player_games
                        if user_to_move_in_game(g) == user]
     not_your_turn_games = [g for g in player_games
                            if user_to_move_in_game(g) != user]
-    return (your_turn_games, not_your_turn_games)
+    return (sorted(your_turn_games, key=sort_key),
+            sorted(not_your_turn_games, key=sort_key))
 
 def get_player_games(user):
     """Returns the list of games in which `user` is involved.
@@ -483,7 +490,8 @@ def create_game_internal(black, white,
         if not stones:
             stones = []
         sgf = sgf_from_text_map(stones)
-    game = Game(black=black, white=white, sgf=sgf)
+    game = Game(black=black, white=white, sgf=sgf,
+                last_move_time=datetime.now())
     db.session.add(game)
     db.session.commit()
     return game
@@ -687,6 +695,7 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
     finished = db.Column(db.Boolean(), server_default="0")
+    last_move_time = db.Column(db.DateTime())
 
     def __repr__(self):
         return "<Game {no}, {b} vs. {w}>".format(
