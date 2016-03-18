@@ -38,62 +38,9 @@ class FrontPageTest(SeleniumTest):
         assert expected_email in email_display.text
         # and there is now no login link
         try:
-            self.browser.find_element_by_id('persona_login')
+            self.browser.find_element_by_id('login_form')
         except NoSuchElementException:
             pass  ## we expect no such element
         else:
             self.fail('found login link, should not exist')
         return logout_link
-
-    def test_persona_login(self):
-        ## we won't use the fake login session creator for this test; we want
-        ## to test the actual login procedure.
-
-        def find_login():
-            return self.browser.find_element_by_id('persona_login')
-
-        def find_email_entry():
-            return self.browser.find_element_by_id('authentication_email')
-
-        # loading the site's base url for the first time shows a button
-        # to log in with Mozilla Persona
-        self.browser.get(self.get_server_url())
-        persona_button = find_login()
-        # push the button and enter mockmyid login details
-        persona_button.click()
-        self.switch_to_new_window('Mozilla Persona')
-        email_input = self.wait_for(find_email_entry)
-        print(email_input)
-        ## mockmyid.com will approve any email in its domain
-        self.careful_keys(email_input, 'test@mockmyid.com')
-        self.browser.find_element_by_tag_name('button').click()
-        # the Persona window closes
-        self.switch_to_new_window('Go')
-        # and we're logged in
-        plogout_link = self.confirm_logged_in_and_get_logout_link()
-
-        # we try another page, we're still logged in there
-        # TODO: once we have a non-frontpage to browse to, go there
-        self.browser.get(self.get_server_url() + "/")
-        plogout_link = self.confirm_logged_in_and_get_logout_link()
-
-        # now we log out again
-        plogout_link.click()
-        # we're back to a login link...
-
-        persona_button = self.wait_for(find_login)
-        # and no email display...
-        try:
-            email_display = self.browser.find_element_by_class_name(
-                    'logged_in_user')
-        except NoSuchElementException:
-            pass
-        else:
-            assert 'test@mockmyid.com' not in email_display.text
-        # and no logout link
-        try:
-            self.browser.find_element_by_id('logout')
-        except NoSuchElementException:
-            pass  ## we expect no such element
-        else:
-            self.fail('found logout link, should not exist')
