@@ -343,27 +343,6 @@ def create_account():
                                            form=form)
 
 
-@app.route('/persona/login', methods=['POST'])
-def persona_login():
-    if 'assertion' not in request.form:
-        abort(400)
-    data = {
-            'assertion': request.form['assertion'],
-            'audience': DOMAIN,
-    }
-    response = requests.post(
-            'https://verifier.login.persona.org/verify',
-            data=data, verify=True
-    )
-    session_update = process_persona_response(response)
-    if session_update.do:
-        set_logged_in_user(session_update.email)
-        session.update({'persona_email': session_update.email})
-        # we're only accessed through AJAX, the response doesn't matter
-        return ''
-    else:
-        abort(500)
-
 @app.route('/finished', methods=['GET'])
 def finished():
     try:
@@ -384,10 +363,6 @@ def finished():
 def logout():
     try:
         logout_current_user()
-    except KeyError:
-        pass
-    try:
-        del session['persona_email']
     except KeyError:
         pass
     if request.method == 'POST':
@@ -562,26 +537,6 @@ def clear_games_for_player_internal(user):
 
 # helper functions
 
-_SessionUpdate = namedtuple('_SessionUpdate', ['do', 'email'])
-def process_persona_response(response):
-    """Given an HTTP response from Mozilla, determine who to log in.
-
-    Pure function.
-    """
-    if not response.ok:
-        logging.debug("Response not 'ok' for persona login attempt")
-        return _SessionUpdate(do=False, email='')
-    verification_data = response.json()
-    if (
-            'status' not in verification_data or
-            verification_data['status'] != 'okay' or
-            'email' not in verification_data
-    ):
-        logging.debug("Persona login has a problem with the verification data")
-        logging.debug(str(verification_data))
-        return _SessionUpdate(do=False, email='')
-    return _SessionUpdate(do=True, email=verification_data['email'])
-
 def is_logged_in():
     """True if a user is logged in."""
     return 'user' in session
@@ -614,14 +569,9 @@ def render_template_with_basics(template_name_or_list, **context):
         user = logged_in_user()
     except NoLoggedInPlayerException:
         user = ''
-    try:
-        persona_email = session['persona_email']
-    except KeyError:
-        persona_email = ''
     return render_template(
             template_name_or_list,
             current_user=user,
-            current_persona_email=persona_email,
             login_form=LoginForm(),
             feedback_form=FeedbackForm(),
             **context)

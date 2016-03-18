@@ -96,15 +96,8 @@ class TestWithDb(TestWithTestingApp):
 
 
 class TestFrontPageIntegrated(TestWithTestingApp):
-
-    def test_without_login_shows_persona_login_link(self):
-        response = self.test_client.get('/')
-        assert re.search(
-                r"""<a [^>]*id=['"]persona_login['"]""",
-                str(response.get_data())) is not None
-
     def test_with_login_redirects_to_status(self):
-        with self.set_user('test@mockmyid.com') as test_client:
+        with self.set_user('test_user') as test_client:
             response = test_client.get('/')
         self.assert_redirects(response, url_for('status'))
 
@@ -153,74 +146,6 @@ class TestNativeLoginIntegrated(TestWithDb):
         self.assert_redirects(response, '/')
 
 
-class TestPersonaLoginIntegrated(TestWithTestingApp):
-
-    TEST_EMAIL = 'test@example.com'
-
-    def make_mock_post(self, ok=True, status='okay', email=TEST_EMAIL):
-        mock_post = Mock(spec=requests.post)
-        mock_post.return_value = Mock()
-        mock_post.return_value.ok = ok
-        mock_post.return_value.json.return_value = {
-                'status': status,
-                'email': email,
-        }
-        return mock_post
-
-    def post_simple_assertion(self, test_client=None, mock_post=None):
-        if test_client is None:
-            test_client = self.test_client
-        if mock_post is None:
-            mock_post = self.make_mock_post()
-        with patch('app.main.requests.post', mock_post):
-            response = test_client.post('/persona/login',
-                                        data={'assertion': 'test'})
-        return (response, mock_post)
-
-
-    def test_aborts_on_no_assertion(self):
-        response = self.test_client.post('/persona/login',
-                                         data={})
-        self.assertEqual(response.status_code, 400)
-
-    def test_posts_assertion_to_mozilla(self):
-        _, mock_post = self.post_simple_assertion()
-        mock_post.assert_called_once_with(
-                'https://verifier.login.persona.org/verify',
-                data={
-                    'assertion': 'test',
-                    'audience': ANY
-                },
-                verify=True
-        )
-
-    def test_good_response_sets_session_email_and_persona_email(self):
-        with main.app.test_client() as test_client:
-
-            self.post_simple_assertion(test_client)
-
-            self.assertEqual(main.logged_in_user(), self.TEST_EMAIL)
-            self.assertEqual(session['persona_email'], self.TEST_EMAIL)
-
-    def test_bad_response_status_aborts(self):
-        mock_post = self.make_mock_post(status='no no NO')
-        with main.app.test_client() as test_client:
-
-            response, _ = self.post_simple_assertion(test_client, mock_post)
-
-            self.assertFalse(main.is_logged_in())
-            self.assertNotEqual(response.status_code, 200)
-
-    def test_bad_response_ok_aborts(self):
-        mock_post = self.make_mock_post(ok=False)
-        with main.app.test_client() as test_client:
-
-            response, _ = self.post_simple_assertion(test_client, mock_post)
-
-            self.assertFalse(main.is_logged_in())
-            self.assertNotEqual(response.status_code, 200)
-
-
 class TestLogoutIntegrated(TestWithTestingApp):
 
     def test_no_content_on_post(self):
@@ -230,19 +155,6 @@ class TestLogoutIntegrated(TestWithTestingApp):
     def test_returns_to_front_on_get(self):
         response = self.test_client.get(url_for('logout'))
         self.assert_redirects(response, '/')
-
-    def test_removes_email_and_persona_email_from_session(self):
-        with main.app.test_client() as test_client:
-            with test_client.session_transaction() as session:
-                main.set_logged_in_user('olduser@remove.me')
-                session['persona_email'] = 'olduser@remove.me'
-            with self.patch_render_template():
-
-                test_client.post('/logout')
-
-            with test_client.session_transaction() as session:
-                self.assertFalse(main.is_logged_in())
-                self.assertNotIn('persona_email', session)
 
     def test_no_error_when_email_not_set(self):
         with main.app.test_client() as test_client:

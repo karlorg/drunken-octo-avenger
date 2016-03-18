@@ -10,8 +10,6 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
 <link href="/static/index.css" rel="stylesheet" type="text/css">
-<!-- following meta is needed by Persona -->
-<meta http-equiv="X-UA-Compatible" content="IE=Edge">
 <title>Go</title>
 <style>
 body {
@@ -54,12 +52,7 @@ body {
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">
               {{current_user}} <b class="caret"></b></a>
               <ul class="dropdown-menu">
-                <li>{% if current_persona_email %}
-                  <a href="#" id="logout">Log out</a>
-                  {% else %}  <!-- else current_persona_email -->
-                  <a href="/logout" id="logout">Log out</a>
-                  {% endif %}  <!-- end current_persona_email -->
-                </li>
+                <li><a href="/logout" id="logout">Log out</a></li>
               </ul>
             </li>
         {% endif %} <!-- end if current_user -->
@@ -73,11 +66,6 @@ body {
           {{ login_form.password(size=15, placeholder=login_form.password.description) }}
           <div class="btn-group">
             <button class="btn" id="login_submit" type="submit" name="login" value="Login">Login</button>
-            <button class="btn dropdown-toggle" data-toggle="dropdown">
-              <span class="caret"></span></button>
-            <ul class="dropdown-menu">
-              <li><a href="#" id="persona_login">Login with Persona</a></li>
-            </ul>
           </div>
         </form>
         <ul class="nav navbar-nav pull-right">
@@ -152,7 +140,6 @@ body {
 <script>
 window.tesuji_charm = {
     currentUserEmail: "{{ current_user }}",
-    currentPersonaEmail: "{{ current_persona_email }}",
 };
 </script>
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
@@ -161,10 +148,7 @@ window.tesuji_charm = {
 <!-- Bootstrap Latest compiled and minified JavaScript -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
         integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
-<script src="https://login.persona.org/include.js"></script>
-<script src="/static/compiled-js/persona.js"></script>
 <script>
-tesuji_charm.persona.initialize(navigator);
 </script>
 {% block page_scripts %}
 {% endblock %}
