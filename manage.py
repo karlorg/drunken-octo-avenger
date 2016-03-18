@@ -118,13 +118,25 @@ def coffeewatch():
     return spawn_commands_and_wait_forever(*cmds,
                                            error_msg="A coffee process died!")
 
+def coverage_command(command_args, coverage):
+    # No need to specify the sources, this is done in the .coveragerc file.
+    if coverage:
+        return ["coverage", "run"] + command_args
+    else:
+        return ['python'] + command_args
+    
 def run_with_test_server(test_command, coverage):
     """Run the test server and the given test command in parallel. If 'coverage'
     is True, then we run the server under coverage analysis and produce a
-    coverge report."""
-    coverage_prefix = ["coverage", "run", "--source", "app.main"]
-    server_command_prefx = coverage_prefix if coverage else ['python']
-    server_command = server_command_prefx + ["manage.py", "run_test_server"]
+    coverge report.
+    """
+    # Note, if we start running Selenium tests again, then we should have,
+    # rather than a single 'test_command' a series of 'test_commands'. Then
+    # we start the server and *then* run each of the test commands, that way
+    # we will get the combined coverage of all the test commands, for example
+    # selenium + capserJS tests.
+    server_command_args = ["manage.py", "run_test_server"]
+    server_command = coverage_command(server_command_args, coverage)
     server = subprocess.Popen(server_command, stderr=subprocess.PIPE)
     # TODO: If we don't get this line we should  be able to detect that
     # and avoid the starting test process.
@@ -153,21 +165,6 @@ def test_casper(nocoverage=False):
     js_test_file = "app/static/compiled-js/tests/browser.js"
     casper_command = ["./node_modules/.bin/casperjs", "test", js_test_file]
     return run_with_test_server(casper_command, not nocoverage)
-
-
-@manager.command
-def test_main(nocoverage=False):
-    """Run the python only tests within py.test app/main.py we still run
-    the test server in parallel and produce a coverage report."""
-    test_command = ['py.test', 'app/main.py']
-    return run_with_test_server(test_command, not nocoverage)
-
-
-@manager.command
-def test():
-    casper_result = test_casper()
-    main_result = test_main()
-    return max([casper_result, main_result])
 
 
 def shutdown():
@@ -204,81 +201,51 @@ def run_test_server():
     db.session.remove()
     db.drop_all()
 
+def run_unittests(unittest_args, coverage):
+    command_args = ['-m', 'unittest'] + unittest_args
+    command = coverage_command(command_args, coverage)
+    result = run_command(" ".join(command))
+    if coverage:
+        os.system("coverage report -m")
+        os.system("coverage html")
+    return result
 
+# I've assumed that if you are limiting your tests to just a particular module,
+# or a particular package then it's likely because you're implementing a feature
+# and not particularly interested in coverage analysis so the default for that
+# is not to run coverage analysis. But the defaults for running all your tests
+# is to run coverage analysis.
 
 @manager.command
-def test_browser(name):
-    """Run a single browser test, given its name (excluding `test_`)"""
-    command = "python -m unittest app.browser_tests.test_{}".format(name)
-    return run_command(command)
-
-
-@manager.command
-def test_module(module):
+def test_module(module, coverage=False):
     """ For example you might do `python manage.py test_module app.tests.test'
     """
-    return run_command("python -m unittest " + module)
+    return run_unittests([module], coverage)
 
 @manager.command
-def test_package(directory):
-    return run_command("python -m unittest discover " + directory)
+def test_package(directory, coverage=False):
+    """ For example `python manage.py test_package app.tests`"""
+    return run_unittests(['discover', directory], coverage)
 
 @manager.command
-def test_all():
-    return run_command("python -m unittest discover")
-
-# @manager.command
-# def test(browser=None, casper=None, module=None, package=None):
-#     """For convenience, you can use `test -x` as a shorthand for other tests"""
-#     if browser is not None:
-#         return test_browser(browser)
-#     elif casper is not None:
-#         return test_casper(casper)
-#     elif module is not None:
-#         return test_module(module)
-#     elif package is not None:
-#         return test_package(package)
-#     else:
-#         return test_all()
+def test_units(nocoverage=False):
+    """ Runs all the unittests but none of the casperJS tests """
+    return run_unittests(['discover'], not nocoverage)
+    
 
 @manager.command
-def coverage(quick=False, browser=False, phantom=False):
-    rcpath = os.path.abspath('.coveragerc')
-
-    quick_command = 'test_package app.tests'
-    # once all browser tests are converted to phantom, we can remove the
-    # phantom option
-    browser_command = 'test_package app.browser_tests'
-    phantom_command = 'test_module app.browser_tests.phantom'
-    full_command = 'test_all'
-
-    if quick:
-        manage_command = quick_command
-    elif browser:
-        manage_command = browser_command
-    elif phantom:
-        manage_command = phantom_command
+def test(nocoverage=False):
+    """ Run both the casperJS and all the unittests. We do not bother to run
+    the capser tests if the unittests fail."""
+    # TODO: This means that the coverage report for the casper tests will
+    # overwrite the coverage report for the unittests. I have not found an
+    # elegant way to combine the coverage results.
+    unit_result = test_units(nocoverage=nocoverage)
+    if unit_result:
+        return unit_result
     else:
-        manage_command = full_command
+        return test_casper(nocoverage=nocoverage)
 
-    if os.path.exists('.coverage'):
-        os.remove('.coverage')
-    os.system((
-            "COVERAGE_PROCESS_START='{0}' "
-            "coverage run manage.py {1}"
-            ).format(rcpath, manage_command))
-    os.system("coverage combine")
-    os.system("coverage report -m")
-    os.system("coverage html")
-
-# @manager.command
-# def run_test_server():
-#     """Used by the phantomjs tests to run a live testing server"""
-#     # running the server in debug mode during testing fails for some reason
-#     app.config['DEBUG'] = False
-#     app.config['TESTING'] = True
-#     port = config.LIVESERVER_PORT
-#     app.run(port=port, use_reloader=False)
 
 @manager.command
 def setup_finished_game(black, white):
