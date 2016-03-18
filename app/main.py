@@ -396,17 +396,6 @@ def test_only_route(self, rule, **options):
 
 Flask.test_only_route = test_only_route
 
-@app.test_only_route('/shutdown', methods=['POST'])
-def shutdown():
-    """Shutdown the Werkzeug dev server, if we're using it.
-
-    From http://flask.pocoo.org/snippets/67/"""
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func is None:  # pragma: no cover
-        raise RuntimeError('Not running with the Werkzeug Server')
-    func()
-    return 'Server shutting down...'
-
 @app.test_only_route('/testing_delete_user', methods=['POST'])
 def testing_delete_user():
     """Delete the user with the given username."""
@@ -533,6 +522,7 @@ def clear_games_for_player_internal(user):
     games = games_as_black + games_as_white
     for game in games:
         db.session.delete(game)
+    db.session.commit()
 
 
 # helper functions

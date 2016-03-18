@@ -32,7 +32,7 @@ runTest = (name) ->
   test = testObjectsByName[name]
   test.run()
 
-runAll = ->
+runAll = () ->
   for test in allTestObjects
     test.run()
 
@@ -433,7 +433,7 @@ class PlaceStonesTest extends BrowserTest
 registerTest new PlaceStonesTest
 
 class BasicChatTest extends BrowserTest
-  names: ['BasicChatTest']
+  names: ['BasicChatTest', 'chat']
   description: "Very basic chat functionality test"
   numTests: 11
   testBody: (test) =>
@@ -954,6 +954,14 @@ else
   runAll()
 
 casper.run ->
-  casper.log "shutting down..."
+  casper.log "shutting down ..."
   casper.open 'http://localhost:5000/shutdown',
     method: 'post'
+
+# casper.test.begin 'The shutdown test', 0, (test) ->
+#   casper.start()
+#   casper.thenOpen 'http://localhost:5000/shutdown', method: 'post', ->
+#     casper.echo 'Shutting down ...'
+#   casper.run ->
+#     casper.echo 'Shutdown'
+#     test.done()
