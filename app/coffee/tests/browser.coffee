@@ -955,13 +955,3 @@ else
 
 casper.run ->
   casper.log "shutting down ..."
-  casper.open 'http://localhost:5000/shutdown',
-    method: 'post'
-
-# casper.test.begin 'The shutdown test', 0, (test) ->
-#   casper.start()
-#   casper.thenOpen 'http://localhost:5000/shutdown', method: 'post', ->
-#     casper.echo 'Shutting down ...'
-#   casper.run ->
-#     casper.echo 'Shutdown'
-#     test.done()
