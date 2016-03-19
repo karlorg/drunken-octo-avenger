@@ -157,14 +157,16 @@ def run_with_test_server(test_command, coverage):
     return server_return_code
 
 @manager.command
-def test_casper(nocoverage=False):
+def test_casper(coverage=False, name=None):
     """Run the casper test suite with or without coverage analysis."""
     if coffeebuild():
         print("Coffee script failed to compile, exiting test!")
         return 1
     js_test_file = "app/static/compiled-js/tests/browser.js"
     casper_command = ["./node_modules/.bin/casperjs", "test", js_test_file]
-    return run_with_test_server(casper_command, not nocoverage)
+    if name is not None:
+        casper_command.append('--single={}'.format(name))
+    return run_with_test_server(casper_command, coverage)
 
 
 def shutdown():
@@ -228,9 +230,9 @@ def test_package(directory, coverage=False):
     return run_unittests(['discover', directory], coverage)
 
 @manager.command
-def test_units(nocoverage=False):
+def test_units(coverage=False):
     """ Runs all the unittests but none of the casperJS tests """
-    return run_unittests(['discover'], not nocoverage)
+    return run_unittests(['discover'], coverage)
     
 
 @manager.command
@@ -240,11 +242,12 @@ def test(nocoverage=False):
     # TODO: This means that the coverage report for the casper tests will
     # overwrite the coverage report for the unittests. I have not found an
     # elegant way to combine the coverage results.
-    unit_result = test_units(nocoverage=nocoverage)
+    coverage = not nocoverage
+    unit_result = test_units(coverage=coverage)
     if unit_result:
         return unit_result
     else:
-        return test_casper(nocoverage=nocoverage)
+        return test_casper(coverage=coverage)
 
 
 @manager.command
