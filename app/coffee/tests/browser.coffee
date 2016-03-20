@@ -32,7 +32,7 @@ runTest = (name) ->
   test = testObjectsByName[name]
   test.run()
 
-runAll = ->
+runAll = () ->
   for test in allTestObjects
     test.run()
 
@@ -216,31 +216,6 @@ class ClientSideJsTest extends BrowserTest
       casper.waitFor predicate, foundFunc, timeoutFunc, 5000
 
 registerTest new ClientSideJsTest
-
-
-class PersonaLoginTest extends BrowserTest
-  names: ['PersonaLoginTest', 'persona', 'plogin']
-  description: 'Test the Persona login procedure'
-  numTests: 3
-  testBody: (test) ->
-    casper.thenOpen serverUrl, ->
-      test.assertTitle 'Go', 'The front page title is the one expected'
-
-    casper.thenClick '#persona_login'
-    casper.waitForPopup /persona/
-    casper.withPopup /persona/, ->
-      test.assertTitleMatch /Persona/i, 'Persona login popup has expected title'
-      this.sendKeys '#authentication_email', 'test@mockmyid.com'
-      this.thenClick 'button:enabled'
-      # TODO: finish this.  Clicking this button seems to have an effect
-      # (most of the popup window contents vanish), but the onlogin callback
-      # registered with navigator.id.watch is never called.
-
-    casper.then () ->
-      test.skip 1
-      # test.assertExists '#logout'
-
-registerTest new PersonaLoginTest
 
 
 class NativeLoginTest extends BrowserTest
@@ -458,7 +433,7 @@ class PlaceStonesTest extends BrowserTest
 registerTest new PlaceStonesTest
 
 class BasicChatTest extends BrowserTest
-  names: ['BasicChatTest']
+  names: ['BasicChatTest', 'chat']
   description: "Very basic chat functionality test"
   numTests: 11
   testBody: (test) =>
@@ -979,6 +954,4 @@ else
   runAll()
 
 casper.run ->
-  casper.log "shutting down..."
-  casper.open 'http://localhost:5000/shutdown',
-    method: 'post'
+  casper.log "shutting down ..."

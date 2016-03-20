@@ -29,61 +29,6 @@ isPointLastPlayed = ($point) -> contains_selector $point, '.last-played'
 
 # ============================================================================
 
-
-module 'Persona'
-
-test 'init function sets request and logout callbacks', ->
-  requestCalled = false
-  logoutCalled = false
-  watchCalled = false
-  mockNavigator =
-    id:
-      logout: -> logoutCalled = true
-      request: -> requestCalled = true
-      watch: (params) ->
-        p_user = params.loggedInUser
-        t_user = tesuji_charm.currentPersonaEmail
-        ok(
-          (t_user == '' and p_user == null) or
-          (t_user != '' and p_user == t_user),
-            'navigator.id.watch passed good loggedInUser')
-        ok typeof params.onlogin is 'function',
-          'navigator.id.watch passed function for onlogin'
-        ok typeof params.onlogout is 'function',
-          'navigator.id.watch passed function for onlogout'
-        watchCalled = true
-  # main test sequence begins here
-  equal watchCalled, false
-  tesuji_charm.currentPersonaEmail = ''
-  tesuji_charm.persona.initialize mockNavigator
-  equal watchCalled, true, 'navigator.id.watch called'
-  tesuji_charm.currentPersonaEmail = 'bob@example.com'
-  tesuji_charm.persona.initialize mockNavigator
-
-  equal requestCalled, false
-  equal logoutCalled, false
-  $('#persona_login').click()
-  equal requestCalled, true, 'login request called correctly'
-  equal logoutCalled, false
-  $('#logout').click()
-  equal logoutCalled, true, 'logout callback called correctly'
-
-test 'logout callback not set when not logged in with Persona', ->
-  logoutCalled = false
-  mockNavigator =
-    id:
-      logout: -> logoutCalled = true
-      request: ->
-      watch : ->
-  tesuji_charm.currentPersonaEmail = ''
-  tesuji_charm.persona.initialize mockNavigator
-
-  $('#logout').click()
-  equal logoutCalled, false
-
-
-# ============================================================================
-
 # helpers for game page tests
 
 setInputSgf = (sgf) -> $('input#data').val sgf

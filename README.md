@@ -37,14 +37,6 @@ In the repository root directory, run
 Access the local server at `http://localhost:5000` by default (other domains
 will need to be set in `config.py` to avoid confusing the login system).
 
-Note: When you run the server it may tell you that it is:
-
-    Running on http://127.0.0.1:5000/
-
-If you actually go there though you will not be able to login via persona
-because there will be an audience and domain mismatch. So make sure you visit
-`http://localhost:5000` instead.
-
 ## testing
 
 ### Python code
