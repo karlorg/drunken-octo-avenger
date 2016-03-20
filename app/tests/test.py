@@ -19,6 +19,9 @@ from .. import main
 from ..main import Game, User, db
 
 
+main.use_log_file_handler()
+
+
 class TestWithTestingApp(flask.ext.testing.TestCase):
 
     def create_app(self):

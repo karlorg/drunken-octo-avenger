@@ -1,5 +1,16 @@
 # compute server url from arguments
 
+fs = require('fs')
+
+logFileName = '../casper_tests.log'
+
+do ->
+  oldLog = casper.log
+  casper.log = (message, level, space) ->
+    mySpace = space or ""
+    fs.write logFileName, "[#{level}] [#{mySpace}] #{message}\n", "a"
+    oldLog.call this, message, level, space
+
 defaultHost = "http://localhost"
 host = casper.cli.options['host'] or defaultHost
 port = casper.cli.options['port'] or
@@ -798,9 +809,13 @@ class PassAndScoringTest extends BrowserTest
         white: 7
     casper.thenClick (pointSelector 3, 0)
     casper.thenClick '.submit_button'
-    goToGame BLACK_EMAIL
+    goToGame BLACK_EMAIL, ->
+      formTarget = casper.getElementAttribute '#main_form', 'action'
+      casper.log "main form will post to #{formTarget}", "debug"
     # finally, Black accepts White's proposal
     casper.thenClick '.submit_button'
+    casper.then ->
+      casper.log "submit clicked", "debug"
 
     # game is now finished
     casper.thenOpen serverUrl, =>
@@ -824,6 +839,9 @@ class ResignTest extends BrowserTest
     createLoginSession BLACK_EMAIL
     casper.thenOpen serverUrl
     casper.thenClick (@lastGameSelector true)  # true = our turn
+    casper.then ->
+      formTarget = casper.getElementAttribute '#main_form', 'action'
+      casper.log "main form will post to #{formTarget}", "debug"
     casper.thenClick '.resign_button'
     # the game is no longer visible on Black's status page
     casper.thenOpen serverUrl, =>
@@ -868,7 +886,9 @@ class FinishedGamesTest extends BrowserTest
         blackscore: 117 - 18
         whitescore: 89 - 14
     casper.thenClick '.submit_button'
-    goToGame WHITE_EMAIL
+    goToGame WHITE_EMAIL, ->
+      formTarget = casper.getElementAttribute '#main_form', 'action'
+      casper.log "main form will post to #{formTarget}", "debug"
     casper.thenClick '.submit_button'
 
     casper.thenOpen serverUrl
@@ -954,4 +974,4 @@ else
   runAll()
 
 casper.run ->
-  casper.log "shutting down ..."
+  casper.exit()

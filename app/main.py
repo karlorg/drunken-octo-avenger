@@ -6,6 +6,7 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
 
 from collections import namedtuple
 import logging
+import logging.handlers
 import time
 import multiprocessing
 from datetime import datetime
@@ -40,6 +41,16 @@ app.jinja_env.undefined = jinja2.StrictUndefined
 if app.debug:
     logging.basicConfig(level=logging.DEBUG)
 db = SQLAlchemy(app)
+
+def use_log_file_handler():
+    # for test runners etc. that want to log to files; using this
+    # function allows them to all provide the same behaviour.
+    handler = logging.handlers.RotatingFileHandler(
+        '../test.log', maxBytes=1000000, backupCount=5)
+    handler.setLevel(logging.DEBUG)
+    app.logger.handlers = []
+    app.logger.propagate = False
+    app.logger.addHandler(handler)
 
 def async(f):
     def wrapper(*args, **kwargs):
@@ -125,11 +136,16 @@ def comment(game_no):
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
+    app.logger.debug("play() called for game {}".format(game_no))
     try:
         game = db.session.query(Game).filter_by(id=game_no).one()
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
+    try:
+        app.logger.debug("play(): logged in user: {}".format(logged_in_user()))
+    except NoLoggedInPlayerException:
+        app.logger.debug("play(): no logged in user")
     if not is_players_turn_in_game(game):
         flash("It's not your turn in that game.")
         return redirect('/')
@@ -137,12 +153,17 @@ def play(game_no):
     if 'resign_button' in arguments:
         game.finished = True
         db.session.commit()
+        app.logger.debug("play(): resignation received and saved")
         return redirect(redirect_url())
     try:
         go.check_continuation(old_sgf=game.sgf,
                               new_sgf=arguments['response'],
                               allowed_new_moves=1)
+        app.logger.debug(
+            "play(): valid SGF, ends: '{}'".format(
+                arguments['response'][-12:]))
     except go.ValidationException as e:
+        app.logger.debug("play(): invalid SGF received")
         flash("Invalid move: {}".format(e.args[0]))
         return redirect(url_for('game', game_no=game_no))
     except KeyError:
@@ -410,6 +431,9 @@ def testing_delete_user():
 def testing_create_login_session():
     """Log in the given user id."""
     set_logged_in_user(request.form['email'])
+    app.logger.debug(
+        "logged in user set to {} for testing".format(
+            request.form['email']))
     return ''
 
 @app.test_only_route('/testing_create_game', methods=['POST'])
