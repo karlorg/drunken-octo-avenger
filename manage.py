@@ -5,9 +5,12 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
                       str, super, zip)
 
 import os
+import subprocess
 
+import flask
 from flask.ext.migrate import Migrate, MigrateCommand
 from flask.ext.script import Manager
+import requests
 
 from app import main
 from app.main import app, db
@@ -42,7 +45,6 @@ def run_command(command):
 def spawn_command(command):
     """Start a shell command in a new process, return immediately."""
     import shlex
-    import subprocess
     cmd_args = shlex.split(command)
     return subprocess.Popen(cmd_args)
 
@@ -116,78 +118,66 @@ def coffeewatch():
     return spawn_commands_and_wait_forever(*cmds,
                                            error_msg="A coffee process died!")
 
-@manager.command
-def test_browser(name):
-    """Run a single browser test, given its name (excluding `test_`)"""
-    command = "python -m unittest app.browser_tests.test_{}".format(name)
-    return run_command(command)
-
-@manager.command
-def test_casper(name=None):
-    """Run the specified single CasperJS test, or all if not given"""
-    from app.browser_tests.test_phantom import PhantomTest
-    phantom_test = PhantomTest('test_run')
-    phantom_test.set_single(name)
-    result = phantom_test.test_run()
-    return (0 if result == 0 else 1)
-
-@manager.command
-def test_module(module):
-    """ For example you might do `python manage.py test_module app.tests.test'
+def coverage_command(command_args, coverage):
+    # No need to specify the sources, this is done in the .coveragerc file.
+    if coverage:
+        return ["coverage", "run"] + command_args
+    else:
+        return ['python'] + command_args
+    
+def run_with_test_server(test_command, coverage):
+    """Run the test server and the given test command in parallel. If 'coverage'
+    is True, then we run the server under coverage analysis and produce a
+    coverge report.
     """
-    return run_command("python -m unittest " + module)
+    # Note, if we start running Selenium tests again, then we should have,
+    # rather than a single 'test_command' a series of 'test_commands'. Then
+    # we start the server and *then* run each of the test commands, that way
+    # we will get the combined coverage of all the test commands, for example
+    # selenium + capserJS tests.
+    server_command_args = ["manage.py", "run_test_server"]
+    server_command = coverage_command(server_command_args, coverage)
+    server = subprocess.Popen(server_command, stderr=subprocess.PIPE)
+    # TODO: If we don't get this line we should  be able to detect that
+    # and avoid the starting test process.
+    for line in server.stderr:
+        if b' * Running on' in line:
+            break
+    test_process = subprocess.Popen(test_command)
+    test_process.wait(timeout=60)
+    # Once the test process has completed we can shutdown the server. To do so
+    # we have to make a request so that the server process can shut down
+    # cleanly, and in particular finalise coverage analysis.
+    # We could check the return from this is success.
+    requests.post('http://localhost:5000/shutdown')
+    server_return_code = server.wait(timeout=60)
+    if coverage:
+        os.system("coverage report -m")
+        os.system("coverage html")
+    return server_return_code
 
 @manager.command
-def test_package(directory):
-    return run_command("python -m unittest discover " + directory)
+def test_casper(coverage=False, name=None):
+    """Run the casper test suite with or without coverage analysis."""
+    if coffeebuild():
+        print("Coffee script failed to compile, exiting test!")
+        return 1
+    js_test_file = "app/static/compiled-js/tests/browser.js"
+    casper_command = ["./node_modules/.bin/casperjs", "test", js_test_file]
+    if name is not None:
+        casper_command.append('--single={}'.format(name))
+    return run_with_test_server(casper_command, coverage)
 
-@manager.command
-def test_all():
-    return run_command("python -m unittest discover")
 
-@manager.command
-def test(browser=None, casper=None, module=None, package=None):
-    """For convenience, you can use `test -x` as a shorthand for other tests"""
-    if browser is not None:
-        return test_browser(browser)
-    elif casper is not None:
-        return test_casper(casper)
-    elif module is not None:
-        return test_module(module)
-    elif package is not None:
-        return test_package(package)
-    else:
-        return test_all()
+def shutdown():
+    """Shutdown the Werkzeug dev server, if we're using it.
+    From http://flask.pocoo.org/snippets/67/"""
+    func = flask.request.environ.get('werkzeug.server.shutdown')
+    if func is None:  # pragma: no cover
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+    return 'Server shutting down...'
 
-@manager.command
-def coverage(quick=False, browser=False, phantom=False):
-    rcpath = os.path.abspath('.coveragerc')
-
-    quick_command = 'test_package app.tests'
-    # once all browser tests are converted to phantom, we can remove the
-    # phantom option
-    browser_command = 'test_package app.browser_tests'
-    phantom_command = 'test_module app.browser_tests.phantom'
-    full_command = 'test_all'
-
-    if quick:
-        manage_command = quick_command
-    elif browser:
-        manage_command = browser_command
-    elif phantom:
-        manage_command = phantom_command
-    else:
-        manage_command = full_command
-
-    if os.path.exists('.coverage'):
-        os.remove('.coverage')
-    os.system((
-            "COVERAGE_PROCESS_START='{0}' "
-            "coverage run manage.py {1}"
-            ).format(rcpath, manage_command))
-    os.system("coverage combine")
-    os.system("coverage report -m")
-    os.system("coverage html")
 
 @manager.command
 def run_test_server():
@@ -195,8 +185,70 @@ def run_test_server():
     # running the server in debug mode during testing fails for some reason
     app.config['DEBUG'] = False
     app.config['TESTING'] = True
-    port = config.LIVESERVER_PORT
-    app.run(port=port, use_reloader=False)
+    port = app.config['LIVESERVER_PORT']
+    # Don't use the production database but a temporary test database.
+    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///test.db"
+    db.drop_all()
+    db.create_all()
+    db.session.commit()
+
+    # Add a route that allows the test code to shutdown the server, this allows
+    # us to quit the server without killing the process thus enabling coverage
+    # to work.
+    app.add_url_rule('/shutdown', 'shutdown', shutdown,
+                             methods=['POST', 'GET'])
+
+    app.run(port=port, use_reloader=False, threaded=True)
+
+    db.session.remove()
+    db.drop_all()
+
+def run_unittests(unittest_args, coverage):
+    command_args = ['-m', 'unittest'] + unittest_args
+    command = coverage_command(command_args, coverage)
+    result = run_command(" ".join(command))
+    if coverage:
+        os.system("coverage report -m")
+        os.system("coverage html")
+    return result
+
+# I've assumed that if you are limiting your tests to just a particular module,
+# or a particular package then it's likely because you're implementing a feature
+# and not particularly interested in coverage analysis so the default for that
+# is not to run coverage analysis. But the defaults for running all your tests
+# is to run coverage analysis.
+
+@manager.command
+def test_module(module, coverage=False):
+    """ For example you might do `python manage.py test_module app.tests.test'
+    """
+    return run_unittests([module], coverage)
+
+@manager.command
+def test_package(directory, coverage=False):
+    """ For example `python manage.py test_package app.tests`"""
+    return run_unittests(['discover', directory], coverage)
+
+@manager.command
+def test_units(coverage=False):
+    """ Runs all the unittests but none of the casperJS tests """
+    return run_unittests(['discover'], coverage)
+    
+
+@manager.command
+def test(nocoverage=False):
+    """ Run both the casperJS and all the unittests. We do not bother to run
+    the capser tests if the unittests fail."""
+    # TODO: This means that the coverage report for the casper tests will
+    # overwrite the coverage report for the unittests. I have not found an
+    # elegant way to combine the coverage results.
+    coverage = not nocoverage
+    unit_result = test_units(coverage=coverage)
+    if unit_result:
+        return unit_result
+    else:
+        return test_casper(coverage=coverage)
+
 
 @manager.command
 def setup_finished_game(black, white):
