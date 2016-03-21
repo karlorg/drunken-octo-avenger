@@ -632,6 +632,22 @@ class Game(db.Model):
         return "<Game {no}, {b} vs. {w}>".format(
             no=self.id, b=self.black, w=self.white)
 
+    def player_opponent(self, player):
+        if player == self.black:
+            return self.white
+        elif player == self.white:
+            return self.black
+        else:
+            return None
+
+    def player_color(self, player):
+        if player == self.black:
+            return 'black'
+        elif player == self.white:
+            return 'white'
+        else:
+            return None
+
 class GameComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pub_date = db.Column(db.DateTime)
