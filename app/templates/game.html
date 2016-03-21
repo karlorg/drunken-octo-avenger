@@ -261,8 +261,23 @@
           {% else %}  <!-- if with_scoring -->
             <button type="button" class="form-control btn btn-warning pass_button"
                     name='pass_button'>Pass</button>
-            <button type="submit" class="form-control btn btn-danger resign_button"
-                    name='resign_button'>Resign</button>
+            <button type="button" class="form-control btn btn-danger resign_button" 
+                    data-toggle="modal" data-target="#resign-modal">Resign</button>
+            <!-- Resign Modal Dialog -->
+            <div id="resign-modal" class="modal fade" role="dialog">
+              <div class="modal-dialog">
+                <div id="resign-area" class="modal-content">
+                  <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal">&times;</button>
+                      <h4 class="modal-title">Confirm Resign?</h4>
+                      Are you <em>sure</em> you wish to resign?
+                      <button type="button" class="form-control btn btn-default" data-dismiss="modal">Oh, cancel and keep playing</button>
+                      <button type="submit" class="form-control btn btn-danger resign_button"
+                              name='resign_button'>Resign</button>
+                  </div>
+                </div><!-- /#resign-area -->
+              </div><!-- /.modal-dialog -->
+            </div><!-- /#resign-modal -->
           {% endif %}  <!-- if with_scoring -->
           </form><!-- /#main_form -->
         {% else %}  <!-- if on_turn -->
