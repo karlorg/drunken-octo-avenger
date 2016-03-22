@@ -80,9 +80,12 @@ class BrowserTest
     list_id = 'finished_games'
     return '#' + list_id + ' li:last-child a'
 
+  statusGameSelector: (your_turn, first_or_last) ->
+    div_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
+    return "\##{div_id} .status-game-row:#{first_or_last}-child td a"
+    
   lastGameSelector: (your_turn) ->
-    list_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
-    return '#' + list_id + ' li:last-child a'
+    @statusGameSelector(your_turn, 'last')
 
   getLastGameLink: (your_turn) =>
     evaluate_fun = (selector) ->
@@ -610,7 +613,7 @@ class GameInterfaceTest extends BrowserTest
     # reload front page and get the other game
     # (it should be the first listed under 'not your turn')
     casper.thenOpen serverUrl
-    casper.thenClick '#not_your_turn_games li:first-child a', =>
+    casper.thenClick @statusGameSelector(false, 'first'), =>
       # we should be back to an empty board
       test.assertExists '.goban', 'The Go board still exists.'
       @assertEmptyBoard test
