@@ -76,16 +76,19 @@ class BrowserTest
       test.assertEqual game_counts.not_your_turn, players_wait,
                        'Expected number of not-your-turn games'
 
+  gameSelector: (div_id, first_or_last) ->
+    return "\##{div_id} .game-list-row:#{first_or_last}-child td a"
+
+
   lastFinishedGameSelector: ->
-    list_id = 'finished_games'
-    return '#' + list_id + ' li:last-child a'
+    @gameSelector 'finished_games', 'last'
 
   statusGameSelector: (your_turn, first_or_last) ->
     div_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
-    return "\##{div_id} .status-game-row:#{first_or_last}-child td a"
+    @gameSelector div_id, first_or_last
     
   lastGameSelector: (your_turn) ->
-    @statusGameSelector(your_turn, 'last')
+    @statusGameSelector your_turn, 'last'
 
   getLastGameLink: (your_turn) =>
     evaluate_fun = (selector) ->
@@ -878,14 +881,14 @@ class FinishedGamesTest extends BrowserTest
 
     casper.thenOpen serverUrl
     casper.thenClick '.finished_games_link', ->
-      gamesCount = casper.evaluate -> $('#finished_games li').length
+      gamesCount = casper.evaluate -> $('#finished_games .game-list-row').length
       test.assertEqual gamesCount, 1, "White: exactly one finished game listed"
 
     # Black logs in and views the finished game
     createLoginSession BLACK_EMAIL
     casper.thenOpen serverUrl
     casper.thenClick '.finished_games_link', ->
-      gamesCount = casper.evaluate -> $('#finished_games li').length
+      gamesCount = casper.evaluate -> $('#finished_games .game-list-row').length
       test.assertEqual gamesCount, 1, "Black: exactly one finished game listed"
     casper.thenClick @lastFinishedGameSelector(), =>
       # check scores and board markings are still the same
