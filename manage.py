@@ -245,10 +245,14 @@ def test(nocoverage=False):
     coverage = not nocoverage
     unit_result = test_units(coverage=coverage)
     if unit_result:
+        print('Unit test failure!')
         return unit_result
+    casper_result = test_casper(coverage=coverage)
+    if not casper_result:
+        print('All tests passed!')
     else:
-        return test_casper(coverage=coverage)
-
+        print('Casper test failure!')
+    return casper_result
 
 @manager.command
 def setup_finished_game(black, white):
