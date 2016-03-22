@@ -830,9 +830,9 @@ class ResignTest extends BrowserTest
     createLoginSession BLACK_EMAIL
     casper.thenOpen serverUrl
     casper.thenClick (@lastGameSelector true) # true = our turn
-    casper.thenClick '#resign-button', ->
-      test.assertVisible '.resign_button'
-      casper.thenClick '.resign_button'
+    casper.thenClick '#resign-button', -> # Click the resign button
+      test.assertVisible '.confirm-resign-button'
+      casper.thenClick '.confirm-resign-button'
     # the game is no longer visible on Black's status page
     casper.thenOpen serverUrl, =>
       test.assertDoesntExist (@lastGameSelector true),
