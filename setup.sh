@@ -17,16 +17,8 @@ else
     VENV="../venv$PYTHONVERSION"
 fi
 
-# Creating a virtual environment and which requirements file to use depends
-# upon which version of python we are using.
-if [ $(echo "$PYTHONVERSION < 3.0" | bc) -ne 0 ] 
-then
-    REQUIREMENTS=requirements.txt
-    PYVENV="virtualenv -p python${PYTHONVERSION}"
-else
-    REQUIREMENTS=p3req.txt
-    PYVENV="pyvenv-${PYTHONVERSION}"
-fi
+REQUIREMENTS=requirements.txt
+PYVENV="virtualenv -p python${PYTHONVERSION}"
 
 
 # Finally we can go about creating the virtual environment and installing
