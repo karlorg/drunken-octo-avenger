@@ -263,7 +263,7 @@ class TestStatusIntegrated(TestWithDb):
         with self.set_user() as test_client:
             response = test_client.get(url_for('status'))
         self.assertEqual(
-                self.count_pattern_in(r"Game \d", str(response.get_data())),
+                self.count_pattern_in(r"class=\"status-game-row\"", str(response.get_data())),
                 4)
 
     def test_anonymous_users_redirected_to_front(self):

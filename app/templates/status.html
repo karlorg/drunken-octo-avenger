@@ -13,7 +13,7 @@
         </thead>
         <tbody>
             {% for game in the_games_list %}
-            <tr>
+            <tr class="status-game-row">
                 <td><a href="{{ url_for('game', game_no=game.id) }}" 
                        class="btn btn-default" role="button">{{game.id}}</a></td>
                 <td>{{game.player_color(current_user)}}</td>
@@ -35,7 +35,7 @@
 </div>
 <div>
     <a href="{{ url_for('finished') }}" class="finished_games_link">
-        Finished games
+        View finished games
     </a>
 </div>
 {% endblock %}
