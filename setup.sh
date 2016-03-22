@@ -34,12 +34,6 @@ source develop.sh ${VENV}
 pip install -r ${REQUIREMENTS}
 
 
-# This essentially writes a small sitecustomize.py file into the virtual
-# environment, this is required for coverage to work with subprocesses.
-SITECUSTOMIZE="${VENV}/lib/python${PYTHONVERSION}/site-packages/sitecustomize.py"
-echo import coverage >> ${SITECUSTOMIZE}
-echo "coverage.process_startup()" >> ${SITECUSTOMIZE}
-
 # Finally we have to install the node modules that we require, so for this
 # you will need to have 'npm' installed.
 npm install coffee-script
