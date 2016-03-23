@@ -12,9 +12,9 @@ fi
 # virtual environment in.
 if [ $# -gt 1 ]
 then
-    VENV="../$2"
+    VENV="$2"
 else
-    VENV="../venv$PYTHONVERSION"
+    VENV="generated/venv$PYTHONVERSION"
 fi
 
 REQUIREMENTS=requirements.txt
@@ -37,4 +37,4 @@ pip install -r ${REQUIREMENTS}
 # Finally we have to install the node modules that we require, so for this
 # you will need to have 'npm' installed.
 npm install coffee-script
-echo "To run the tests you will need to run 'npm install casperjs'"
+npm install casperjs
