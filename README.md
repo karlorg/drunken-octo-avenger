@@ -1,10 +1,9 @@
-## setup
+## Introduction
 
-I recommend cloning this repository inside an existing directory that's just
-for this project.  The setup scripts (see below) will create the database file
-and Python virtual environments one level up from the repository root.
+This is a turn-based Go server. We are mostly writing this for fun and as
+practice for other web applications.
 
-### setup script
+## Setup
 
 Run the setup script, give the python version you wish to use as the only
 argument.
@@ -12,7 +11,8 @@ argument.
     source setup.sh 3.4
 
 This will create a virtual environment, activate it, and install all of the
-dependencies.
+dependencies. We also have a setup script for users of `fish`, simply run
+this as `. setup.fish`.
 
 ### manage.py
 
