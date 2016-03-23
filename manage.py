@@ -1,9 +1,3 @@
-from __future__ import (
-        absolute_import, division, print_function, unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
-                      int, map, next, oct, open, pow, range, round,
-                      str, super, zip)
-
 import os
 import subprocess
 
@@ -118,14 +112,29 @@ def coffeewatch():
     return spawn_commands_and_wait_forever(*cmds,
                                            error_msg="A coffee process died!")
 
-def coverage_command(command_args, coverage):
+def coverage_command(command_args, coverage, accumulate):
+    """The `accumulate` argument specifies whether we should add to the existing
+    coverage data or wipe that and start afresh. Generally you wish to
+    accumulate if you need to run multiple commands and you want the coverage
+    analysis relevant to all those commands. So, for the commands we specify
+    below this is usually off by default, since if you are running coverage on
+    a particular test command then presumably you only wish to know about that
+    command. However, for the main 'test' command, we want to accumulte the
+    coverage results for both the casper and unit tests, hence in our 'test'
+    command below we supply 'accumulate=True' for the sub-commands test_casper
+    and run_unittests.
+    """
+    
     # No need to specify the sources, this is done in the .coveragerc file.
     if coverage:
-        return ["coverage", "run"] + command_args
+        command = ["coverage", "run"]
+        if accumulate:
+            command.append("-a")
+        return command + command_args
     else:
         return ['python'] + command_args
     
-def run_with_test_server(test_command, coverage):
+def run_with_test_server(test_command, coverage, accumulate):
     """Run the test server and the given test command in parallel. If 'coverage'
     is True, then we run the server under coverage analysis and produce a
     coverge report.
@@ -136,7 +145,7 @@ def run_with_test_server(test_command, coverage):
     # we will get the combined coverage of all the test commands, for example
     # selenium + capserJS tests.
     server_command_args = ["manage.py", "run_test_server"]
-    server_command = coverage_command(server_command_args, coverage)
+    server_command = coverage_command(server_command_args, coverage, accumulate)
     server = subprocess.Popen(server_command, stderr=subprocess.PIPE)
     # TODO: If we don't get this line we should  be able to detect that
     # and avoid the starting test process.
@@ -144,7 +153,7 @@ def run_with_test_server(test_command, coverage):
         if b' * Running on' in line:
             break
     test_process = subprocess.Popen(test_command)
-    test_process.wait(timeout=60)
+    test_return_code = test_process.wait(timeout=60)
     # Once the test process has completed we can shutdown the server. To do so
     # we have to make a request so that the server process can shut down
     # cleanly, and in particular finalise coverage analysis.
@@ -154,10 +163,10 @@ def run_with_test_server(test_command, coverage):
     if coverage:
         os.system("coverage report -m")
         os.system("coverage html")
-    return server_return_code
+    return test_return_code + server_return_code
 
 @manager.command
-def test_casper(coverage=False, name=None):
+def test_casper(name=None, coverage=False, accumulate=False):
     """Run the casper test suite with or without coverage analysis."""
     if coffeebuild():
         print("Coffee script failed to compile, exiting test!")
@@ -166,7 +175,7 @@ def test_casper(coverage=False, name=None):
     casper_command = ["./node_modules/.bin/casperjs", "test", js_test_file]
     if name is not None:
         casper_command.append('--single={}'.format(name))
-    return run_with_test_server(casper_command, coverage)
+    return run_with_test_server(casper_command, coverage, accumulate)
 
 
 def shutdown():
@@ -203,9 +212,9 @@ def run_test_server():
     db.session.remove()
     db.drop_all()
 
-def run_unittests(unittest_args, coverage):
+def run_unittests(unittest_args, coverage, accumulate=False):
     command_args = ['-m', 'unittest'] + unittest_args
-    command = coverage_command(command_args, coverage)
+    command = coverage_command(command_args, coverage, accumulate)
     result = run_command(" ".join(command))
     if coverage:
         os.system("coverage report -m")
@@ -219,40 +228,52 @@ def run_unittests(unittest_args, coverage):
 # is to run coverage analysis.
 
 @manager.command
-def test_module(module, coverage=False):
+def test_module(module, coverage=False, accumulate=False):
     """ For example you might do `python manage.py test_module app.tests.test'
     """
     return run_unittests([module], coverage)
 
 @manager.command
-def test_package(directory, coverage=False):
+def test_package(directory, coverage=False, accumulate=True):
     """ For example `python manage.py test_package app.tests`"""
-    return run_unittests(['discover', directory], coverage)
+    arguments = ['discover', directory]
+    return run_unittests(arguments, coverage, accumulate=accumulate)
 
 @manager.command
-def test_units(coverage=False):
+def test_units(coverage=False, accumulate=False):
     """ Runs all the unittests but none of the casperJS tests """
-    return run_unittests(['discover'], coverage)
+    return run_unittests(['discover'], coverage, accumulate=accumulate)
     
 
 @manager.command
-def test(nocoverage=False):
+def test(nocoverage=False, coverage_erase=True):
     """ Run both the casperJS and all the unittests. We do not bother to run
-    the capser tests if the unittests fail."""
-    # TODO: This means that the coverage report for the casper tests will
-    # overwrite the coverage report for the unittests. I have not found an
-    # elegant way to combine the coverage results.
+    the capser tests if the unittests fail. By default this will erase any
+    coverage-data accrued so far, you can avoid this, and thus get the results
+    for multiple runs by passing `--coverage_erase=False`"""
+    if coverage_erase:
+        os.system('coverage erase')
     coverage = not nocoverage
-    unit_result = test_units(coverage=coverage)
+    unit_result = test_units(coverage=coverage, accumulate=True)
     if unit_result:
         print('Unit test failure!')
         return unit_result
-    casper_result = test_casper(coverage=coverage)
+    casper_result = test_casper(coverage=coverage,  accumulate=True)
     if not casper_result:
         print('All tests passed!')
     else:
         print('Casper test failure!')
     return casper_result
+
+@manager.command
+def cloud9():
+    """When you run this command you should be able to view the running web app 
+    either by "Preview->Preview Running Application", or by visiting:
+    `<worksapce>-<username>.c9users.io/` which you can get to by doing the above
+    preview and then clicking to pop-out to a new window."""
+    return run_command('python manage.py runserver -h 0.0.0.0 -p 8080')
+
+
 
 @manager.command
 def setup_finished_game(black, white):

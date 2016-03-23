@@ -1,9 +1,3 @@
-from __future__ import (
-        absolute_import, division, print_function, unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
-                      int, map, next, oct, open, pow, range, round,
-                      str, super, zip)
-
 from contextlib import contextmanager
 from itertools import chain
 from mock import ANY, Mock, patch
@@ -514,9 +508,6 @@ class TestPlayIntegrated(TestWithDb):
         self.assertFalse(new_game.finished,
                          "game is not over after different submission")
 
-    @unittest.skip(
-            """haven't decided yet what should be returned after a move is
-            played""")
     def test_no_links_after_playing_a_move(self):
         # regression: testing specifically the response to playing a move due
         # to old bug whereby 'is our turn' testing happened before updating the
