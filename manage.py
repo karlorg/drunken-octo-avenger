@@ -153,7 +153,7 @@ def run_with_test_server(test_command, coverage, accumulate):
         if b' * Running on' in line:
             break
     test_process = subprocess.Popen(test_command)
-    test_process.wait(timeout=60)
+    test_return_code = test_process.wait(timeout=60)
     # Once the test process has completed we can shutdown the server. To do so
     # we have to make a request so that the server process can shut down
     # cleanly, and in particular finalise coverage analysis.
@@ -163,7 +163,7 @@ def run_with_test_server(test_command, coverage, accumulate):
     if coverage:
         os.system("coverage report -m")
         os.system("coverage html")
-    return server_return_code
+    return test_return_code + server_return_code
 
 @manager.command
 def test_casper(name=None, coverage=False, accumulate=False):
