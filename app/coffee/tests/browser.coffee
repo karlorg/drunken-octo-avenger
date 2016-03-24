@@ -86,7 +86,7 @@ class BrowserTest
   statusGameSelector: (your_turn, first_or_last) ->
     div_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
     @gameSelector div_id, first_or_last
-    
+
   lastGameSelector: (your_turn) ->
     @statusGameSelector your_turn, 'last'
 
@@ -347,6 +347,7 @@ class ChallengeTest extends BrowserTest
   names: ['ChallengeTest', 'challenge']
   description: "Tests the 'Challenge a player process"
   numTests: 17
+
   testBody: (test) =>
   # Be sure not to use the 'createGame' shortcut.
     SHINDOU_EMAIL = 'shindou@ki-in.jp'
@@ -441,13 +442,24 @@ registerTest new PlaceStonesTest
 class BasicChatTest extends BrowserTest
   names: ['BasicChatTest', 'chat']
   description: "Very basic chat functionality test"
-  numTests: 11
+  numTests: 27
+
   testBody: (test) =>
+    addComment = (comment) ->
+      form_values = 'input[name="comment"]' : comment
+      # The final 'true' argument means that the form is submitted.
+      casper.fillSelectors 'form#chat-form', form_values, true
+
+    checkComment = (color, comment, testMessage) ->
+      casper.waitForText comment, ->
+        comments_selector = ".game-chat .chat-comments .chat-comment-#{color}"
+        test.assertSelectorHasText comments_selector, comment, testMessage
+
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
 
-    MY_CHAT = ['Are you dancing?', 'Are you asking?',
-               "I'm asking", "I'm dancing"]
+    ONE_CHAT = ['Are you dancing?', "I'm asking"]
+    TWO_CHAT =  ['Are you asking?', "I'm dancing"]
 
     clearGamesForPlayer ONE_EMAIL
     clearGamesForPlayer TWO_EMAIL
@@ -461,30 +473,48 @@ class BasicChatTest extends BrowserTest
       @assertNumGames test, 1, 0
 
     # select the most recent game
-    casper.thenClick (@lastGameSelector true), ->
+    casper.thenClick (@lastGameSelector true), =>
       # on the game page is a game chat.
       test.assertExists '.game-chat', 'The game chat does exist.'
-      form_values = 'input[name="comment"]' : MY_CHAT[0]
-      # The final 'true' argument means that the form is submitted.
-      @fillSelectors 'form#chat-form', form_values, true
-      comments_selector = '.game-chat .chat-comments .chat-comment-black'
-      casper.waitForSelector comments_selector
+      addComment ONE_CHAT[0], true
+      checkComment 'black', ONE_CHAT[0], 'Black sees their own first comment'
 
     createLoginSession TWO_EMAIL
     casper.thenOpen serverUrl, =>
       @assertNumGames test, 0, 1
 
-    casper.thenClick (@lastGameSelector false), ->
+    casper.thenClick (@lastGameSelector false), =>
       # on the game page is a game chat.
       test.assertExists '.game-chat', 'The game chat does exist.'
-      comments_selector = '.game-chat .chat-comments .chat-comment-black'
-      test.assertSelectorHasText comments_selector, MY_CHAT[0],
-                 "Player one's comment has appeared in the chat area."
+      checkComment 'black', ONE_CHAT[0], "White sees black's first comment."
+      addComment TWO_CHAT[0], true
+      checkComment 'white', TWO_CHAT[0], "White sees their own first comment."
 
-      form_values = 'input[name="comment"]' : MY_CHAT[1]
-      # The final 'true' argument means that the form is submitted.
-      @fillSelectors 'form#chat-form', form_values, true
+    # Back to player one.
+    createLoginSession ONE_EMAIL
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 1, 0
 
+    # select the most recent game
+    casper.thenClick (@lastGameSelector true), =>
+      # on the game page is a game chat.
+      test.assertExists '.game-chat', 'The game chat does exist.'
+      checkComment 'white', TWO_CHAT[0], "Black sees white's first comment."
+      addComment ONE_CHAT[1], true
+      checkComment 'black', ONE_CHAT[1], "Black sees their own second comment."
+
+    # And back to player 2.
+    createLoginSession TWO_EMAIL
+    casper.thenOpen serverUrl, =>
+      @assertNumGames test, 0, 1
+
+    # select the most recent game
+    casper.thenClick (@lastGameSelector false), =>
+      # on the game page is a game chat.
+      test.assertExists '.game-chat', 'The game chat does exist.'
+      checkComment 'black', ONE_CHAT[1], "White sees black's second comment."
+      addComment TWO_CHAT[1], true
+      checkComment 'white', TWO_CHAT[1], "White sees their own second comment."
 
 registerTest new BasicChatTest
 
