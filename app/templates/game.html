@@ -328,6 +328,7 @@
 <script src="/static/compiled-js/game_comments.js"></script>
 <script type="text/javascript">
 jQuery(document).ready(function(){
+  window.tesuji_charm.game.update_comment_button();
   window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');
   /* keyUp does not work here because we change it programmaticaly below.
      but .change only works when the input field loses focuses, not quite what
