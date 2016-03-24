@@ -124,7 +124,7 @@ def coverage_command(command_args, coverage, accumulate):
     command below we supply 'accumulate=True' for the sub-commands test_casper
     and run_unittests.
     """
-    
+
     # No need to specify the sources, this is done in the .coveragerc file.
     if coverage:
         command = ["coverage", "run"]
@@ -133,7 +133,7 @@ def coverage_command(command_args, coverage, accumulate):
         return command + command_args
     else:
         return ['python'] + command_args
-    
+
 def run_with_test_server(test_command, coverage, accumulate):
     """Run the test server and the given test command in parallel. If 'coverage'
     is True, then we run the server under coverage analysis and produce a
@@ -243,7 +243,7 @@ def test_package(directory, coverage=False, accumulate=True):
 def test_units(coverage=False, accumulate=False):
     """ Runs all the unittests but none of the casperJS tests """
     return run_unittests(['discover'], coverage, accumulate=accumulate)
-    
+
 
 @manager.command
 def test(nocoverage=False, coverage_erase=True):
@@ -266,11 +266,14 @@ def test(nocoverage=False, coverage_erase=True):
     return casper_result
 
 @manager.command
-def cloud9():
-    """When you run this command you should be able to view the running web app 
+def cloud9(nocoffeebuild=False):
+    """When you run this command you should be able to view the running web app
     either by "Preview->Preview Running Application", or by visiting:
     `<worksapce>-<username>.c9users.io/` which you can get to by doing the above
     preview and then clicking to pop-out to a new window."""
+    if not nocoffeebuild and coffeebuild():
+        print("Coffee script failed to compile, exiting test!")
+        return 1
     return run_command('python manage.py runserver -h 0.0.0.0 -p 8080')
 
 
