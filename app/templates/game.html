@@ -291,7 +291,10 @@
     </div> <!-- /#match-column -->
     <div class="col-xs-12 col-md-6 well" id="chat-column">
       <div class="game-chat">
-        <span id="refreshing-comments">Refreshing Comments</span>
+        <button onclick="window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');"
+                class="btn btn-default"
+                id="refresh-comments-button">Refresh</button>
+        <span id="refreshing-comments" style="float:right;">Refreshing Comments</span>
         <ul class="chat-comments list-group">
         </ul><!-- /.chat-comments -->
         <form id="chat-form"
@@ -320,11 +323,6 @@
      console.log(window.tesuji_charm.onTurn);
  })();
 </script>
-<!--
-<script>
- $('.chat-comments').scrollTop($('.chat-comments')[0].scrollHeight);
-</script>
--->
 <script src="/static/compiled-js/game_comments.js"></script>
 <script>
 jQuery(document).ready(function(){
