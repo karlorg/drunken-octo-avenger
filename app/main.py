@@ -121,7 +121,8 @@ def comment(game_no):
         comment = GameComment(game, form.comment.data, current_user)
         db.session.add(comment)
         db.session.commit()
-        return redirect(redirect_url())
+        return ''
+    print('The comment form did not validates')
     flash("Comment not validated!")
     return redirect(redirect_url())
 

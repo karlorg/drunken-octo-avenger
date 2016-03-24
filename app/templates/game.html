@@ -326,10 +326,27 @@
  })();
 </script>
 <script src="/static/compiled-js/game_comments.js"></script>
-<script>
+<script type="text/javascript">
 jQuery(document).ready(function(){
   window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');
-  $('#chat-form input').keyup(window.tesuji_charm.game.update_comment_button);
+  /* keyUp does not work here because we change it programmaticaly below.
+     but .change only works when the input field loses focuses, not quite what
+     I was expecting. This though seems to work for all use-cases, including
+     middle-clicking with the mouse to paste. */
+  $('#chat-form input').bind('input', window.tesuji_charm.game.update_comment_button);
+  var chat_form = $('#chat-form');
+  chat_form.submit(function (ev) {
+     $.ajax({
+        type: chat_form.attr('method'),
+        url: chat_form.attr('action'),
+        data: chat_form.serialize(),
+        success: function (data) {
+          $('#chat-form input#comment').val('');
+          window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');
+        }
+    });
+    ev.preventDefault();
+  });
 });
 </script>
 <script src="/static/bind-polyfill.js"></script>
