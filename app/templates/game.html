@@ -302,7 +302,9 @@
             {{ chatform.hidden_tag() }}
             {{ chatform.comment(placeholder="Comment ...", class="form-control") }}
             <button type="submit" class="form-control btn btn-default comment_button"
-                    name='comment_button'>Comment</button>
+                    name='comment_button'
+                    id="comment-button"
+                    >Comment</button>
         </form>
       </div><!-- /.game-chat -->
     </div><!-- /#chat-column -->
@@ -327,6 +329,7 @@
 <script>
 jQuery(document).ready(function(){
   window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');
+  $('#chat-form input').keyup(window.tesuji_charm.game.update_comment_button);
 });
 </script>
 <script src="/static/bind-polyfill.js"></script>

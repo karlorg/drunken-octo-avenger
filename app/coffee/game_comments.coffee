@@ -26,3 +26,7 @@ exports.refresh_game_comments = (game_id, black_user, white_user) ->
     receive_game_comments data, black_user, white_user
   posting.fail (data) ->
     $("#refreshing-comments").text "Error: Could not contact server."
+
+exports.update_comment_button = () ->
+  empty = $('#chat-form > input').val() == ''
+  $('#comment-button').prop 'disabled', empty
