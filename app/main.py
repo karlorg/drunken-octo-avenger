@@ -4,6 +4,7 @@ import time
 import multiprocessing
 from datetime import datetime
 
+import flask
 from flask import (
         Flask, abort, flash, redirect, render_template, request,
         session, url_for
@@ -94,6 +95,13 @@ def game(game_no):
         form=form, chatform=chatform, game_no=game_no,
         on_turn=is_your_turn, with_scoring=is_passed_twice,
         comments=comments)
+
+@app.route('/grab_game_comments', methods=['POST'])
+def grab_game_comments():
+    game_id = flask.request.form['game_id']
+    db_game = db.session.query(Game).filter_by(id=game_id).one()
+    return db_game.jsonify_comments()
+
 
 @app.route('/chat/<int:game_no>', methods=['POST'])
 def comment(game_no):
@@ -642,6 +650,10 @@ class Game(db.Model):
         else:
             return None
 
+    def jsonify_comments(self):
+        return flask.jsonify(moments=[c.jsonify() for c in self.comments])
+
+
 class GameComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pub_date = db.Column(db.DateTime)
@@ -656,6 +668,12 @@ class GameComment(db.Model):
         self.content = content
         self.speaker = speaker
         self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
+
+    def jsonify(self):
+        return {'content': self.content,
+                'speaker': self.speaker,
+                'pub_date': self.pub_date}
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)

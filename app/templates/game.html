@@ -291,17 +291,8 @@
     </div> <!-- /#match-column -->
     <div class="col-xs-12 col-md-6 well" id="chat-column">
       <div class="game-chat">
+        <span id="refreshing-comments">Refreshing Comments</span>
         <ul class="chat-comments list-group">
-          {% for comment in comments %}
-            {% if comment.speaker == black_user %}
-              {% set chat_class = "chat-comment-black" %}
-            {% elif comment.speaker == white_user %}
-              {% set chat_class = "chat-comment-white" %}
-            {% else %}
-              {% set chat_class = "chat-comment-anonymous" %}
-            {% endif %}<!-- end if comment.speaker ... -->
-            <li class="{{chat_class}} list-group-item">{{comment.content}}</li>
-          {% endfor %}
         </ul><!-- /.chat-comments -->
         <form id="chat-form"
               method="POST" action="{{ url_for('comment', game_no=game_no) }}">
@@ -329,8 +320,16 @@
      console.log(window.tesuji_charm.onTurn);
  })();
 </script>
+<!--
 <script>
  $('.chat-comments').scrollTop($('.chat-comments')[0].scrollHeight);
+</script>
+-->
+<script src="/static/compiled-js/game_comments.js"></script>
+<script>
+jQuery(document).ready(function(){
+  window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');
+});
 </script>
 <script src="/static/bind-polyfill.js"></script>
 <script src="/static/react.js"></script>
