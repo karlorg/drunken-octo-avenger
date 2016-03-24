@@ -37,4 +37,5 @@ pip install -r ${REQUIREMENTS}
 # Finally we have to install the node modules that we require, so for this
 # you will need to have 'npm' installed.
 npm install coffee-script
+npm install coffeelint
 npm install casperjs
