@@ -174,7 +174,14 @@ def play(game_no):
     game.last_move_time = datetime.now()
     _check_gameover_and_update(game)
     db.session.commit()
-    return redirect(redirect_url())
+    if 'submit_and_next_game_button' in arguments:
+        try:
+            return redirect(
+                url_for('game',
+                        game_no=next_game_for_user(logged_in_user()).id))
+        except NoPendingGamesException:
+            return redirect(url_for('front_page'))
+    return redirect(url_for('game', game_no=game_no))
 
 def _check_gameover_and_update(game):
     """If game is over, update the appropriate fields."""
@@ -238,6 +245,15 @@ def get_player_games(user):
                                    or_(Game.black == user,
                                        Game.white == user))).all()
     return games
+
+class NoPendingGamesException(Exception):
+    pass
+
+def next_game_for_user(user):
+    your_turn_games, _ = get_status_lists(user)
+    if len(your_turn_games) < 1:
+        raise NoPendingGamesException
+    return your_turn_games[0]
 
 def is_players_turn_in_game(game):
     """Test if it's the logged-in player's turn to move in `game`.
