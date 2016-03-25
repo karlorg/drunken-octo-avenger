@@ -41,7 +41,7 @@ def use_log_file_handler():
     # for test runners etc. that want to log to files; using this
     # function allows them to all provide the same behaviour.
     handler = logging.handlers.RotatingFileHandler(
-        '../test.log', maxBytes=1000000, backupCount=5)
+        'generated/test.log', maxBytes=1000000, backupCount=5)
     handler.setLevel(logging.DEBUG)
     app.logger.handlers = []
     app.logger.propagate = False

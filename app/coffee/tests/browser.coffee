@@ -2,7 +2,7 @@
 
 fs = require('fs')
 
-logFileName = '../casper_tests.log'
+logFileName = 'generated/casper_tests.log'
 
 do ->
   oldLog = casper.log
