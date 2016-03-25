@@ -252,13 +252,13 @@
           <form id="main_form" class="form-group"
                 method="POST" action="{{ url_for('play', game_no=game_no) }}">
             {{ form.hidden_tag() }}
-                Submit and stay on this board</button>
             <button type="submit"
                     class="form-control btn btn-success submit_and_next_game_button"
                     name='submit_and_next_game_button'>
                 Submit and go to next game</button>
             <button type="submit" class="form-control btn btn-success submit_button"
                     name='submit_button'>
+                Submit and stay on this board</button>
 
           {% if with_scoring %}
             <button type="button" class="form-control btn btn-default resume_button"
