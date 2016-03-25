@@ -171,9 +171,17 @@ def play(game_no):
         flash("Invalid request.")
         return redirect(url_for('game', game_no=game_no))
     game.sgf = arguments['response']
+    game.last_move_time = datetime.now()
     _check_gameover_and_update(game)
     db.session.commit()
-    return redirect(redirect_url())
+    if 'submit_and_next_game_button' in arguments:
+        try:
+            return redirect(
+                url_for('game',
+                        game_no=next_game_for_user(logged_in_user()).id))
+        except NoPendingGamesException:
+            return redirect(url_for('front_page'))
+    return redirect(url_for('game', game_no=game_no))
 
 def _check_gameover_and_update(game):
     """If game is over, update the appropriate fields."""
@@ -186,6 +194,7 @@ def challenge():
     if form.validate_on_submit():
         game = Game(black=form.opponent.data,
                     white=logged_in_user(),
+                    last_move_time=datetime.now(),
                     sgf="(;)")
         db.session.add(game)
         db.session.commit()
@@ -207,15 +216,23 @@ def status():
 def get_status_lists(user):
     """Return two lists of games for the player, split by on-turn or not.
 
+    Sorts game lists with most time since last move first.
+
     Accesses database.
     """
     player_games = get_player_games(user)
 
+    def sort_key(game):
+        t = game.last_move_time
+        if t is None:
+            t = datetime.min
+        return t
     your_turn_games = [g for g in player_games
                        if user_to_move_in_game(g) == user]
     not_your_turn_games = [g for g in player_games
                            if user_to_move_in_game(g) != user]
-    return (your_turn_games, not_your_turn_games)
+    return (sorted(your_turn_games, key=sort_key),
+            sorted(not_your_turn_games, key=sort_key))
 
 def get_player_games(user):
     """Returns the list of games in which `user` is involved.
@@ -228,6 +245,15 @@ def get_player_games(user):
                                    or_(Game.black == user,
                                        Game.white == user))).all()
     return games
+
+class NoPendingGamesException(Exception):
+    pass
+
+def next_game_for_user(user):
+    your_turn_games, _ = get_status_lists(user)
+    if len(your_turn_games) < 1:
+        raise NoPendingGamesException
+    return your_turn_games[0]
 
 def is_players_turn_in_game(game):
     """Test if it's the logged-in player's turn to move in `game`.
@@ -472,7 +498,8 @@ def create_game_internal(black, white,
         if not stones:
             stones = []
         sgf = sgf_from_text_map(stones)
-    game = Game(black=black, white=white, sgf=sgf)
+    game = Game(black=black, white=white, sgf=sgf,
+                last_move_time=datetime.now())
     db.session.add(game)
     db.session.commit()
     return game
@@ -652,6 +679,7 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
     finished = db.Column(db.Boolean(), server_default="0")
+    last_move_time = db.Column(db.DateTime())
 
     def __repr__(self):
         return "<Game {no}, {b} vs. {w}>".format(

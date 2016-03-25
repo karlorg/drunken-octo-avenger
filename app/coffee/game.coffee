@@ -238,6 +238,7 @@ BoardAreaDom = React.createClass
     else
       enabled = false
     $('.submit_button').prop 'disabled', not enabled
+    $('.submit_and_next_game_button').prop 'disabled', not enabled
     return
 
   updateResponseForm: ->

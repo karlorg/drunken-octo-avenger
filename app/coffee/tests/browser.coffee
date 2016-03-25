@@ -98,6 +98,9 @@ class BrowserTest
     div_id = if your_turn then 'your_turn_games' else 'not_your_turn_games'
     @gameSelector div_id, first_or_last
 
+  firstGameSelector: (your_turn) ->
+    @statusGameSelector your_turn, 'first'
+
   lastGameSelector: (your_turn) ->
     @statusGameSelector your_turn, 'last'
 
@@ -402,9 +405,9 @@ registerTest new ChallengeTest
 
 
 class PlaceStonesTest extends BrowserTest
-  names: ['PlaceStonesTest']
+  names: ['PlaceStonesTest', 'place']
   description: "Test Placing Stones"
-  numTests: 18
+  numTests: 19
   testBody: (test) =>
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
@@ -434,6 +437,8 @@ class PlaceStonesTest extends BrowserTest
       # no (usable) submit button appears yet
       test.assertDoesntExist '.submit_button:enabled',
                              'no usable submit button appears'
+      test.assertDoesntExist '.submit_and_next_game_button:enabled',
+                             'no usable submit (-> next game) button appears'
 
       # the 3x3 block at top left is as we specified
       @assertPointIsEmpty test, 0, 0
@@ -663,6 +668,90 @@ class GameInterfaceTest extends BrowserTest
       @assertEmptyBoard test
 
 registerTest new GameInterfaceTest
+
+
+class SubmitAndNextGameTest extends BrowserTest
+  names: ['SubmitAndNextGameTest', 'nextgame']
+  description: "'Submit and go to next game' button"
+  numTests: 0
+  testBody: (test) =>
+    EMAILS = ['hero@zero.com',
+              'player@one.com',
+              'playa@dos.es',
+              'plagxo@tri.eo']
+    [HERO, P1, P2, P3] = EMAILS
+    clearGamesForPlayer p for p in EMAILS
+    createGame HERO, P1
+    createGame P2, HERO
+    createGame P3, HERO
+
+    # convenience function
+    goToGame = (email, thenFn=(->)) =>
+      createLoginSession email
+      casper.thenOpen serverUrl
+      casper.thenClick (@lastGameSelector true), thenFn  # true = our turn
+
+    goToHeroFirstGame = (thenFn=(->)) =>
+      createLoginSession HERO
+      casper.thenOpen serverUrl
+      casper.thenClick (@firstGameSelector true), thenFn
+
+    # two makes a move, then shortly after, three makes a move
+    goToGame P2
+    casper.thenClick (pointSelector 3, 3)
+    casper.thenClick '.submit_button'
+    casper.wait 50
+    goToGame P3
+    casper.thenClick (pointSelector 3, 3)
+    casper.thenClick '.submit_button'
+    # now when hero moves against P1...
+    goToHeroFirstGame()
+    casper.thenClick (pointSelector 3, 3)
+    casper.thenClick '.submit_and_next_game_button', ->
+      # she lands on the game against P2, who moved least recently
+      test.assertSelectorHasText '#match-info', P2,
+        "hero lands on P2's game after playing a move against P1"
+
+    # hero moves in P2 and P3's games, and P1 moves in his game,
+    # leaving the same players to play as when we started
+    casper.thenClick (pointSelector 15, 15)
+    casper.thenClick '.submit_and_next_game_button', ->
+      test.assertSelectorHasText '#match-info', P3,
+        "hero lands on P3's game after playing a move against P2"
+    casper.thenClick (pointSelector 15, 15)
+    casper.thenClick '.submit_and_next_game_button'
+    goToGame P1
+    casper.thenClick (pointSelector 15, 15)
+    casper.thenClick '.submit_and_next_game_button'
+
+    # this time P3 and P2 move in the opposite order:
+    # three makes a move, then shortly after, two makes a move
+    goToGame P3
+    casper.thenClick (pointSelector 9, 9)
+    casper.thenClick '.submit_button'
+    casper.wait 50
+    goToGame P2
+    casper.thenClick (pointSelector 9, 9)
+    casper.thenClick '.submit_button'
+    # now when hero moves against P1...
+    goToHeroFirstGame()
+    casper.thenClick (pointSelector 9, 9)
+    casper.thenClick '.submit_and_next_game_button', ->
+      # she lands on the game against P3, who moved least recently
+      test.assertSelectorHasText '#match-info', P3,
+        "hero lands on P3's game after playing a move against P1"
+
+    # and after moving against P3 and P2...
+    casper.thenClick (pointSelector 4, 15)
+    casper.thenClick '.submit_and_next_game_button', ->
+      test.assertSelectorHasText '#match-info', P2
+    casper.thenClick (pointSelector 4, 15)
+    casper.thenClick '.submit_and_next_game_button', ->
+      # she lands back at the status page as no games are pending
+      test.assertExists '#your_turn_games',
+        "hero lands on status page after playing a move against P2"
+
+registerTest new SubmitAndNextGameTest
 
 
 class PassAndScoringTest extends BrowserTest

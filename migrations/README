@@ -1,1 +1,5 @@
-Generic single-database configuration.
+We're using Flask-Migrate, see
+https://flask-migrate.readthedocs.org/en/latest/
+
+Specifically, we use the `manage.py` script to work with migrations,
+not the `python app.py` version described first in that document.
