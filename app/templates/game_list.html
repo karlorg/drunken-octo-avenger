@@ -1,0 +1,25 @@
+
+{% macro display_game_list(div_id, panel_category, heading, the_games_list, user) -%}
+<div id="{{div_id}}" class="panel panel-{{panel_category}}">
+    <div class="panel-heading">{{heading}}</div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Game Link</th>
+                <th>Your Color</th>
+                <th>Opponent</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for game in the_games_list %}
+            <tr class="game-list-row">
+                <td><a href="{{ url_for('game', game_no=game.id) }}" 
+                       class="btn btn-default" role="button">{{game.id}}</a></td>
+                <td>{{game.player_color(user)}}</td>
+                <td>{{game.player_opponent(user)}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div><!-- /#{{div_id}} -->
+{%- endmacro %}

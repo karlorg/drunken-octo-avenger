@@ -1,9 +1,3 @@
-from __future__ import (
-        absolute_import, division, print_function, unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
-                      int, map, next, oct, open, pow, range, round,
-                      str, super, zip)
-
 from collections import namedtuple
 import logging
 import logging.handlers
@@ -11,6 +5,7 @@ import time
 import multiprocessing
 from datetime import datetime
 
+import flask
 from flask import (
         Flask, abort, flash, redirect, render_template, request,
         session, url_for
@@ -112,6 +107,13 @@ def game(game_no):
         on_turn=is_your_turn, with_scoring=is_passed_twice,
         comments=comments)
 
+@app.route('/grab_game_comments', methods=['POST'])
+def grab_game_comments():
+    game_id = flask.request.form['game_id']
+    db_game = db.session.query(Game).filter_by(id=game_id).one()
+    return db_game.jsonify_comments()
+
+
 @app.route('/chat/<int:game_no>', methods=['POST'])
 def comment(game_no):
     try:
@@ -130,7 +132,8 @@ def comment(game_no):
         comment = GameComment(game, form.comment.data, current_user)
         db.session.add(comment)
         db.session.commit()
-        return redirect(redirect_url())
+        return ''
+    print('The comment form did not validates')
     flash("Comment not validated!")
     return redirect(redirect_url())
 
@@ -656,6 +659,26 @@ class Game(db.Model):
         return "<Game {no}, {b} vs. {w}>".format(
             no=self.id, b=self.black, w=self.white)
 
+    def player_opponent(self, player):
+        if player == self.black:
+            return self.white
+        elif player == self.white:
+            return self.black
+        else:
+            return None
+
+    def player_color(self, player):
+        if player == self.black:
+            return 'black'
+        elif player == self.white:
+            return 'white'
+        else:
+            return None
+
+    def jsonify_comments(self):
+        return flask.jsonify(moments=[c.jsonify() for c in self.comments])
+
+
 class GameComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pub_date = db.Column(db.DateTime)
@@ -670,6 +693,12 @@ class GameComment(db.Model):
         self.content = content
         self.speaker = speaker
         self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
+
+    def jsonify(self):
+        return {'content': self.content,
+                'speaker': self.speaker,
+                'pub_date': self.pub_date}
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -1,13 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<div id="finished_games">
-    <h3>Your finished games:</h3>
-    <ul>
-        {% for game in finished_games %}
-        <li>
-        <a href="{{ url_for('game', game_no=game.id) }}">Game {{ game.id }}</a>
-        </li>
-        {% endfor %}
-    </ul>
-</div>
+{% from 'game_list.html' import display_game_list %}
+
+{{display_game_list('finished_games', 'info', 
+                    'A list of your finished games',
+                    finished_games, current_user)}}
+
 {% endblock %}

@@ -1,9 +1,3 @@
-from __future__ import (
-        absolute_import, division, print_function, unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
-                      int, map, next, oct, open, pow, range, round,
-                      str, super, zip)
-
 from contextlib import contextmanager
 from itertools import chain
 from mock import ANY, Mock, patch
@@ -266,7 +260,7 @@ class TestStatusIntegrated(TestWithDb):
         with self.set_user() as test_client:
             response = test_client.get(url_for('status'))
         self.assertEqual(
-                self.count_pattern_in(r"Game \d", str(response.get_data())),
+                self.count_pattern_in(r"class=\"game-list-row\"", str(response.get_data())),
                 4)
 
     def test_anonymous_users_redirected_to_front(self):
@@ -517,9 +511,6 @@ class TestPlayIntegrated(TestWithDb):
         self.assertFalse(new_game.finished,
                          "game is not over after different submission")
 
-    @unittest.skip(
-            """haven't decided yet what should be returned after a move is
-            played""")
     def test_no_links_after_playing_a_move(self):
         # regression: testing specifically the response to playing a move due
         # to old bug whereby 'is our turn' testing happened before updating the
