@@ -261,8 +261,23 @@
           {% else %}  <!-- if with_scoring -->
             <button type="button" class="form-control btn btn-warning pass_button"
                     name='pass_button'>Pass</button>
-            <button type="submit" class="form-control btn btn-danger resign_button"
-                    name='resign_button'>Resign</button>
+            <button type="button" id="resign-button" class="form-control btn btn-danger"
+                    data-toggle="modal" data-target="#resign-modal">Resign</button>
+            <!-- Resign Modal Dialog -->
+            <div id="resign-modal" class="modal fade" role="dialog">
+              <div class="modal-dialog">
+                <div id="resign-area" class="modal-content">
+                  <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal">&times;</button>
+                      <h4 class="modal-title">Confirm Resign?</h4>
+                      Are you <em>sure</em> you wish to resign?
+                      <button type="button" class="form-control btn btn-default" data-dismiss="modal">Oh, cancel and keep playing</button>
+                      <button type="submit" class="form-control btn btn-danger confirm-resign-button"
+                              name='resign_button'>Resign</button>
+                  </div>
+                </div><!-- /#resign-area -->
+              </div><!-- /.modal-dialog -->
+            </div><!-- /#resign-modal -->
           {% endif %}  <!-- if with_scoring -->
           </form><!-- /#main_form -->
         {% else %}  <!-- if on_turn -->
@@ -276,24 +291,20 @@
     </div> <!-- /#match-column -->
     <div class="col-xs-12 col-md-6 well" id="chat-column">
       <div class="game-chat">
+        <button onclick="window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');"
+                class="btn btn-default"
+                id="refresh-comments-button">Refresh</button>
+        <span id="refreshing-comments" style="float:right;">Refreshing Comments</span>
         <ul class="chat-comments list-group">
-          {% for comment in comments %}
-            {% if comment.speaker == black_user %}
-              {% set chat_class = "chat-comment-black" %}
-            {% elif comment.speaker == white_user %}
-              {% set chat_class = "chat-comment-white" %}
-            {% else %}
-              {% set chat_class = "chat-comment-anonymous" %}
-            {% endif %}<!-- end if comment.speaker ... -->
-            <li class="{{chat_class}} list-group-item">{{comment.content}}</li>
-          {% endfor %}
         </ul><!-- /.chat-comments -->
         <form id="chat-form"
               method="POST" action="{{ url_for('comment', game_no=game_no) }}">
             {{ chatform.hidden_tag() }}
             {{ chatform.comment(placeholder="Comment ...", class="form-control") }}
             <button type="submit" class="form-control btn btn-default comment_button"
-                    name='comment_button'>Comment</button>
+                    name='comment_button'
+                    id="comment-button"
+                    >Comment</button>
         </form>
       </div><!-- /.game-chat -->
     </div><!-- /#chat-column -->
@@ -314,11 +325,32 @@
      console.log(window.tesuji_charm.onTurn);
  })();
 </script>
-<script>
- $('.chat-comments').scrollTop($('.chat-comments')[0].scrollHeight);
+<script src="/static/compiled-js/game_comments.js"></script>
+<script type="text/javascript">
+jQuery(document).ready(function(){
+  window.tesuji_charm.game.update_comment_button();
+  window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');
+  /* keyUp does not work here because we change it programmaticaly below.
+     but .change only works when the input field loses focuses, not quite what
+     I was expecting. This though seems to work for all use-cases, including
+     middle-clicking with the mouse to paste. */
+  $('#chat-form input').bind('input', window.tesuji_charm.game.update_comment_button);
+  var chat_form = $('#chat-form');
+  chat_form.submit(function (ev) {
+     $.ajax({
+        type: chat_form.attr('method'),
+        url: chat_form.attr('action'),
+        data: chat_form.serialize(),
+        success: function (data) {
+          $('#chat-form input#comment').val('');
+          window.tesuji_charm.game.refresh_game_comments({{game_no}}, '{{black_user}}', '{{white_user}}');
+        }
+    });
+    ev.preventDefault();
+  });
+});
 </script>
 <script src="/static/bind-polyfill.js"></script>
-<script src="/static/jquery.js"></script>
 <script src="/static/react.js"></script>
 <script src="/static/compiled-js/go_rules.js"></script>
 <script src="/static/compiled-js/smartgame.js"></script>

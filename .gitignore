@@ -19,6 +19,8 @@ app/static/compiled-js/
 
 app/test.db
 
+generated/
+
 node_modules/
 npm-debug.log
 

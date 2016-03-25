@@ -1,17 +1,12 @@
-from __future__ import (
-        absolute_import, division, print_function, unicode_literals)
-from builtins import (ascii, bytes, chr, dict, filter, hex, input,  # noqa
-                      int, map, next, oct, open, pow, range, round,
-                      str, super, zip)
-
-from collections import namedtuple
 import logging
+import logging.handlers
 import time
 import multiprocessing
 from datetime import datetime
 
+import flask
 from flask import (
-        Flask, abort, flash, redirect, render_template, request,
+        Flask, flash, redirect, render_template, request,
         session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -29,7 +24,6 @@ from wtforms.widgets import HiddenInput
 import wtforms
 import threading
 
-from config import DOMAIN
 from app import go
 from app import sgftools
 
@@ -40,6 +34,16 @@ app.jinja_env.undefined = jinja2.StrictUndefined
 if app.debug:
     logging.basicConfig(level=logging.DEBUG)
 db = SQLAlchemy(app)
+
+def use_log_file_handler():
+    # for test runners etc. that want to log to files; using this
+    # function allows them to all provide the same behaviour.
+    handler = logging.handlers.RotatingFileHandler(
+        'generated/test.log', maxBytes=1000000, backupCount=5)
+    handler.setLevel(logging.DEBUG)
+    app.logger.handlers = []
+    app.logger.propagate = False
+    app.logger.addHandler(handler)
 
 def async(f):
     def wrapper(*args, **kwargs):
@@ -101,6 +105,13 @@ def game(game_no):
         on_turn=is_your_turn, with_scoring=is_passed_twice,
         comments=comments)
 
+@app.route('/grab_game_comments', methods=['POST'])
+def grab_game_comments():
+    game_id = flask.request.form['game_id']
+    db_game = db.session.query(Game).filter_by(id=game_id).one()
+    return db_game.jsonify_comments()
+
+
 @app.route('/chat/<int:game_no>', methods=['POST'])
 def comment(game_no):
     try:
@@ -119,17 +130,23 @@ def comment(game_no):
         comment = GameComment(game, form.comment.data, current_user)
         db.session.add(comment)
         db.session.commit()
-        return redirect(redirect_url())
+        return ''
+    print('The comment form did not validates')
     flash("Comment not validated!")
     return redirect(redirect_url())
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
+    app.logger.debug("play() called for game {}".format(game_no))
     try:
         game = db.session.query(Game).filter_by(id=game_no).one()
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
+    try:
+        app.logger.debug("play(): logged in user: {}".format(logged_in_user()))
+    except NoLoggedInPlayerException:
+        app.logger.debug("play(): no logged in user")
     if not is_players_turn_in_game(game):
         flash("It's not your turn in that game.")
         return redirect('/')
@@ -137,12 +154,17 @@ def play(game_no):
     if 'resign_button' in arguments:
         game.finished = True
         db.session.commit()
+        app.logger.debug("play(): resignation received and saved")
         return redirect(redirect_url())
     try:
         go.check_continuation(old_sgf=game.sgf,
                               new_sgf=arguments['response'],
                               allowed_new_moves=1)
+        app.logger.debug(
+            "play(): valid SGF, ends: '{}'".format(
+                arguments['response'][-12:]))
     except go.ValidationException as e:
+        app.logger.debug("play(): invalid SGF received")
         flash("Invalid move: {}".format(e.args[0]))
         return redirect(url_for('game', game_no=game_no))
     except KeyError:
@@ -417,6 +439,9 @@ def testing_delete_user():
 def testing_create_login_session():
     """Log in the given user id."""
     set_logged_in_user(request.form['email'])
+    app.logger.debug(
+        "logged in user set to {} for testing".format(
+            request.form['email']))
     return ''
 
 @app.test_only_route('/testing_create_game', methods=['POST'])
@@ -641,6 +666,26 @@ class Game(db.Model):
         return "<Game {no}, {b} vs. {w}>".format(
             no=self.id, b=self.black, w=self.white)
 
+    def player_opponent(self, player):
+        if player == self.black:
+            return self.white
+        elif player == self.white:
+            return self.black
+        else:
+            return None
+
+    def player_color(self, player):
+        if player == self.black:
+            return 'black'
+        elif player == self.white:
+            return 'white'
+        else:
+            return None
+
+    def jsonify_comments(self):
+        return flask.jsonify(moments=[c.jsonify() for c in self.comments])
+
+
 class GameComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pub_date = db.Column(db.DateTime)
@@ -655,6 +700,12 @@ class GameComment(db.Model):
         self.content = content
         self.speaker = speaker
         self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
+
+    def jsonify(self):
+        return {'content': self.content,
+                'speaker': self.speaker,
+                'pub_date': self.pub_date}
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
