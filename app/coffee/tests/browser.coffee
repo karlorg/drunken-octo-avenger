@@ -405,9 +405,9 @@ registerTest new ChallengeTest
 
 
 class PlaceStonesTest extends BrowserTest
-  names: ['PlaceStonesTest']
+  names: ['PlaceStonesTest', 'place']
   description: "Test Placing Stones"
-  numTests: 18
+  numTests: 19
   testBody: (test) =>
     ONE_EMAIL = 'player@one.com'
     TWO_EMAIL = 'playa@dos.es'
@@ -437,6 +437,8 @@ class PlaceStonesTest extends BrowserTest
       # no (usable) submit button appears yet
       test.assertDoesntExist '.submit_button:enabled',
                              'no usable submit button appears'
+      test.assertDoesntExist '.submit_and_next_game_button:enabled',
+                             'no usable submit (-> next game) button appears'
 
       # the 3x3 block at top left is as we specified
       @assertPointIsEmpty test, 0, 0
