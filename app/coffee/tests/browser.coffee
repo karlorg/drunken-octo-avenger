@@ -968,7 +968,8 @@ class ResignTest extends BrowserTest
       # log the form's POST target in case of random test failure
       formTarget = casper.getElementAttribute '#main_form', 'action'
       casper.log "main form will post to #{formTarget}", "debug"
-    casper.thenClick '#resign-button', -> # Click the resign button
+    casper.thenClick '#resign-button'  # Click the resign button
+    casper.waitUntilVisible '.confirm-resign-button', ->
       test.assertVisible '.confirm-resign-button'
       casper.thenClick '.confirm-resign-button'
 
