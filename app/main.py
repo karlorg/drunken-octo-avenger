@@ -1,4 +1,3 @@
-from collections import namedtuple
 import logging
 import logging.handlers
 import time
@@ -7,7 +6,7 @@ from datetime import datetime
 
 import flask
 from flask import (
-        Flask, abort, flash, redirect, render_template, request,
+        Flask, flash, redirect, render_template, request,
         session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -25,7 +24,6 @@ from wtforms.widgets import HiddenInput
 import wtforms
 import threading
 
-from config import DOMAIN
 from app import go
 from app import sgftools
 
