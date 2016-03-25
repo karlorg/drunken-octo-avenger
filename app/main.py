@@ -216,7 +216,10 @@ def get_status_lists(user):
     player_games = get_player_games(user)
 
     def sort_key(game):
-        return game.last_move_time
+        t = game.last_move_time
+        if t is None:
+            t = datetime.min
+        return t
     your_turn_games = [g for g in player_games
                        if user_to_move_in_game(g) == user]
     not_your_turn_games = [g for g in player_games
