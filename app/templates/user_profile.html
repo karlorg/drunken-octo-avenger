@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>Username</td><td>{{user.username}}</td>
+            </tr>
+            <tr>
+                <td>Challenge</td>
+                <td><a href="{{ url_for('challenge', challenged=user.username) }}"
+                       class="btn btn-default" role="button">Challenge</a></td>
+            </tr>
+        </tbody>
+    </table>
+{% endblock %}

@@ -216,7 +216,8 @@ def users():
 
 @app.route('/userprofile/<int:user_no>')
 def user_profile(user_no):
-    return redirect(url_for('front_page'))
+    db_user = db.session.query(User).filter(User.id == user_no).one()
+    return render_template_with_basics('user_profile.html', user=db_user)
 
 @app.route('/status')
 def status():
