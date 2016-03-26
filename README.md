@@ -23,7 +23,7 @@ for example `python manage.py test --help`.
 ### database
 
 Run `python manage.py remake_db` to create the database (by default it will
-appear one directory level higher than your repository root).
+appear in a directory named `generated` which is excluded from the git repo).
 
 Generally you can run `python manage.py db upgrade` to upgrade the database to
 the most recent version, for example you may have to do this following a

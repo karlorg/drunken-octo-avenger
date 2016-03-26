@@ -173,6 +173,7 @@ def test_casper(name=None, coverage=False, accumulate=False):
         return 1
     js_test_file = "app/static/compiled-js/tests/browser.js"
     casper_command = ["./node_modules/.bin/casperjs", "test", js_test_file]
+    casper_command.append('--fail-fast')
     if name is not None:
         casper_command.append('--single={}'.format(name))
     return run_with_test_server(casper_command, coverage, accumulate)
@@ -206,6 +207,7 @@ def run_test_server():
     # to work.
     app.add_url_rule('/shutdown', 'shutdown', shutdown,
                              methods=['POST', 'GET'])
+    main.use_log_file_handler()
 
     app.run(port=port, use_reloader=False, threaded=True)
 

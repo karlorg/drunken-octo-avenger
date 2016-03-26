@@ -1,12 +1,12 @@
-from collections import namedtuple
 import logging
+import logging.handlers
 import time
 import multiprocessing
 from datetime import datetime
 
 import flask
 from flask import (
-        Flask, abort, flash, redirect, render_template, request,
+        Flask, flash, redirect, render_template, request,
         session, url_for
 )
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -24,7 +24,6 @@ from wtforms.widgets import HiddenInput
 import wtforms
 import threading
 
-from config import DOMAIN
 from app import go
 from app import sgftools
 
@@ -35,6 +34,16 @@ app.jinja_env.undefined = jinja2.StrictUndefined
 if app.debug:
     logging.basicConfig(level=logging.DEBUG)
 db = SQLAlchemy(app)
+
+def use_log_file_handler():
+    # for test runners etc. that want to log to files; using this
+    # function allows them to all provide the same behaviour.
+    handler = logging.handlers.RotatingFileHandler(
+        'generated/test.log', maxBytes=1000000, backupCount=5)
+    handler.setLevel(logging.DEBUG)
+    app.logger.handlers = []
+    app.logger.propagate = False
+    app.logger.addHandler(handler)
 
 def async(f):
     def wrapper(*args, **kwargs):
@@ -128,11 +137,16 @@ def comment(game_no):
 
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
+    app.logger.debug("play() called for game {}".format(game_no))
     try:
         game = db.session.query(Game).filter_by(id=game_no).one()
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
+    try:
+        app.logger.debug("play(): logged in user: {}".format(logged_in_user()))
+    except NoLoggedInPlayerException:
+        app.logger.debug("play(): no logged in user")
     if not is_players_turn_in_game(game):
         flash("It's not your turn in that game.")
         return redirect('/')
@@ -140,21 +154,34 @@ def play(game_no):
     if 'resign_button' in arguments:
         game.finished = True
         db.session.commit()
+        app.logger.debug("play(): resignation received and saved")
         return redirect(redirect_url())
     try:
         go.check_continuation(old_sgf=game.sgf,
                               new_sgf=arguments['response'],
                               allowed_new_moves=1)
+        app.logger.debug(
+            "play(): valid SGF, ends: '{}'".format(
+                arguments['response'][-12:]))
     except go.ValidationException as e:
+        app.logger.debug("play(): invalid SGF received")
         flash("Invalid move: {}".format(e.args[0]))
         return redirect(url_for('game', game_no=game_no))
     except KeyError:
         flash("Invalid request.")
         return redirect(url_for('game', game_no=game_no))
     game.sgf = arguments['response']
+    game.last_move_time = datetime.now()
     _check_gameover_and_update(game)
     db.session.commit()
-    return redirect(redirect_url())
+    if 'submit_and_next_game_button' in arguments:
+        try:
+            return redirect(
+                url_for('game',
+                        game_no=next_game_for_user(logged_in_user()).id))
+        except NoPendingGamesException:
+            return redirect(url_for('front_page'))
+    return redirect(url_for('game', game_no=game_no))
 
 def _check_gameover_and_update(game):
     """If game is over, update the appropriate fields."""
@@ -167,6 +194,7 @@ def challenge():
     if form.validate_on_submit():
         game = Game(black=form.opponent.data,
                     white=logged_in_user(),
+                    last_move_time=datetime.now(),
                     sgf="(;)")
         db.session.add(game)
         db.session.commit()
@@ -188,15 +216,23 @@ def status():
 def get_status_lists(user):
     """Return two lists of games for the player, split by on-turn or not.
 
+    Sorts game lists with most time since last move first.
+
     Accesses database.
     """
     player_games = get_player_games(user)
 
+    def sort_key(game):
+        t = game.last_move_time
+        if t is None:
+            t = datetime.min
+        return t
     your_turn_games = [g for g in player_games
                        if user_to_move_in_game(g) == user]
     not_your_turn_games = [g for g in player_games
                            if user_to_move_in_game(g) != user]
-    return (your_turn_games, not_your_turn_games)
+    return (sorted(your_turn_games, key=sort_key),
+            sorted(not_your_turn_games, key=sort_key))
 
 def get_player_games(user):
     """Returns the list of games in which `user` is involved.
@@ -209,6 +245,15 @@ def get_player_games(user):
                                    or_(Game.black == user,
                                        Game.white == user))).all()
     return games
+
+class NoPendingGamesException(Exception):
+    pass
+
+def next_game_for_user(user):
+    your_turn_games, _ = get_status_lists(user)
+    if len(your_turn_games) < 1:
+        raise NoPendingGamesException
+    return your_turn_games[0]
 
 def is_players_turn_in_game(game):
     """Test if it's the logged-in player's turn to move in `game`.
@@ -413,6 +458,9 @@ def testing_delete_user():
 def testing_create_login_session():
     """Log in the given user id."""
     set_logged_in_user(request.form['email'])
+    app.logger.debug(
+        "logged in user set to {} for testing".format(
+            request.form['email']))
     return ''
 
 @app.test_only_route('/testing_create_game', methods=['POST'])
@@ -450,7 +498,8 @@ def create_game_internal(black, white,
         if not stones:
             stones = []
         sgf = sgf_from_text_map(stones)
-    game = Game(black=black, white=white, sgf=sgf)
+    game = Game(black=black, white=white, sgf=sgf,
+                last_move_time=datetime.now())
     db.session.add(game)
     db.session.commit()
     return game
@@ -630,6 +679,7 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
     finished = db.Column(db.Boolean(), server_default="0")
+    last_move_time = db.Column(db.DateTime())
 
     def __repr__(self):
         return "<Game {no}, {b} vs. {w}>".format(
