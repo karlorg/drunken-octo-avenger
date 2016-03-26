@@ -62,6 +62,8 @@ body {
         {% if current_user %}
           <li {% if active_page == 'status' %} class="active"{% endif%}>
               <a href="{{url_for('status')}}">Status</a></li>
+          <li {% if active_page == 'users' %} class="active" {% endif%}>
+              <a href="{{url_for('users')}}">Users</a></li>
           <li{% if active_page == 'challenge' %} class="active"{% endif%}>
               <a href="{{ url_for('challenge') }}" id='challenge_link'>Challenge</a></li>
         {% else %} <!-- so if not current_user -->
