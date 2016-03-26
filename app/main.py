@@ -201,6 +201,18 @@ def challenge():
         return redirect(url_for('status'))
     return render_template_with_basics("challenge.html", form=form)
 
+@app.route('/users')
+def users():
+    query = db.session.query(User)
+    # The use of 'all' turns this into a list, might be better
+    # for it to simply iterate through the results.
+    db_users = query.limit(100).all()
+    return render_template_with_basics('list_users.html', user_list=db_users)
+
+@app.route('/userprofile/<int:user_no>')
+def user_profile(user_no):
+    return redirect(url_for('front_page'))
+
 @app.route('/status')
 def status():
     try:

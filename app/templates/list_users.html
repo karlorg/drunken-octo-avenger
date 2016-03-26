@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+<div id="user-list" class="panel panel-info">
+    <div class="panel-heading">List of Users</div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in user_list %}
+            <tr class="user-list-row">
+                <td><a href="{{ url_for('user_profile', user_no=user.id) }}"
+                       class="btn btn-default" role="button">{{user.username}}</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div><!-- /#user-list -->
+
+{% endblock %}
