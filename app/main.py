@@ -188,8 +188,10 @@ def _check_gameover_and_update(game):
     if go.ends_by_agreement(game.sgf):
         game.finished = True
 
-@app.route('/challenge', methods=('GET', 'POST'))
-def challenge():
+
+@app.route('/challenge/<string:challenged>', methods=['GET'])
+@app.route('/challenge/', methods=['GET', 'POST'])
+def challenge(challenged=""):
     form = ChallengeForm()
     if form.validate_on_submit():
         game = Game(black=form.opponent.data,
@@ -199,7 +201,10 @@ def challenge():
         db.session.add(game)
         db.session.commit()
         return redirect(url_for('status'))
-    return render_template_with_basics("challenge.html", form=form)
+    elif request.method == 'POST':
+        flash('There was a problem with the challenge form.')
+    return render_template_with_basics("challenge.html", form=form,
+                                        challenged=challenged)
 
 @app.route('/users')
 def users():

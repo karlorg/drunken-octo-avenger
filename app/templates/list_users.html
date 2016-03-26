@@ -8,6 +8,7 @@
         <thead>
             <tr>
                 <th>User</th>
+                <th>Challenge</th>
             </tr>
         </thead>
         <tbody>
@@ -15,6 +16,8 @@
             <tr class="user-list-row">
                 <td><a href="{{ url_for('user_profile', user_no=user.id) }}"
                        class="btn btn-default" role="button">{{user.username}}</a></td>
+                <td><a href="{{ url_for('challenge', challenged=user.username) }}"
+                       class="btn btn-default" role="button">Challenge</a></td>
             </tr>
             {% endfor %}
         </tbody>
