@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="user-profile-title">{{user.username}}</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>Username</td><td>{{user.username}}</td>
+            </tr>
+            <tr>
+                <td>Challenge</td>
+                <td><a href="{{ url_for('challenge', challenged=user.username) }}"
+                       class="btn btn-default user-challenge-link" role="button">Challenge</a></td>
+            </tr>
+        </tbody>
+    </table>
+{% endblock %}

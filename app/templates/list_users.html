@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% set active_page = "users" %}
+{% block content %}
+
+
+<div id="user-list" class="panel panel-info">
+    <div class="panel-heading">List of Users</div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Challenge</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in user_list %}
+            <tr class="user-list-row">
+                <td><a href="{{ url_for('user_profile', user_no=user.id) }}"
+                       data-username="{{user.username}}"
+                       class="btn btn-default user-profile-link" role="button">{{user.username}}</a></td>
+                <td><a href="{{ url_for('challenge', challenged=user.username) }}"
+                       class="btn btn-default user-challenge-link"
+                       data-username="{{user.username}}"
+                       role="button">Challenge</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div><!-- /#user-list -->
+
+{% endblock %}

@@ -188,8 +188,10 @@ def _check_gameover_and_update(game):
     if go.ends_by_agreement(game.sgf):
         game.finished = True
 
-@app.route('/challenge', methods=('GET', 'POST'))
-def challenge():
+
+@app.route('/challenge/<string:challenged>/', methods=['GET'])
+@app.route('/challenge/', methods=['GET', 'POST'])
+def challenge(challenged=""):
     form = ChallengeForm()
     if form.validate_on_submit():
         game = Game(black=form.opponent.data,
@@ -199,7 +201,23 @@ def challenge():
         db.session.add(game)
         db.session.commit()
         return redirect(url_for('status'))
-    return render_template_with_basics("challenge.html", form=form)
+    elif request.method == 'POST':
+        flash('There was a problem with the challenge form.')
+    return render_template_with_basics("challenge.html", form=form,
+                                        challenged=challenged)
+
+@app.route('/users')
+def users():
+    query = db.session.query(User)
+    # The use of 'all' turns this into a list, might be better
+    # for it to simply iterate through the results.
+    db_users = query.limit(100).all()
+    return render_template_with_basics('list_users.html', user_list=db_users)
+
+@app.route('/userprofile/<int:user_no>')
+def user_profile(user_no):
+    db_user = db.session.query(User).filter(User.id == user_no).one()
+    return render_template_with_basics('user_profile.html', user=db_user)
 
 @app.route('/status')
 def status():
