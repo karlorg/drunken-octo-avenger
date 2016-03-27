@@ -189,7 +189,7 @@ def _check_gameover_and_update(game):
         game.finished = True
 
 
-@app.route('/challenge/<string:challenged>', methods=['GET'])
+@app.route('/challenge/<string:challenged>/', methods=['GET'])
 @app.route('/challenge/', methods=['GET', 'POST'])
 def challenge(challenged=""):
     form = ChallengeForm()

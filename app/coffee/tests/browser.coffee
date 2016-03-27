@@ -214,6 +214,12 @@ class BrowserTest
       test.assertEqual actualScore, score,
         "#{color} score should be #{score}, is #{actualScore}"
 
+  registerNewAccount: (username, password, repeat=password) ->
+      casper.fill 'form#new_account_form', {
+        username: username
+        password1: password
+        password2: repeat
+        }, true  # true = submit form
 
 class ClientSideJsTest extends BrowserTest
   names: ['ClientSideJsTest', 'qunit', 'client']
@@ -259,12 +265,9 @@ class NativeLoginTest extends BrowserTest
 
     # he sets up a new account
     # at first he gets overenthusiastic and tries to set two different passwords
-    casper.thenClick '#new_account', ->
-      @fill 'form#new_account_form', {
-        username: 'darrenlamb'
-        password1: 'iknowandy'
-        password2: 'imdarrenlamb'
-        }, true  # true = submit form
+    casper.thenClick '#new_account', =>
+      @registerNewAccount 'darrenlamb', 'iknowandy', 'imdarrenlamb'
+
     # he is returned to the new account form with an error message
     casper.then =>
       casper.waitForText 'Passwords do not match', =>
@@ -275,13 +278,10 @@ class NativeLoginTest extends BrowserTest
         # he is not logged in
         test.assertDoesntExist '#logout'
 
-    # he tries again with matching passwords
-    casper.then ->
-      @fill 'form#new_account_form', {
-        username: 'darrenlamb'
-        password1: 'iknowandy'
-        password2: 'iknowandy'
-        }, true  # true = submit form
+   # he tries again with matching passwords
+    casper.then =>
+      @registerNewAccount 'darrenlamb', 'iknowandy'
+
     # Darren is automatically logged in
     casper.waitForSelector '#logout', ->
       # the next page has a logout button
@@ -328,6 +328,64 @@ class NativeLoginTest extends BrowserTest
         "Darren logs in again, his name appears on the page"
 
 registerTest new NativeLoginTest
+
+
+class UserListTest extends BrowserTest
+  names: ['UserListTest', 'users']
+  description: "Tests the lists of users, user profiles, and challenge links"
+  numTests: 15
+
+  testBody: (test) =>
+    allan = "allanxlkadsf9120293"
+    karl = "karlasdlkjsad0f932"
+    batman = "batmanlkasjdfwa0932"
+
+    deleteUser allan
+    deleteUser karl
+    deleteUser batman
+    clearGamesForPlayer p for p in [allan, karl, batman]
+
+    # allan
+
+    casper.thenOpen serverUrl, ->
+      if casper.exists '#logout'
+        casper.click '#logout'
+      casper.waitForSelector '#new_account', ->
+        test.assertExists '#new_account'
+    casper.thenClick '#new_account', =>
+      @registerNewAccount allan, 'insecure'
+      casper.waitForSelector '#logout'
+    casper.thenClick '#logout'
+    casper.thenClick '#new_account', =>
+      @registerNewAccount karl, 'alsoinsecure'
+    casper.thenClick '#logout'
+    casper.thenClick '#new_account', =>
+      @registerNewAccount batman, 'LKJ;lkjaskasdflkew932qa2oir3laksdj'
+
+    casper.thenClick '#user-list-link', =>
+      # Batman should be able to see all three users.
+      for name in [allan, karl, batman]
+        test.assertExists ".user-profile-link[data-username=\"#{name}\"]"
+    # Now batman is going to challenge karl to a match
+    casper.thenClick ".user-challenge-link[data-username=\"#{karl}\"]", =>
+      test.assertSelectorHasText \
+        'form#challenge-form input[name="opponent"]', karl
+    casper.thenClick '#send_challenge', =>
+      casper.waitForSelector '#your_turn_games'
+      @assertNumGames test, 0, 1
+    # Now he goes back to the user list and check's out allan's profile page,
+    # also starting a game against allan.
+    casper.thenClick '#user-list-link', =>
+      casper.thenClick ".user-profile-link[data-username=\"#{allan}\"]", =>
+        test.assertSelectorHasText '.user-profile-title', allan
+    casper.thenClick '.user-challenge-link', =>
+      test.assertSelectorHasText \
+        'form#challenge-form input[name="opponent"]', allan
+    casper.thenClick '#send_challenge', =>
+      casper.waitForSelector '#your_turn_games', =>
+      @assertNumGames test, 0, 2
+
+registerTest new UserListTest
 
 
 class StatusTest extends BrowserTest

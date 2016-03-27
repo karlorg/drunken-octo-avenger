@@ -175,7 +175,7 @@ class TestChallengeIntegrated(TestWithDb):
         time0 = datetime.now()
         assert Game.query.all() == []
         with self.set_user('white@white.com') as test_client:
-            test_client.post('/challenge', data=dict(
+            test_client.post('/challenge/', data=dict(
                 opponent='black@black.com'))
         db.session.rollback()  # to catch missing commits
         game = db.session.query(Game).one()
