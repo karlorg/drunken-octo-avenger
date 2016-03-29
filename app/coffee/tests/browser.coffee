@@ -1043,8 +1043,9 @@ class ResignTest extends BrowserTest
     casper.thenClick '.finished_games_link', ->
       gamesCount = casper.evaluate -> $('#finished_games .game-list-row').length
       test.assertEqual gamesCount, 1, "White: exactly one finished game listed"
-      test.assertSelectorHasText '.game-list-row', 'White (resignation)'
-    casper.thenClick (@lastFinishedGameSelector()),
+      test.assertSelectorHasText '.game-list-row', 'White (resignation)',
+        'Check that the White win by resignation is in the finished games list'
+    casper.thenClick (@lastFinishedGameSelector()), ->
       test.assertSelectorHasText '#game-result-summary',
                                  'White won by resignation'
 
