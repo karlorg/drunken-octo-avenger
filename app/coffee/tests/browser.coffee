@@ -1011,7 +1011,7 @@ registerTest new PassAndScoringTest
 class ResignTest extends BrowserTest
   names: ['ResignTest', 'resign']
   description: "resignation"
-  numTests: 3
+  numTests: 6
   testBody: (test) =>
     BLACK_EMAIL = "quitter@nomo.re"
     WHITE_EMAIL = "recipient@easyw.in"
@@ -1037,6 +1037,16 @@ class ResignTest extends BrowserTest
         "Black no longer sees the resigned game on his status page"
       test.assertDoesntExist (@lastGameSelector false),
         "it's not in the off-turn games list either"
+
+    # But it is visible on Black's finished games list:
+    casper.thenOpen serverUrl
+    casper.thenClick '.finished_games_link', ->
+      gamesCount = casper.evaluate -> $('#finished_games .game-list-row').length
+      test.assertEqual gamesCount, 1, "White: exactly one finished game listed"
+      test.assertSelectorHasText '.game-list-row', 'White (resignation)'
+    casper.thenClick (@lastFinishedGameSelector()),
+      test.assertSelectorHasText '#game-result-summary',
+                                 'White won by resignation'
 
 registerTest new ResignTest
 
