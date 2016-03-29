@@ -224,6 +224,10 @@
 
 </style>
 
+{% if game.finished %}
+<h1 id="game-result-summary">{{game.result|game_result_summary}}</h1>
+{% endif %}
+
 <div class="container">
   <div class="row">
     <div class="col-xs-12 col-md-5" id="match-column">

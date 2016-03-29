@@ -3,6 +3,7 @@ import logging.handlers
 import time
 import multiprocessing
 from datetime import datetime
+import enum
 
 import flask
 from flask import (
@@ -98,6 +99,7 @@ def game(game_no):
     chatform = ChatForm(data=form_data)
     return render_template_with_basics(
         "game.html",
+        game=game,
         black_user=game.black,
         white_user=game.white,
         color_turn=color_turn,
@@ -137,13 +139,14 @@ def comment(game_no):
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
     app.logger.debug("play() called for game {}".format(game_no))
+    user = logged_in_user()
     try:
         game = db.session.query(Game).filter_by(id=game_no).one()
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
     try:
-        app.logger.debug("play(): logged in user: {}".format(logged_in_user()))
+        app.logger.debug("play(): logged in user: {}".format(user))
     except NoLoggedInPlayerException:
         app.logger.debug("play(): no logged in user")
     if not is_players_turn_in_game(game):
@@ -151,7 +154,7 @@ def play(game_no):
         return redirect('/')
     arguments = request.form.to_dict()
     if 'resign_button' in arguments:
-        game.finished = True
+        game.resign(user)
         db.session.commit()
         app.logger.debug("play(): resignation received and saved")
         return redirect(redirect_url())
@@ -258,9 +261,9 @@ def get_player_games(user):
 
     Accesses database.
     """
-    games = Game.query.filter(and_(not_(Game.finished),
-                                   or_(Game.black == user,
-                                       Game.white == user))).all()
+    query = db.session.query(Game)
+    games = query.filter(and_((Game.result == GameResult.not_finished.value),
+                             or_(Game.black == user, Game.white == user))).all()
     return games
 
 class NoPendingGamesException(Exception):
@@ -290,7 +293,7 @@ def user_to_move_in_game(game):
     Accesses database.  Return None if game is finished.
     """
     if game.finished:
-        return None
+       return None
     black_or_white = go.next_color(game.sgf)
     next_in_game = {go.Color.black: game.black,
                     go.Color.white: game.white}[black_or_white]
@@ -416,7 +419,7 @@ def finished():
         return redirect('/')
     finished_games = (
         db.session.query(Game)
-        .filter(Game.finished == True)  # noqa
+        .filter(Game.result != GameResult.not_finished.value)  # noqa
         .filter(or_(Game.black == user, Game.white == user))
         .all()
     )
@@ -689,13 +692,47 @@ class ServerPlayer(object):
 
 # models
 
+class GameResult(enum.Enum):
+    white_by_resign = "WBR"
+    white_by_count = "WBC"
+    black_by_resign = "BBR"
+    black_by_count = "BBC"
+    draw = "D"
+    not_finished = ""
+
+# TODO: In SQLAlchemy 1.1, you can directly use an Enum, but that is not yet
+# released and it seems a pain to require a development version of SQLAlchemy,
+# hence, we're using a slightly temporary fix. This means that unfortunately,
+# scattered about the code we will have a few `GameResult.<result>.value` where
+# ideally we'd like to just write `GameResult.<result>`. I've tried to keep this
+# mostly in the Game class itself, however, that is awkward when creating a
+# query filter.
+game_results = [r.value for r in GameResult]
+
+@app.template_filter('game_result_summary')
+def game_result_summary(game_result):
+    return {'WBR': 'White won by resignation',
+            'WBC': 'White won on points',
+            'BBR': 'Black won by resignation',
+            'BBC': 'Black won on points',
+            'D': 'The Game was Drawn'}.get(game_result, '')
+
+@app.template_filter('game_result_summary_short')
+def game_result_summary_short(game_result):
+    return {'WBR': 'White (resignation)',
+            'WBC': 'White (points)',
+            'BBR': 'Black (resignation)',
+            'BBC': 'Black (points)',
+            'D': 'Draw'}.get(game_result, '')
+
 class Game(db.Model):
     __tablename__ = 'games'
     id = db.Column(db.Integer, primary_key=True)
     black = db.Column(db.String(length=254))
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
-    finished = db.Column(db.Boolean(), server_default="0")
+    result = db.Column(db.Enum(*game_results),
+                       default=GameResult.not_finished.value)
     last_move_time = db.Column(db.DateTime())
 
     def __repr__(self):
@@ -717,6 +754,19 @@ class Game(db.Model):
             return 'white'
         else:
             return None
+
+    def resign(self, player):
+        if player == self.black:
+            self.result = GameResult.white_by_resign.value
+        elif player == self.white:
+            self.result = GameResult.black_by_resign.value
+        else:
+            app.logger.debug("Attempt to resign by non-player")
+
+
+    @property
+    def finished(self):
+        return self.result
 
     def jsonify_comments(self):
         return flask.jsonify(moments=[c.jsonify() for c in self.comments])

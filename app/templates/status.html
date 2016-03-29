@@ -3,12 +3,12 @@
 {% block content %}
 {% from 'game_list.html' import display_game_list %}
 
-{{display_game_list('your_turn_games', 'success', 
+{{display_game_list('your_turn_games', 'success',
                     'Your turn in the following games',
-                    your_turn_games, current_user)}}
+                    your_turn_games, current_user, False)}}
 {{display_game_list('not_your_turn_games', 'warning',
                     'Waiting for your opponents in the following games',
-                     not_your_turn_games, current_user)}}
+                     not_your_turn_games, current_user, False)}}
 <div>
     <a href="{{ url_for('finished') }}" class="finished_games_link">
         View finished games
