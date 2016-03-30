@@ -42,16 +42,7 @@ def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
 def _is_valid(sgf):
     nodes = _GameTree.from_sgf(sgf).main_line
     board = _Board()
-    move_no = 0
-    for node in nodes:
-        if node.is_setup:
-            for coord in node.black_coords:
-                board[coord] = Color.black
-            for coord in node.white_coords:
-                board[coord] = Color.white
-        elif node.is_move:
-            board.update_with_move(node.coord, node.color, move_no)
-            move_no += 1
+    board.update_with_nodes(nodes, starting_move_no=0)
     # if none of those updates raised, it's a valid sequence
     return True
 
@@ -69,21 +60,34 @@ def _is_continuation(old_sgf, new_sgf):
                                   move_no=0)
     return True
 
+
+def agreed_marking(sgf):
+    """Returns the final agreed proposal if an sgf ends in two identical
+    proposals and None otherwise."""
+    try:
+        reversed_nodes = reversed(_GameTree.from_sgf(sgf).main_line)
+        last_node = next(reversed_nodes)
+        penultimate_node = next(reversed_nodes)
+        if ((last_node.is_mark and penultimate_node.is_mark) and
+            (last_node.black_coords == penultimate_node.black_coords) and
+            (last_node.white_coords == penultimate_node.white_coords)):
+                return last_node
+        return None
+    except StopIteration:
+        return None
+
+
 def ends_by_agreement(sgf):
     """True if sgf ends with two identical territory proposals."""
-    previous_proposal = None
-    for node in reversed(_GameTree.from_sgf(sgf).main_line):
-        if not node.is_mark:
-            return False
-        prop = (node.black_coords, node.white_coords)
-        if previous_proposal:
-            if previous_proposal == prop:
-                return True
-            else:
-                return False
-        else:
-            previous_proposal = prop
-    return False
+    return agreed_marking(sgf) is not None
+
+
+def score_ended_game(sgf):
+    marking = agreed_marking(sgf)
+    if marking:
+        return {Color.black: 10, Color.white: 2}
+    else:
+        return None
 
 def next_color(sgf):
     """Return the color that is next to move in sgf."""
@@ -132,6 +136,7 @@ class _Board(object):
         self._points = {_Coord(x, y): Color.empty
                         for x in range(size)
                         for y in range(size)}
+        self.prisoner_points = {Color.black: 0, Color.white: 0}
 
     def __getitem__(self, coord):
         return self._points[coord]
@@ -145,28 +150,52 @@ class _Board(object):
     def items(self):
         return self._points.items()
 
-    def update_with_move(self, coord, color, move_no):
+
+    def update_with_nodes(self, nodes, starting_move_no=0):
+        move_no = starting_move_no
+        for node in nodes:
+            if node.is_setup:
+                for coord in node.black_coords:
+                    self[coord] = Color.black
+                for coord in node.white_coords:
+                    self[coord] = Color.white
+            elif node.is_move:
+                self.update_with_move(node.coord.x, node.coord.y,
+                                      node.color, move_no)
+                move_no += 1
+
+    def update_with_move(self, x, y, color, move_no):
         """Update board to the state it should be in after the move is played.
 
         Modifies self.
         """
+        coord = _Coord(x,y)
         try:
             enemy = {Color.white: Color.black,
                      Color.black: Color.white}.get(color)
         except:  # pragma: no cover
             assert False, "attempted board update with invalid color"
 
+        if self[coord] == Color.empty:
+            self[coord] = color
+        else:
+            raise ValidationException("point already occupied", move_no)
+
+        # Note, this already updates the board with the captures, hence assuming
+        # that this point is valid, so we must first check that the move is
+        # valid before calling this. However, we cannot check if a player is
+        # playing into a place with zero liberties until we removes the
+        # captures. Nicely, a move will not be valid for that reason if it makes
+        # any captures, and if it does not, then `process_captures` won't make
+        # any updates to the board that we would need to undo.
         def process_captures(coord0):
             for n_coord in self._get_neighbours(coord0):
                 if self[n_coord] == enemy:
                     if self._count_liberties(n_coord) == 0:
                         for p in self.get_group(n_coord):
+                            self.prisoner_points[color] += 1
                             self[p] = Color.empty
 
-        if self[coord] == Color.empty:
-            self[coord] = color
-        else:
-            raise ValidationException("point already occupied", move_no)
         process_captures(coord)
 
         if self._count_liberties(coord) == 0:
@@ -174,8 +203,7 @@ class _Board(object):
             # occurred, so we can revert the board position simply by removing
             # the stone we just played
             self[coord] = Color.empty
-            raise ValidationException("playing into no liberties",
-                                      move_no)
+            raise ValidationException("playing into no liberties", move_no)
 
     def get_group(self, coord, include=None):
         """Return the group of the stone at coord as an iterable of coords.

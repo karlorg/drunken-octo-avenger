@@ -139,16 +139,18 @@ def comment(game_no):
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
     app.logger.debug("play() called for game {}".format(game_no))
-    user = logged_in_user()
     try:
         game = db.session.query(Game).filter_by(id=game_no).one()
     except SQLAlchemyError:
         flash("Game #{} not found".format(game_no))
         return redirect('/')
     try:
+        user = logged_in_user()
         app.logger.debug("play(): logged in user: {}".format(user))
     except NoLoggedInPlayerException:
+        flash('You must be logged in to play a move.')
         app.logger.debug("play(): no logged in user")
+        return redirect(redirect_url())
     if not is_players_turn_in_game(game):
         flash("It's not your turn in that game.")
         return redirect('/')
@@ -187,8 +189,9 @@ def play(game_no):
 
 def _check_gameover_and_update(game):
     """If game is over, update the appropriate fields."""
-    if go.ends_by_agreement(game.sgf):
-        game.finished = True
+    scores = go.score_ended_game(game.sgf)
+    if scores is not None:
+        game.result = GameResult.black_by_count.value
 
 
 @app.route('/challenge/<string:challenged>/', methods=['GET'])

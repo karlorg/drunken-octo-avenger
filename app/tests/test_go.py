@@ -143,14 +143,14 @@ class TestUpdateBoardWithMove(unittest.TestCase):
 
     def test_place_stone(self):
         board = board_from_strings(['..', '..'])
-        board.update_with_move(_Coord(0, 0), black, move_no=0)
+        board.update_with_move(0, 0, black, move_no=0)
         self.assertEqual(board[_Coord(0, 0)], black)
 
     def test_single_stone_capture(self):
         board = board_from_strings(['.b.',
                                     'bw.',
                                     '.b.'])
-        board.update_with_move(_Coord(2, 1), black, move_no=0)
+        board.update_with_move(2, 1, black, move_no=0)
         self.assertEqual(board[_Coord(1, 1)], empty)
 
     def test_regression_single_capture_with_non_identity(self):
@@ -160,14 +160,14 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'bw.',
                                     '.b.'])
         board[_Coord(1, 1)] = int(Color.white)
-        board.update_with_move(_Coord(2, 1), black, move_no=0)
+        board.update_with_move(2, 1, black, move_no=0)
         self.assertEqual(board[_Coord(1, 1)], empty)
 
     def test_group_capture(self):
         board = board_from_strings(['.bb.',
                                     'bwwb',
                                     '.b..'])
-        board.update_with_move(_Coord(2, 2), black, move_no=0)
+        board.update_with_move(2, 2, black, move_no=0)
         self.assertEqual(board[_Coord(1, 1)], empty)
         self.assertEqual(board[_Coord(x=2, y=1)], empty)
 
@@ -179,7 +179,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'b.wb.',
                                     'wbbw.',
                                     '.ww..'])
-        board.update_with_move(_Coord(1, 2), white, move_no=0)
+        board.update_with_move(1, 2, white, move_no=0)
         self.assertEqual(board[_Coord(x=1, y=1)], white)
         self.assertEqual(board[_Coord(x=2, y=2)], white)
         self.assertEqual(board[_Coord(x=1, y=3)], empty)
@@ -190,7 +190,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'bw.b.',
                                     'bwwb.',
                                     '.bb..'])
-        board.update_with_move(_Coord(2, 2), white, move_no=0)
+        board.update_with_move(2, 2, white, move_no=0)
         self.assertEqual(board[_Coord(x=1, y=2)], white)
         self.assertEqual(board[_Coord(x=2, y=3)], white)
         self.assertEqual(board[_Coord(x=1, y=1)], empty)
@@ -199,7 +199,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
     def test_exception_on_simple_illegal_move(self):
         board = board_from_strings(['..', '.b'])
         with self.assertRaises(ValidationException) as cm:
-            board.update_with_move(_Coord(1, 1), black, move_no=1)
+            board.update_with_move(1, 1, black, move_no=1)
         e = cm.exception
         self.assertEqual(e.move_no, 1)
 
@@ -208,7 +208,7 @@ class TestUpdateBoardWithMove(unittest.TestCase):
                                     'w.w',
                                     '.w.'])
         with self.assertRaises(ValidationException) as cm:
-            board.update_with_move(_Coord(1, 1), black, move_no=1)
+            board.update_with_move(1, 1, black, move_no=1)
         e = cm.exception
         self.assertEqual(e.move_no, 1)
         # also, the board should not have changed
