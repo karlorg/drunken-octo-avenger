@@ -126,6 +126,20 @@ class TestNextColor(unittest.TestCase):
             self.assertEqual(actual, no, msg)
 
 
+class TestScoring(unittest.TestCase):
+    # TODO: So I really want to test that the scoring I have added into 'go.py'
+    # is correct. In particular, it should count dead stones correctly.
+    # wb.
+    # .bw
+    # .bw
+    def test_scoring(self):
+        sgf = ("(;SZ[3];B[ba];W[aa];B[bb];W[cb];B[bc];W[cc];"
+               "TB[aa][ab][ac][ca][cb][cc];"
+               "TB[aa][ab][ac][ca][cb][cc])")
+        black_score, white_score = go.get_finished_game_scores(sgf)
+        self.assertEqual(black_score, 9)
+        self.assertEqual(white_score, 0)
+
 # test helper Board facilities
 
 def board_from_strings(rows):

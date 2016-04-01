@@ -88,17 +88,22 @@ class GameResult(enum.Enum):
     draw = "D"
     not_finished = ""
 
-def get_game_result(sgf):
-    # TODO: Should tidy this up to allow for resigning. I think that we do not
-    # actually call this method if the game has ended by resign, however I think
-    # that it would make a nicer API for this module.
+class GameNotFinishedException(Exception):
+    pass
+
+def get_finished_game_scores(sgf):
     marking = agreed_marking(sgf)
     if not marking:
-        return GameResult.not_finished
+        raise GameNotFinishedException()
     board = _Board(sgf=sgf)
-    # TODO, I think this misses dead stones, need to write a test for that.
-    black_score = len(marking.black_coords) + board.prisoner_points[Color.black]
-    white_score = len(marking.white_coords) + board.prisoner_points[Color.white]
+    return board.scores(marking)
+
+
+def get_game_result(sgf):
+    try:
+        black_score, white_score = get_finished_game_scores(sgf)
+    except GameNotFinishedException:
+        return GameResult.not_finished
     if black_score > white_score:
         return GameResult.black_by_count
     elif white_score > black_score:
@@ -171,6 +176,15 @@ class _Board(object):
 
     def items(self):
         return self._points.items()
+
+    def scores(self, marking_node):
+        black_points = sum(2 if self._points[coord] == Color.white else 1
+                           for coord in marking_node.black_coords)
+        white_points = sum(2 if self._points[coord] == Color.black else 1
+                           for coord in marking_node.white_coords)
+        black_score = black_points + self.prisoner_points[Color.black]
+        white_score = white_points + self.prisoner_points[Color.white]
+        return (black_score, white_score)
 
 
     def update_with_nodes(self, nodes, starting_move_no=0):
