@@ -1,9 +1,9 @@
 from collections import namedtuple
-from enum import IntEnum
+import enum
 
 from app import sgftools
 
-class Color(IntEnum):
+class Color(enum.IntEnum):
     empty = 0
     black = 1
     white = 2
@@ -40,9 +40,7 @@ def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
     return new_is_valid and new_continues_old
 
 def _is_valid(sgf):
-    nodes = _GameTree.from_sgf(sgf).main_line
-    board = _Board()
-    board.update_with_nodes(nodes, starting_move_no=0)
+    _Board(sgf=sgf)
     # if none of those updates raised, it's a valid sequence
     return True
 
@@ -82,12 +80,33 @@ def ends_by_agreement(sgf):
     return agreed_marking(sgf) is not None
 
 
-def score_ended_game(sgf):
+class GameResult(enum.Enum):
+    white_by_resign = "WBR"
+    white_by_count = "WBC"
+    black_by_resign = "BBR"
+    black_by_count = "BBC"
+    draw = "D"
+    not_finished = ""
+
+def get_game_result(sgf):
+    # TODO: Should tidy this up to allow for resigning. I think that we do not
+    # actually call this method if the game has ended by resign, however I think
+    # that it would make a nicer API for this module.
     marking = agreed_marking(sgf)
-    if marking:
-        return {Color.black: 10, Color.white: 2}
+    if not marking:
+        return GameResult.not_finished
+    board = _Board(sgf=sgf)
+    # TODO, I think this misses dead stones, need to write a test for that.
+    black_score = len(marking.black_coords) + board.prisoner_points[Color.black]
+    white_score = len(marking.white_coords) + board.prisoner_points[Color.white]
+    if black_score > white_score:
+        return GameResult.black_by_count
+    elif white_score > black_score:
+        return GameResult.white_by_count
     else:
-        return None
+        GameResult.draw
+
+
 
 def next_color(sgf):
     """Return the color that is next to move in sgf."""
@@ -132,11 +151,14 @@ _Coord = namedtuple("Coord", ["x", "y"])
 class _Board(object):
     """Emulates a dict mapping `_Coord`s to `Color`s."""
 
-    def __init__(self, size=19):
+    def __init__(self, size=19, sgf=None):
         self._points = {_Coord(x, y): Color.empty
                         for x in range(size)
                         for y in range(size)}
         self.prisoner_points = {Color.black: 0, Color.white: 0}
+        if sgf:
+            nodes = _GameTree.from_sgf(sgf).main_line
+            self.update_with_nodes(nodes, starting_move_no=0)
 
     def __getitem__(self, coord):
         return self._points[coord]

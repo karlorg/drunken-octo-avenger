@@ -9,7 +9,7 @@ from flask import flash, render_template, session, url_for
 import flask.ext.testing
 import requests
 
-from .. import main
+from .. import main, go
 from ..main import Game, User, db
 
 
@@ -83,7 +83,7 @@ class TestWithDb(TestWithTestingApp):
 
     def add_game(self, sgf_or_stones=None, stones=None, sgf=None,
                  black='black@black.com', white='white@white.com',
-                 result=main.GameResult.not_finished.value):
+                 result=go.GameResult.not_finished.value):
         game = main.create_game_internal(
             black=black, white=white,
             sgf_or_stones=sgf_or_stones, stones=stones, sgf=sgf)
@@ -240,7 +240,7 @@ class TestStatusIntegrated(TestWithDb):
         game5 = self.add_game(black=OTHER_EMAIL_1, white=self.LOGGED_IN_EMAIL,
                               sgf="(;B[])")
         game6 = self.add_game(black=self.LOGGED_IN_EMAIL, white=OTHER_EMAIL_1,
-                              result=main.GameResult.white_by_resign.value)
+                              result=go.GameResult.white_by_resign.value)
         return (game1, game2, game3, game4, game5, game6,)
 
     def test_sends_games_to_correct_template_params(self):
@@ -314,12 +314,12 @@ class TestFinishedIntegrated(TestWithDb):
 
     def test_shows_only_finished_games(self):
         black_game = self.add_game(black='us@we.com',
-                                   result=main.GameResult.black_by_count.value)
+                                   result=go.GameResult.black_by_count.value)
         white_game = self.add_game(white='us@we.com',
-                                   result=main.GameResult.black_by_resign.value)
+                                   result=go.GameResult.black_by_resign.value)
         self.add_game(black='us@we.com',
-                      result=main.GameResult.not_finished.value)
-        self.add_game(result=main.GameResult.black_by_count.value)
+                      result=go.GameResult.not_finished.value)
+        self.add_game(result=go.GameResult.black_by_count.value)
         with self.set_user('us@we.com') as test_client:
             with self.patch_render_template() as mock_render:
 

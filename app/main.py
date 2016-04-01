@@ -176,7 +176,8 @@ def play(game_no):
         return redirect(url_for('game', game_no=game_no))
     game.sgf = arguments['response']
     game.last_move_time = datetime.now()
-    _check_gameover_and_update(game)
+    game_result = go.get_game_result(game.sgf)
+    game.result = game_result.value
     db.session.commit()
     if 'submit_and_next_game_button' in arguments:
         try:
@@ -186,13 +187,6 @@ def play(game_no):
         except NoPendingGamesException:
             return redirect(url_for('front_page'))
     return redirect(url_for('game', game_no=game_no))
-
-def _check_gameover_and_update(game):
-    """If game is over, update the appropriate fields."""
-    scores = go.score_ended_game(game.sgf)
-    if scores is not None:
-        game.result = GameResult.black_by_count.value
-
 
 @app.route('/challenge/<string:challenged>/', methods=['GET'])
 @app.route('/challenge/', methods=['GET', 'POST'])
@@ -265,7 +259,7 @@ def get_player_games(user):
     Accesses database.
     """
     query = db.session.query(Game)
-    games = query.filter(and_((Game.result == GameResult.not_finished.value),
+    games = query.filter(and_((Game.result == go.GameResult.not_finished.value),
                              or_(Game.black == user, Game.white == user))).all()
     return games
 
@@ -422,7 +416,7 @@ def finished():
         return redirect('/')
     finished_games = (
         db.session.query(Game)
-        .filter(Game.result != GameResult.not_finished.value)  # noqa
+        .filter(Game.result != go.GameResult.not_finished.value)  # noqa
         .filter(or_(Game.black == user, Game.white == user))
         .all()
     )
@@ -695,14 +689,6 @@ class ServerPlayer(object):
 
 # models
 
-class GameResult(enum.Enum):
-    white_by_resign = "WBR"
-    white_by_count = "WBC"
-    black_by_resign = "BBR"
-    black_by_count = "BBC"
-    draw = "D"
-    not_finished = ""
-
 # TODO: In SQLAlchemy 1.1, you can directly use an Enum, but that is not yet
 # released and it seems a pain to require a development version of SQLAlchemy,
 # hence, we're using a slightly temporary fix. This means that unfortunately,
@@ -710,7 +696,7 @@ class GameResult(enum.Enum):
 # ideally we'd like to just write `GameResult.<result>`. I've tried to keep this
 # mostly in the Game class itself, however, that is awkward when creating a
 # query filter.
-game_results = [r.value for r in GameResult]
+game_results = [r.value for r in go.GameResult]
 
 @app.template_filter('game_result_summary')
 def game_result_summary(game_result):
@@ -735,7 +721,7 @@ class Game(db.Model):
     white = db.Column(db.String(length=254))
     sgf = db.Column(db.Text())
     result = db.Column(db.Enum(*game_results),
-                       default=GameResult.not_finished.value)
+                       default=go.GameResult.not_finished.value)
     last_move_time = db.Column(db.DateTime())
 
     def __repr__(self):
@@ -760,9 +746,9 @@ class Game(db.Model):
 
     def resign(self, player):
         if player == self.black:
-            self.result = GameResult.white_by_resign.value
+            self.result = go.GameResult.white_by_resign.value
         elif player == self.white:
-            self.result = GameResult.black_by_resign.value
+            self.result = go.GameResult.black_by_resign.value
         else:
             app.logger.debug("Attempt to resign by non-player")
 
