@@ -1011,7 +1011,7 @@ registerTest new PassAndScoringTest
 class ResignTest extends BrowserTest
   names: ['ResignTest', 'resign']
   description: "resignation"
-  numTests: 6
+  numTests: 7
   testBody: (test) =>
     BLACK_EMAIL = "quitter@nomo.re"
     WHITE_EMAIL = "recipient@easyw.in"
@@ -1043,11 +1043,21 @@ class ResignTest extends BrowserTest
     casper.thenClick '.finished_games_link', ->
       gamesCount = casper.evaluate -> $('#finished_games .game-list-row').length
       test.assertEqual gamesCount, 1, "White: exactly one finished game listed"
-      test.assertSelectorHasText '.game-list-row', 'White (resignation)',
+      test.assertSelectorHasText '.game-list-row',
+        'Your game has ended, white won by resignation.'
         'Check that the White win by resignation is in the finished games list'
     casper.thenClick (@lastFinishedGameSelector()), ->
       test.assertSelectorHasText '#game-result-summary',
                                  'White won by resignation'
+
+    # White logs in an is greated by a notification that they have won a game
+    createLoginSession WHITE_EMAIL
+    casper.thenOpen serverUrl, ->
+      test.assertSelectorHasText '.unread.notification',
+        'Game Finished White by Resignation',
+        'Check that white has an unread notification'
+
+
 
 registerTest new ResignTest
 
