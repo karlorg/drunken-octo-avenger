@@ -136,6 +136,20 @@ def comment(game_no):
     flash("Comment not validated!")
     return redirect(redirect_url())
 
+def notify_user(username, content, commit_session=False):
+    try:
+        user = db.session.query(User).filter_by(username=username).one()
+        notification = Notification(user, content)
+        db.session.add(notification)
+        if commit_session:
+            db.session.commit()
+    except SQLAlchemyError:
+        message = """We have made an error attempting to create a notification
+        for the user: {}. We're sorry about this, but you can probably
+        ignore it.""".format(username)
+        flash(message)
+
+
 @app.route('/play/<int:game_no>', methods=['POST'])
 def play(game_no):
     app.logger.debug("play() called for game {}".format(game_no))
@@ -155,8 +169,19 @@ def play(game_no):
         flash("It's not your turn in that game.")
         return redirect('/')
     arguments = request.form.to_dict()
+    # TODO: We should be able to change the way resign is played such that this
+    # special condition is not required. Note, we want the resignation to be
+    # recorded in the sgf. So I think we can simply change the way resign and
+    # pass are played and then remove this check for the resign button. Note
+    # below we check if the game is ended and send the correct notifications if
+    # it is.
     if 'resign_button' in arguments:
         game.resign(user)
+        winner = game.player_color(game.player_opponent(user))
+        result_summary = "{} won by resignation".format(winner)
+        message = "Your game has ended, {}.".format(result_summary)
+        notify_user(game.black, message, commit_session=False)
+        notify_user(game.white, message, commit_session=False)
         db.session.commit()
         app.logger.debug("play(): resignation received and saved")
         return redirect(redirect_url())
@@ -178,6 +203,16 @@ def play(game_no):
     game.last_move_time = datetime.now()
     game_result = go.get_game_result(game.sgf)
     game.result = game_result.value
+    if game_result != go.GameResult.not_finished:
+        result_summary = {'WBR': 'white won by resignation',
+                          'WBC': 'white won on points',
+                          'BBR': 'black won by resignation',
+                          'BBC': 'black won on points',
+                          'D': ''}.get(game_result, '')
+        message = "Your game has ended, {}.".format(result_summary)
+        notify_user(game.black, message, commit_session=False)
+        notify_user(game.white, message, commit_session=False)
+
     db.session.commit()
     if 'submit_and_next_game_button' in arguments:
         try:
@@ -225,10 +260,26 @@ def status():
     except NoLoggedInPlayerException:
         return redirect('/')
     your_turn_games, not_your_turn_games = get_status_lists(user)
+    unread_notifications = get_unread_notifications(user)
     return render_template_with_basics(
             "status.html",
             your_turn_games=your_turn_games,
-            not_your_turn_games=not_your_turn_games)
+            not_your_turn_games=not_your_turn_games,
+            unread_notifications=unread_notifications)
+
+def get_unread_notifications(username):
+    try:
+        user = db.session.query(User).filter(User.username == username).one()
+        query = db.session.query(Notification)
+        notifications = query.filter(and_((Notification.user_id == user.id),
+                                          Notification.unread)).limit(100).all()
+    except SQLAlchemyError as e:
+        message = """We have made an error attempting to grab the notifications
+        for the user: {}. We're sorry about this. The error was: {}.
+        """.format(username, e)
+        flash(message)
+        notifications = None
+    return notifications
 
 def get_status_lists(user):
     """Return two lists of games for the player, split by on-turn or not.
@@ -782,7 +833,23 @@ class GameComment(db.Model):
                 'pub_date': self.pub_date}
 
 
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    pub_date = db.Column(db.DateTime)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User',
+                           backref=db.backref('notifications', lazy='dynamic'))
+    unread = db.Column(db.Boolean, default=True)
+    content = db.Column(db.Text())
+
+    def __init__(self, user, content, pub_date=None):
+        self.user = user
+        self.content = content
+        self.pub_date = pub_date if pub_date is not None else datetime.utcnow()
+
 class User(db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(length=254))
     password_hash = db.Column(db.String(length=254))

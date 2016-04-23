@@ -1018,6 +1018,17 @@ class ResignTest extends BrowserTest
     clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
     createGame BLACK_EMAIL, WHITE_EMAIL
 
+    casper.thenOpen serverUrl + "/logout"
+    casper.thenClick '#new_account', =>
+      @registerNewAccount BLACK_EMAIL, 'password'
+    casper.waitForSelector '#logout', ->
+      casper.click '#logout'
+
+    casper.thenOpen serverUrl
+    casper.thenClick '#new_account', =>
+      @registerNewAccount WHITE_EMAIL, 'password'
+
+
     # Black opens the game and, tormented by the blank slate, resigns
     createLoginSession BLACK_EMAIL
     casper.thenOpen serverUrl
@@ -1043,8 +1054,7 @@ class ResignTest extends BrowserTest
     casper.thenClick '.finished_games_link', ->
       gamesCount = casper.evaluate -> $('#finished_games .game-list-row').length
       test.assertEqual gamesCount, 1, "White: exactly one finished game listed"
-      test.assertSelectorHasText '.game-list-row',
-        'Your game has ended, white won by resignation.'
+      test.assertSelectorHasText '.game-list-row', 'White (resignation)',
         'Check that the White win by resignation is in the finished games list'
     casper.thenClick (@lastFinishedGameSelector()), ->
       test.assertSelectorHasText '#game-result-summary',
@@ -1054,7 +1064,7 @@ class ResignTest extends BrowserTest
     createLoginSession WHITE_EMAIL
     casper.thenOpen serverUrl, ->
       test.assertSelectorHasText '.unread.notification',
-        'Game Finished White by Resignation',
+        'Your game has ended, white won by resignation.',
         'Check that white has an unread notification'
 
 

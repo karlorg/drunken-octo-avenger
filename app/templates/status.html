@@ -3,6 +3,22 @@
 {% block content %}
 {% from 'game_list.html' import display_game_list %}
 
+{% if unread_notifications %}
+    <div id="unread-notifications" class="panel panel-info">
+        <div class="panel-heading">Notifications</div>
+            <ul class="list-group">
+                {% for notification in unread_notifications %}
+                    <li class="list-group-item unread notification">
+                        {{notification.content}}
+                    </li>
+                {% endfor %}
+
+            </ul><!-- /.list-group -->
+    </div><!-- /#unread-notifications -->
+{% endif %} <!-- End unread notifications -->
+
+
+
 {{display_game_list('your_turn_games', 'success',
                     'Your turn in the following games',
                     your_turn_games, current_user, False)}}
