@@ -6,14 +6,26 @@
 {% if unread_notifications %}
     <div id="unread-notifications" class="panel panel-info">
         <div class="panel-heading">Notifications</div>
-            <ul class="list-group">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mark Read</th>
+                    <th>Notification</th>
+                </tr>
+            </thead>
+            <tbody>
                 {% for notification in unread_notifications %}
-                    <li class="list-group-item unread notification">
-                        {{notification.content}}
-                    </li>
+                    <tr class="unread notification" id="notification_{{notification.id}}" >
+                        <td><button class="btn mark-as-read" target="{{notification.id}}">
+                            Mark Read
+                            </button>
+                        </td>
+                        <td>{{notification.content|safe}}</td>
+                    </tr>
                 {% endfor %}
+            </tbody>
+        </table>
 
-            </ul><!-- /.list-group -->
     </div><!-- /#unread-notifications -->
 {% endif %} <!-- End unread notifications -->
 
@@ -30,4 +42,23 @@
         View finished games
     </a>
 </div>
-{% endblock %}
+{% endblock content %}
+{% block page_scripts %}
+<script type="text/javascript">
+jQuery(document).ready(function(){
+    $('.mark-as-read').each(function(index){
+        btn = this;
+        $(btn).on('click', function(e){
+            $.ajax({
+                type: 'POST',
+                data: {'notify_id': $(btn).attr('target')},
+                url: "{{url_for('mark_notification_read')}}",
+                success: function (data) {
+                    $('#notification_' + $(btn).attr('target')).remove();
+                }
+            });
+       });
+    });
+});
+</script>
+{% endblock page_scripts %}

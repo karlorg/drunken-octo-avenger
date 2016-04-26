@@ -179,7 +179,11 @@ def play(game_no):
         game.resign(user)
         winner = game.player_color(game.player_opponent(user))
         result_summary = "{} won by resignation".format(winner)
-        message = "Your game has ended, {}.".format(result_summary)
+        game_url = url_for('game', game_no=game_no)
+        view_game_link = """<a href="{}" class="game-link">
+                            View game</a>""".format(game_url)
+        message = "Your game has ended, {}. {}".format(result_summary,
+                                                       view_game_link)
         notify_user(game.black, message, commit_session=False)
         notify_user(game.white, message, commit_session=False)
         db.session.commit()
@@ -252,6 +256,16 @@ def users():
 def user_profile(user_no):
     db_user = db.session.query(User).filter(User.id == user_no).one()
     return render_template_with_basics('user_profile.html', user=db_user)
+
+@app.route('/marknotificationread/', methods=['POST'])
+def mark_notification_read():
+    notify_id = flask.request.form['notify_id']
+    query = db.session.query(Notification)
+    db_notify = query.filter(Notification.id == notify_id).one()
+    db_notify.unread = False
+    db.session.commit()
+    return flask.jsonify({'result': True})
+
 
 @app.route('/status')
 def status():
