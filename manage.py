@@ -276,6 +276,8 @@ def cloud9(nocoffeebuild=False):
     if not nocoffeebuild and coffeebuild():
         print("Coffee script failed to compile, exiting test!")
         return 1
+    print('You should be able to view the running app by visiting:')
+    print('http://drunken-octo-avenger-<username>.c9users.io/')
     return run_command('python manage.py runserver -h 0.0.0.0 -p 8080')
 
 
