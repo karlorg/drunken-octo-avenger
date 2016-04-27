@@ -247,16 +247,22 @@ def test_units(coverage=False, accumulate=False):
     return run_unittests(['discover'], coverage, accumulate=accumulate)
 
 @manager.command
-def test_pytest(name=None, coverage=False, accumulate=True):
-    # Unlike in casper we run coverage on this command as well, however we need
-    # to accumulate if we want this to work at all, because we need to
-    # accumulate the coverage results of the server process as well as the
-    # pytest process itself. We do this because we want to make sure that the
-    # tests themselves don't contain dead code. So it almost never makes sense
-    # to run `test_pytest` with `coverage=True` but `accumulate=False`.
+def test_pytest(name=None, coverage=False, accumulate=True, output_capture='fd'):
+    """Unlike in casper we run coverage on this command as well, however we need
+    to accumulate if we want this to work at all, because we need to
+    accumulate the coverage results of the server process as well as the
+    pytest process itself. We do this because we want to make sure that the
+    tests themselves don't contain dead code. So it almost never makes sense
+    to run `test_pytest` with `coverage=True` but `accumulate=False`.
+    The 'output_capture' argument is just passed through to pytest, it should be
+    one of fd|sys|no, default is 'fd', this will show you the print statements
+    only from the tests that fail, but if you need to see some debugging print
+    statement set it to 'no'. In general I would like a way for this command to
+    simply pass any unknown arguments through to pytest.
+    """
     test_file = 'app/tests/browser_tests.py'
-    pytest_command = coverage_command(['-m', 'pytest', test_file],
-                                      coverage, accumulate)
+    command = ['-m', 'pytest', '--capture={}'.format(output_capture), test_file]
+    pytest_command = coverage_command(command, coverage, accumulate)
     if name is not None:
         pytest_command.append('--k={}'.format(name))
     return run_with_test_server(pytest_command, coverage, accumulate)
