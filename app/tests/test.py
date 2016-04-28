@@ -506,19 +506,6 @@ class TestPlayIntegrated(TestWithDb):
         self.assertTrue(game.finished,
                         "game should be finished after resign posted")
 
-    def test_resignation_does_nothing_off_turn(self):
-        game = self.add_game("(;B[ab])")
-        game_no = game.id
-        self.assertFalse(game.finished,
-                         "game should not initially be finished")
-        with self.set_user(game.white) as test_client:
-            test_client.post(url_for('play', game_no=game.id),
-                             data=dict(response="(;RE[W+Resign]B[ab])"))
-        db.session.rollback()  # to catch missing commits
-        game = db.session.query(Game).filter_by(id=game_no).one()
-        self.assertFalse(game.finished,
-                         "game should not be finished")
-
 
     def test_two_identical_deadstones_end_game(self):
         tw = 'TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]'
