@@ -143,6 +143,12 @@ class TestScoring(unittest.TestCase):
         self.assertEqual(black_score, 9)
         self.assertEqual(white_score, 0)
 
+    def test_resign_recognised(self):
+        sgf = "(;B[ab]RE[B+Resign];W[bc];B[bb])"
+        result = go.get_game_result(sgf)
+        self.assertEqual(result, go.GameResult.black_by_resign)
+        pass
+
 # test helper Board facilities
 
 def board_from_strings(rows):

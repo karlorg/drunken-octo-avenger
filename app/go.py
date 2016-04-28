@@ -115,6 +115,10 @@ def get_finished_game_scores(sgf):
 
 
 def get_game_result(sgf):
+    game = _GameTree.from_sgf(sgf)
+    if game.winner is not None:
+        return {Color.black: GameResult.black_by_resign,
+                Color.white: GameResult.white_by_resign}[game.winner]
     try:
         black_score, white_score = get_finished_game_scores(sgf)
     except GameNotFinishedException:
@@ -124,7 +128,7 @@ def get_game_result(sgf):
     elif white_score > black_score:
         return GameResult.white_by_count
     else:
-        GameResult.draw
+        return GameResult.draw
 
 
 
