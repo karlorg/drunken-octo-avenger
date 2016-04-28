@@ -47,7 +47,13 @@ def _is_valid(sgf):
 def _is_continuation(old_sgf, new_sgf):
     old_nodes = _GameTree.from_sgf(old_sgf).main_line
     new_nodes = _GameTree.from_sgf(new_sgf).main_line
-    if len(old_nodes) >= len(new_nodes):
+    if len(old_nodes) == len(new_nodes):
+        if _is_valid_resignation(old_sgf, new_sgf):
+            return True
+        else:
+            raise ValidationException("no new node",
+                                      move_no=len(new_nodes))
+    if len(old_nodes) > len(new_nodes):
         raise ValidationException("no new node",
                                   move_no=len(new_nodes))
     if len(new_nodes) - len(old_nodes) > 1:
@@ -56,6 +62,15 @@ def _is_continuation(old_sgf, new_sgf):
     if old_nodes != new_nodes[:-1]:
         raise ValidationException("games don't match",
                                   move_no=0)
+    return True
+
+def _is_valid_resignation(old_sgf, new_sgf):
+    old_game = _GameTree.from_sgf(old_sgf)
+    new_game = _GameTree.from_sgf(new_sgf)
+    if old_game.winner is not None:
+        return False
+    if new_game.winner is None:
+        return False
     return True
 
 
@@ -309,6 +324,7 @@ class _GameTree(object):
         Use classmethod instantiators instead.
         """
         self.main_line = self._nodes_from_sgf_nodes(sgf_tree.main_line)
+        self.winner = self._winner_from_sgf_nodes(sgf_tree.main_line)
 
     @classmethod
     def from_sgf(cls, sgf):
@@ -326,6 +342,22 @@ class _GameTree(object):
             result.extend(_GameNode.from_sgf_node(node))
         return result
 
+    @staticmethod
+    def _winner_from_sgf_nodes(sgf_nodes):
+        for node in sgf_nodes:
+            winner = _winner_from_sgf_node(node)
+            if winner is not None:
+                return winner
+        return None
+
+    def winner(self):
+        return self._winner
+
+def _winner_from_sgf_node(sgf_node):
+    if 'RE' not in sgf_node:
+        return None
+    letter = sgf_node['RE'][0][0]
+    return {'B': Color.black, 'W': Color.white}.get(letter, None)
 
 class _GameNode(object):
     """Represents a node in a game tree.

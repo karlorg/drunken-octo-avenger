@@ -42,6 +42,9 @@ class TestCheckContinuation(unittest.TestCase):
              ("(;B[ab])", "(;B[ba];W[bc])", ('ve', 0)),
              ("(;B[bc])", "(;B[bc];W[bc])", ('ve', 1)),
              ("(;AW[ba])", "(;AW[ba]B[bc])", (True,)),
+             ("(;)", "(;RE[W+Resign])", (True,)),
+             ("(;B[ba])", "(;RE[B+Resign]B[ba])", (True,)),
+             ("(;B[ba])", "(;RE[0]B[ba])", ('ve', 1)),
              ("(;)", "(;FF[4];B[ba])", (True,)),
              ("(;FF[4])", "(;B[ba])", (True,)),
              ("(;SZ[19]FF[4];AW[ba])", "(;AW[ba]B[bc])", (True,))]
