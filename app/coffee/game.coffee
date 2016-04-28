@@ -283,8 +283,24 @@ BoardDom = React.createClass
 
     {size} = @props
     $goban = $('<div>').addClass('goban')
+
+    # column labels
+    $row = $('<div>').addClass('goban-colnos-row')
+    $row.append $('<div>').addClass('goban-blank-topleft')
+    for i in [0...size]
+      $colNo = $("<div>#{letterFromNumber i}</div>").addClass('goban-colno')
+      $row.append $colNo
+    $goban.append $row
+
+    # other rows
     for j in [0...size]
       $row = $('<div>').addClass('goban-row')
+
+      # row label
+      $rowNo = $("<div>#{j+1}</div>").addClass('goban-rowno')
+      $row.append $rowNo
+
+      # rest of row
       for i in [0...size]
         $point = $('<div>').addClass("gopoint row-#{j} col-#{i}")
         $point.click (makeCb i, j)
@@ -511,9 +527,12 @@ a1FromSgfTag = (tag) ->
   coordStr = tag[0]
   return '' unless coordStr
   [x, y] = decodeSgfCoord coordStr
-  colStr = String.fromCharCode(x + 'a'.charCodeAt(0))
+  colStr = letterFromNumber x
   rowStr = y.toString()
   return "#{colStr}#{rowStr}"
+
+letterFromNumber = (num) ->
+  String.fromCharCode(num + 'a'.charCodeAt(0))
 
 isLegalOnSgf = (sgfObject, color, x, y) ->
   {boardState: previousState} = stateFromSgfObject sgfObject
