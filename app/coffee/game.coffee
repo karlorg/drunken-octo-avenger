@@ -71,6 +71,12 @@ exports.initialize = (sgfObject = null, newStoneColor = null) ->
     setResponseSgf newSgf
     $('#main_form').get(0).submit()
 
+  $('.confirm-resign-button').click ->
+    newSgfObject = sgfObjectWithResignAdded sgfObject
+    newSgf = smartgame.generate newSgfObject
+    setResponseSgf newSgf
+    $('#main_form').get(0).submit()
+
   $('.resume_button').click ->
     newSgfObject = sgfObjectWithResumeAdded sgfObject
     newSgf = smartgame.generate newSgfObject
@@ -836,6 +842,17 @@ sgfObjectWithResumeAdded = (sgfObject) ->
   sgfObjectCopy = cloneSgfObject sgfObject
   nodes = sgfObjectCopy.gameTrees[0].nodes
   nodes.push newNode
+  return sgfObjectCopy
+
+sgfObjectWithResignAdded = (sgfObject) ->
+  winner = switch nextPlayerInSgfObject sgfObject
+    when 'black' then 'W'
+    when 'white' then 'B'
+    else throw Error "invalid next player color"
+
+  sgfObjectCopy = cloneSgfObject sgfObject
+  nodes = sgfObjectCopy.gameTrees[0].nodes
+  nodes[0].RE = "#{winner}+Resign"
   return sgfObjectCopy
 
 # markStonesAround and helpers

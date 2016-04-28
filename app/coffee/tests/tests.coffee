@@ -375,6 +375,42 @@ test 'Pass move is for correct color', ->
   equal getResponseSgf(), '(;SZ[3];B[];W[])', "white pass added after black"
   form.submit = oldSubmit
 
+test 'Resign button sets data and submits', (assert) ->
+  setInputSgf '(;SZ[3];B[ab])'
+  tesuji_charm.game.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  submitCalled = false
+  form.submit = -> submitCalled = true
+
+  $('.confirm-resign-button').click()
+
+  assert.ok submitCalled, "form submit function called"
+  form.submit = oldSubmit
+
+  sgf = getResponseSgf()
+  sgfObject = tesuji_charm.smartgame.parse sgf
+  nodes = sgfObject.gameTrees[0].nodes
+  assert.ok ('RE' of nodes[0]), "SGF has gained an RE (result) property"
+  assert.ok (/^B\+R/.test nodes[0].RE), "result shows Black wins by resign"
+
+test 'Resign also works for Black resigning', (assert) ->
+  setInputSgf '(;SZ[3];B[ab];W[cc])'
+  tesuji_charm.game.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  form.submit = ->
+
+  $('.confirm-resign-button').click()
+
+  form.submit = oldSubmit
+
+  sgf = getResponseSgf()
+  sgfObject = tesuji_charm.smartgame.parse sgf
+  nodes = sgfObject.gameTrees[0].nodes
+  assert.ok ('RE' of nodes[0]), "SGF has gained an RE (result) property"
+  assert.ok (/^W\+R/.test nodes[0].RE), "result shows White wins by resign"
+
 test "clicking a pre-existing stone does nothing", (assert) ->
   setInputSgf '(;SZ[3];AW[bb])'
   tesuji_charm.game.initialize()
