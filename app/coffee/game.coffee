@@ -397,21 +397,40 @@ NavigationDom = React.createClass
   render: ->
     {button, div, select} = React.DOM
     div {className: 'board_nav_block'},
-        [(select {
-           key: 'movelist'
-           className: 'move_select'
-           onChange: @onSelectChange
-           onInput: @onSelectChange
-           onKeyUp: @onSelectKeyUp
-           value: @getViewingMove()}, @getOptions()),
-         (button {
-           key: 'resetbutton'
-           className: 'reset_button'
-           disabled: @props.resetWouldDoNothing
-           onClick: @props.resetCallback}, "Reset view to latest move")]
+        [
+          (button {
+            key: 'backbutton'
+            className: 'back_button'
+            onClick: @onBackButton}, "<")
+
+          (select {
+            key: 'movelist'
+            className: 'move_select'
+            onChange: @onSelectChange
+            onInput: @onSelectChange
+            onKeyUp: @onSelectKeyUp
+            value: @getViewingMove()}, @getOptions())
+
+          (button {
+            key: 'forward'
+            className: 'forward_button'
+            onClick: @onForwardButton}, ">")
+
+          (button {
+            key: 'resetbutton'
+            className: 'reset_button'
+            disabled: @props.resetWouldDoNothing
+            onClick: @props.resetCallback}, "Reset view to latest move")
+        ]
+
+  onBackButton: (event) ->
+    @props.changeCallback @getViewingMove() - 1
 
   onSelectChange: (event) ->
     @props.changeCallback parseInt(event.target.value, 10)
+
+  onForwardButton: (event) ->
+    @props.changeCallback @getViewingMove() + 1
 
   # hack for Firefox, which won't fire change/input event on
   # keyboard updates to select boxes until the focus is removed
