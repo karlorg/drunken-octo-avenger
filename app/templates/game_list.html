@@ -1,5 +1,5 @@
 
-{% macro display_game_list(div_id, panel_category, heading, the_games_list, user) -%}
+{% macro display_game_list(div_id, panel_category, heading, the_games_list, user, results) -%}
 <div id="{{div_id}}" class="panel panel-{{panel_category}}">
     <div class="panel-heading">{{heading}}</div>
     <table class="table">
@@ -8,15 +8,21 @@
                 <th>Game Link</th>
                 <th>Your Color</th>
                 <th>Opponent</th>
+                {% if results %}
+                    <th>Result</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for game in the_games_list %}
             <tr class="game-list-row">
-                <td><a href="{{ url_for('game', game_no=game.id) }}" 
+                <td><a href="{{ url_for('game', game_no=game.id) }}"
                        class="btn btn-default" role="button">{{game.id}}</a></td>
                 <td>{{game.player_color(user)}}</td>
                 <td>{{game.player_opponent(user)}}</td>
+                {% if results %}
+                    <td>{{game.result|game_result_summary_short}}</td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

@@ -3,15 +3,62 @@
 {% block content %}
 {% from 'game_list.html' import display_game_list %}
 
-{{display_game_list('your_turn_games', 'success', 
+{% if unread_notifications %}
+    <div id="unread-notifications" class="panel panel-info">
+        <div class="panel-heading">Notifications</div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mark Read</th>
+                    <th>Notification</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for notification in unread_notifications %}
+                    <tr class="unread notification" id="notification_{{notification.id}}" >
+                        <td><button class="btn mark-as-read" target="{{notification.id}}">
+                            Mark Read
+                            </button>
+                        </td>
+                        <td>{{notification.content|safe}}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div><!-- /#unread-notifications -->
+{% endif %} <!-- End unread notifications -->
+
+
+
+{{display_game_list('your_turn_games', 'success',
                     'Your turn in the following games',
-                    your_turn_games, current_user)}}
+                    your_turn_games, current_user, False)}}
 {{display_game_list('not_your_turn_games', 'warning',
                     'Waiting for your opponents in the following games',
-                     not_your_turn_games, current_user)}}
+                     not_your_turn_games, current_user, False)}}
 <div>
     <a href="{{ url_for('finished') }}" class="finished_games_link">
         View finished games
     </a>
 </div>
-{% endblock %}
+{% endblock content %}
+{% block page_scripts %}
+<script type="text/javascript">
+jQuery(document).ready(function(){
+    $('.mark-as-read').each(function(index){
+        btn = this;
+        $(btn).on('click', function(e){
+            $.ajax({
+                type: 'POST',
+                data: {'notify_id': $(btn).attr('target')},
+                url: "{{url_for('mark_notification_read')}}",
+                success: function (data) {
+                    $('#notification_' + $(btn).attr('target')).remove();
+                }
+            });
+       });
+    });
+});
+</script>
+{% endblock page_scripts %}

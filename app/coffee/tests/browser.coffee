@@ -1011,12 +1011,23 @@ registerTest new PassAndScoringTest
 class ResignTest extends BrowserTest
   names: ['ResignTest', 'resign']
   description: "resignation"
-  numTests: 3
+  numTests: 9
   testBody: (test) =>
     BLACK_EMAIL = "quitter@nomo.re"
     WHITE_EMAIL = "recipient@easyw.in"
     clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
     createGame BLACK_EMAIL, WHITE_EMAIL
+
+    casper.thenOpen serverUrl + "/logout"
+    casper.thenClick '#new_account', =>
+      @registerNewAccount BLACK_EMAIL, 'password'
+    casper.waitForSelector '#logout', ->
+      casper.click '#logout'
+
+    casper.thenOpen serverUrl
+    casper.thenClick '#new_account', =>
+      @registerNewAccount WHITE_EMAIL, 'password'
+
 
     # Black opens the game and, tormented by the blank slate, resigns
     createLoginSession BLACK_EMAIL
@@ -1037,6 +1048,35 @@ class ResignTest extends BrowserTest
         "Black no longer sees the resigned game on his status page"
       test.assertDoesntExist (@lastGameSelector false),
         "it's not in the off-turn games list either"
+
+    # But it is visible on Black's finished games list:
+    casper.thenOpen serverUrl
+    casper.thenClick '.finished_games_link', ->
+      gamesCount = casper.evaluate -> $('#finished_games .game-list-row').length
+      test.assertEqual gamesCount, 1, "White: exactly one finished game listed"
+      test.assertSelectorHasText '.game-list-row', 'White (resignation)',
+        'Check that the White win by resignation is in the finished games list'
+    casper.thenClick (@lastFinishedGameSelector()), ->
+      test.assertSelectorHasText '#game-result-summary',
+        'White won by resignation',
+        'The game displays the result summary correctly.'
+
+    # White logs in an is greated by a notification that they have won a game
+    createLoginSession WHITE_EMAIL
+    casper.thenOpen serverUrl, ->
+      casper.waitForSelector '.unread.notification'
+      test.assertSelectorHasText '.unread.notification',
+        'Your game has ended, white won by resignation.',
+        'Check that white has an unread notification'
+
+    casper.thenClick '.unread.notification .game-link', ->
+      test.assertSelectorHasText '#game-result-summary',
+        'White won by resignation',
+        'White also sees the correct game result summary within the game.'
+    casper.thenOpen serverUrl, ->
+      casper.click '.unread.notification .mark-as-read'
+    casper.thenOpen serverUrl, ->
+      test.assertDoesntExist '.unread.notification'
 
 registerTest new ResignTest
 

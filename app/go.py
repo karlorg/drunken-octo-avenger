@@ -1,9 +1,9 @@
 from collections import namedtuple
-from enum import IntEnum
+import enum
 
 from app import sgftools
 
-class Color(IntEnum):
+class Color(enum.IntEnum):
     empty = 0
     black = 1
     white = 2
@@ -40,18 +40,7 @@ def check_continuation(old_sgf, new_sgf, allowed_new_moves=1):
     return new_is_valid and new_continues_old
 
 def _is_valid(sgf):
-    nodes = _GameTree.from_sgf(sgf).main_line
-    board = _Board()
-    move_no = 0
-    for node in nodes:
-        if node.is_setup:
-            for coord in node.black_coords:
-                board[coord] = Color.black
-            for coord in node.white_coords:
-                board[coord] = Color.white
-        elif node.is_move:
-            board.update_with_move(node.coord, node.color, move_no)
-            move_no += 1
+    _Board(sgf=sgf)
     # if none of those updates raised, it's a valid sequence
     return True
 
@@ -69,21 +58,60 @@ def _is_continuation(old_sgf, new_sgf):
                                   move_no=0)
     return True
 
+
+def agreed_marking(sgf):
+    """Returns the final agreed proposal if an sgf ends in two identical
+    proposals and None otherwise."""
+    try:
+        reversed_nodes = reversed(_GameTree.from_sgf(sgf).main_line)
+        last_node = next(reversed_nodes)
+        penultimate_node = next(reversed_nodes)
+        if ((last_node.is_mark and penultimate_node.is_mark) and
+            (last_node.black_coords == penultimate_node.black_coords) and
+            (last_node.white_coords == penultimate_node.white_coords)):
+                return last_node
+        return None
+    except StopIteration:
+        return None
+
+
 def ends_by_agreement(sgf):
     """True if sgf ends with two identical territory proposals."""
-    previous_proposal = None
-    for node in reversed(_GameTree.from_sgf(sgf).main_line):
-        if not node.is_mark:
-            return False
-        prop = (node.black_coords, node.white_coords)
-        if previous_proposal:
-            if previous_proposal == prop:
-                return True
-            else:
-                return False
-        else:
-            previous_proposal = prop
-    return False
+    return agreed_marking(sgf) is not None
+
+
+class GameResult(enum.Enum):
+    white_by_resign = "WBR"
+    white_by_count = "WBC"
+    black_by_resign = "BBR"
+    black_by_count = "BBC"
+    draw = "D"
+    not_finished = ""
+
+class GameNotFinishedException(Exception):
+    pass
+
+def get_finished_game_scores(sgf):
+    marking = agreed_marking(sgf)
+    if not marking:
+        raise GameNotFinishedException()
+    board = _Board(sgf=sgf)
+    return board.scores(marking)
+
+
+def get_game_result(sgf):
+    try:
+        black_score, white_score = get_finished_game_scores(sgf)
+    except GameNotFinishedException:
+        return GameResult.not_finished
+    if black_score > white_score:
+        return GameResult.black_by_count
+    elif white_score > black_score:
+        return GameResult.white_by_count
+    else:
+        GameResult.draw
+
+
 
 def next_color(sgf):
     """Return the color that is next to move in sgf."""
@@ -128,10 +156,14 @@ _Coord = namedtuple("Coord", ["x", "y"])
 class _Board(object):
     """Emulates a dict mapping `_Coord`s to `Color`s."""
 
-    def __init__(self, size=19):
+    def __init__(self, size=19, sgf=None):
         self._points = {_Coord(x, y): Color.empty
                         for x in range(size)
                         for y in range(size)}
+        self.prisoner_points = {Color.black: 0, Color.white: 0}
+        if sgf:
+            nodes = _GameTree.from_sgf(sgf).main_line
+            self.update_with_nodes(nodes, starting_move_no=0)
 
     def __getitem__(self, coord):
         return self._points[coord]
@@ -145,28 +177,61 @@ class _Board(object):
     def items(self):
         return self._points.items()
 
-    def update_with_move(self, coord, color, move_no):
+    def scores(self, marking_node):
+        black_points = sum(2 if self._points[coord] == Color.white else 1
+                           for coord in marking_node.black_coords)
+        white_points = sum(2 if self._points[coord] == Color.black else 1
+                           for coord in marking_node.white_coords)
+        black_score = black_points + self.prisoner_points[Color.black]
+        white_score = white_points + self.prisoner_points[Color.white]
+        return (black_score, white_score)
+
+
+    def update_with_nodes(self, nodes, starting_move_no=0):
+        move_no = starting_move_no
+        for node in nodes:
+            if node.is_setup:
+                for coord in node.black_coords:
+                    self[coord] = Color.black
+                for coord in node.white_coords:
+                    self[coord] = Color.white
+            elif node.is_move:
+                self.update_with_move(node.coord.x, node.coord.y,
+                                      node.color, move_no)
+                move_no += 1
+
+    def update_with_move(self, x, y, color, move_no):
         """Update board to the state it should be in after the move is played.
 
         Modifies self.
         """
+        coord = _Coord(x,y)
         try:
             enemy = {Color.white: Color.black,
                      Color.black: Color.white}.get(color)
         except:  # pragma: no cover
             assert False, "attempted board update with invalid color"
 
+        if self[coord] == Color.empty:
+            self[coord] = color
+        else:
+            raise ValidationException("point already occupied", move_no)
+
+        # Note, this already updates the board with the captures, hence assuming
+        # that this point is valid, so we must first check that the move is
+        # valid before calling this. However, we cannot check if a player is
+        # playing into a place with zero liberties until we removes the
+        # captures. Nicely, a move will not be valid for that reason if it makes
+        # any captures, and if it does not, then `process_captures` won't make
+        # any updates to the board that we would need to undo.
         def process_captures(coord0):
             for n_coord in self._get_neighbours(coord0):
                 if self[n_coord] == enemy:
                     if self._count_liberties(n_coord) == 0:
                         for p in self.get_group(n_coord):
+                            self.prisoner_points[color] += 1
                             self[p] = Color.empty
 
-        if self[coord] == Color.empty:
-            self[coord] = color
-        else:
-            raise ValidationException("point already occupied", move_no)
         process_captures(coord)
 
         if self._count_liberties(coord) == 0:
@@ -174,8 +239,7 @@ class _Board(object):
             # occurred, so we can revert the board position simply by removing
             # the stone we just played
             self[coord] = Color.empty
-            raise ValidationException("playing into no liberties",
-                                      move_no)
+            raise ValidationException("playing into no liberties", move_no)
 
     def get_group(self, coord, include=None):
         """Return the group of the stone at coord as an iterable of coords.

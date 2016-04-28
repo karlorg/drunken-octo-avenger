@@ -2,8 +2,8 @@
 {% block content %}
 {% from 'game_list.html' import display_game_list %}
 
-{{display_game_list('finished_games', 'info', 
+{{display_game_list('finished_games', 'info',
                     'A list of your finished games',
-                    finished_games, current_user)}}
+                    finished_games, current_user, True)}}
 
 {% endblock %}
