@@ -360,35 +360,6 @@ class TestGameIntegrated(TestWithDb):
         self.assertEqual(kwargs['with_scoring'], True)
 
 
-class TestResignIntegrated(TestWithDb):
-
-    def test_sets_finished(self):
-        game = self.add_game()
-        game_no = game.id
-        self.assertFalse(game.finished,
-                         "game should not initially be finished")
-        with self.set_user(game.black) as test_client:
-            test_client.post(url_for('play', game_no=game.id),
-                             data=dict(resign_button='resign'))
-        db.session.rollback()  # to catch missing commits
-        game = db.session.query(Game).filter_by(id=game_no).one()
-        self.assertTrue(game.finished,
-                        "game should be finished after resign posted")
-
-    def test_nothing_happens_off_turn(self):
-        game = self.add_game()
-        game_no = game.id
-        self.assertFalse(game.finished,
-                         "game should not initially be finished")
-        with self.set_user(game.white) as test_client:
-            test_client.post(url_for('play', game_no=game.id),
-                             data=dict(resign_button='resign'))
-        db.session.rollback()  # to catch missing commits
-        game = db.session.query(Game).filter_by(id=game_no).one()
-        self.assertFalse(game.finished,
-                         "game should not be finished")
-
-
 class TestPlayIntegrated(TestWithDb):
 
     def test_can_add_stones_and_passes_to_two_games(self):
@@ -521,6 +492,33 @@ class TestPlayIntegrated(TestWithDb):
         db.session.rollback()  # to catch missing commits
         game = db.session.query(Game).filter_by(id=game_no).one()
         self.assertEqual(game.sgf, "(;B[];W[pp])")
+
+    def test_resignation_in_sgf_ends_game(self):
+        game = self.add_game("(;B[ab];W[cc])")
+        game_no = game.id
+        self.assertFalse(game.finished,
+                         "game should not initially be finished")
+        with self.set_user('black@black.com') as test_client:
+            test_client.post(url_for('play', game_no=game_no),
+                             data=dict(response="(;RE[W+Resign]B[ab];W[cc])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
+        self.assertTrue(game.finished,
+                        "game should be finished after resign posted")
+
+    def test_resignation_does_nothing_off_turn(self):
+        game = self.add_game("(;B[ab])")
+        game_no = game.id
+        self.assertFalse(game.finished,
+                         "game should not initially be finished")
+        with self.set_user(game.white) as test_client:
+            test_client.post(url_for('play', game_no=game.id),
+                             data=dict(response="(;RE[W+Resign]B[ab])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
+        self.assertFalse(game.finished,
+                         "game should not be finished")
+
 
     def test_two_identical_deadstones_end_game(self):
         tw = 'TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]'
