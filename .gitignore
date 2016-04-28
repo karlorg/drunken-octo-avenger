@@ -13,6 +13,8 @@ venv/
 
 set-secrets.*sh
 
+.cache
+
 Cakefile.js
 app/coffee/*.js
 app/static/compiled-js/

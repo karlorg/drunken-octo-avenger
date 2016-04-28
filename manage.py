@@ -246,6 +246,27 @@ def test_units(coverage=False, accumulate=False):
     """ Runs all the unittests but none of the casperJS tests """
     return run_unittests(['discover'], coverage, accumulate=accumulate)
 
+@manager.command
+def test_pytest(name=None, coverage=False, accumulate=True, output_capture='fd'):
+    """Unlike in casper we run coverage on this command as well, however we need
+    to accumulate if we want this to work at all, because we need to
+    accumulate the coverage results of the server process as well as the
+    pytest process itself. We do this because we want to make sure that the
+    tests themselves don't contain dead code. So it almost never makes sense
+    to run `test_pytest` with `coverage=True` but `accumulate=False`.
+    The 'output_capture' argument is just passed through to pytest, it should be
+    one of fd|sys|no, default is 'fd', this will show you the print statements
+    only from the tests that fail, but if you need to see some debugging print
+    statement set it to 'no'. In general I would like a way for this command to
+    simply pass any unknown arguments through to pytest.
+    """
+    test_file = 'app/tests/browser_tests.py'
+    command = ['-m', 'pytest', '--capture={}'.format(output_capture), test_file]
+    pytest_command = coverage_command(command, coverage, accumulate)
+    if name is not None:
+        pytest_command.append('--k={}'.format(name))
+    return run_with_test_server(pytest_command, coverage, accumulate)
+
 
 @manager.command
 def test(nocoverage=False, coverage_erase=True):
@@ -256,16 +277,18 @@ def test(nocoverage=False, coverage_erase=True):
     if coverage_erase:
         os.system('coverage erase')
     coverage = not nocoverage
-    unit_result = test_units(coverage=coverage, accumulate=True)
-    if unit_result:
-        print('Unit test failure!')
-        return unit_result
-    casper_result = test_casper(coverage=coverage,  accumulate=True)
-    if not casper_result:
-        print('All tests passed!')
-    else:
-        print('Casper test failure!')
-    return casper_result
+    test_categories = [ ('Unit', test_units),
+                        ('Pytest', test_pytest),
+                        ('Casper', test_casper)
+                      ]
+    for name, test_fun in test_categories:
+        test_result = test_fun(coverage=coverage, accumulate=True)
+        if test_result:
+            print("{} test failure!")
+            return test_result
+    print('All tests passed!')
+    return 0
+
 
 @manager.command
 def cloud9(nocoffeebuild=False):
