@@ -153,13 +153,13 @@ def run_with_test_server(test_command, coverage, accumulate):
         if b' * Running on' in line:
             break
     test_process = subprocess.Popen(test_command)
-    test_return_code = test_process.wait(timeout=60)
+    test_return_code = test_process.wait(timeout=90)
     # Once the test process has completed we can shutdown the server. To do so
     # we have to make a request so that the server process can shut down
     # cleanly, and in particular finalise coverage analysis.
     # We could check the return from this is success.
     requests.post('http://localhost:5000/shutdown')
-    server_return_code = server.wait(timeout=60)
+    server_return_code = server.wait(timeout=90)
     if coverage:
         os.system("coverage report -m")
         os.system("coverage html")
