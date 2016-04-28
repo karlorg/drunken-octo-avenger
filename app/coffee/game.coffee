@@ -401,7 +401,8 @@ NavigationDom = React.createClass
           (button {
             key: 'backbutton'
             className: 'back_button'
-            onClick: @onBackButton}, "<")
+            onClick: @onBackButton
+            disabled: @getViewingMove() == 0}, "<")
 
           (select {
             key: 'movelist'
@@ -414,7 +415,8 @@ NavigationDom = React.createClass
           (button {
             key: 'forward'
             className: 'forward_button'
-            onClick: @onForwardButton}, ">")
+            onClick: @onForwardButton
+            disabled: @getViewingMove() == @maxMoveNo()}, ">")
 
           (button {
             key: 'resetbutton'
