@@ -3,7 +3,7 @@
 {% block content %}
 
 {% if size is undefined %}
-    {% set size = 19 %}
+    {% set size = 19+1 %}
     {% set board_size = (20 * size) %}
     {% set board_well_size = (board_size + 80) %}
 {% endif %}
@@ -36,6 +36,12 @@
     width: 100%;
 }
 
+.goban-colnos-row{
+    margin: 0;
+    height: {{100.0 / size}}%;
+    width: 100%;
+}
+
 .gopoint {
    float: left;
    background: #CB9546;
@@ -44,6 +50,35 @@
    position: relative;
    /* z-index: 500; the stack order: foreground */
    margin: 0;
+}
+
+.goban-rowno {
+    float: left;
+    text-align: center;
+    height: 100%;
+    width: {{100.0 / size}}%;
+    position: relative;
+    /* z-index: 500; the stack order: foreground */
+    margin: 0;
+}
+
+.goban-colno {
+    float: left;
+    text-align: center;
+    height: 100%;
+    width: {{100.0 / size}}%;
+    position: relative;
+    /* z-index: 500; the stack order: foreground */
+    margin: 0;
+}
+
+.goban-blank-topleft {
+    float: left;
+    height: 100%;
+    width: {{100.0 / size}}%;
+    position: relative;
+    /* z-index: 500; the stack order: foreground */
+    margin: 0;
 }
 
 .board_line {
