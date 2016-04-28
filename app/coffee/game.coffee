@@ -528,7 +528,7 @@ a1FromSgfTag = (tag) ->
   return '' unless coordStr
   [x, y] = decodeSgfCoord coordStr
   colStr = letterFromNumber x
-  rowStr = y.toString()
+  rowStr = (y+1).toString()
   return "#{colStr}#{rowStr}"
 
 letterFromNumber = (num) ->
