@@ -283,8 +283,24 @@ BoardDom = React.createClass
 
     {size} = @props
     $goban = $('<div>').addClass('goban')
+
+    # column labels
+    $row = $('<div>').addClass('goban-colnos-row')
+    $row.append $('<div>').addClass('goban-blank-topleft')
+    for i in [0...size]
+      $colNo = $("<div>#{letterFromNumber i}</div>").addClass('goban-colno')
+      $row.append $colNo
+    $goban.append $row
+
+    # other rows
     for j in [0...size]
       $row = $('<div>').addClass('goban-row')
+
+      # row label
+      $rowNo = $("<div>#{j+1}</div>").addClass('goban-rowno')
+      $row.append $rowNo
+
+      # rest of row
       for i in [0...size]
         $point = $('<div>').addClass("gopoint row-#{j} col-#{i}")
         $point.click (makeCb i, j)
@@ -397,21 +413,52 @@ NavigationDom = React.createClass
   render: ->
     {button, div, select} = React.DOM
     div {className: 'board_nav_block'},
-        [(select {
-           key: 'movelist'
-           className: 'move_select'
-           onChange: @onSelectChange
-           onInput: @onSelectChange
-           onKeyUp: @onSelectKeyUp
-           value: @getViewingMove()}, @getOptions()),
-         (button {
-           key: 'resetbutton'
-           className: 'reset_button'
-           disabled: @props.resetWouldDoNothing
-           onClick: @props.resetCallback}, "Reset view to latest move")]
+        [
+          (button {
+            key: 'backbutton'
+            className: 'back_button'
+            onClick: @onBackButton
+            disabled: @getViewingMove() == 0}, "<")
+
+          (select {
+            key: 'movelist'
+            className: 'move_select'
+            onChange: @onSelectChange
+            onInput: @onSelectChange
+            onKeyUp: @onSelectKeyUp
+            value: @getViewingMove()}, @getOptions())
+
+          (button {
+            key: 'forward'
+            className: 'forward_button'
+            onClick: @onForwardButton
+            disabled: @getViewingMove() == @maxMoveNo()}, ">")
+
+          (button {
+            key: 'resetbutton'
+            className: 'reset_button'
+            disabled: @props.resetWouldDoNothing
+            onClick: @props.resetCallback}, "Reset view to latest move")
+        ]
+
+  onBackButton: (event) ->
+    newMoveNo = @getViewingMove() - 1
+    if newMoveNo < 0 then newMoveNo = 0
+    @props.changeCallback newMoveNo
 
   onSelectChange: (event) ->
     @props.changeCallback parseInt(event.target.value, 10)
+
+  onForwardButton: (event) ->
+    newMoveNo = @getViewingMove() + 1
+    if newMoveNo > @maxMoveNo() then newMoveNo = @maxMoveNo()
+    @props.changeCallback newMoveNo
+
+  maxMoveNo: ->
+    actionNodes =
+      node for node in @props.sgfObject.gameTrees[0].nodes \
+                    when isActionNode node
+    actionNodes.length
 
   # hack for Firefox, which won't fire change/input event on
   # keyboard updates to select boxes until the focus is removed
@@ -480,9 +527,12 @@ a1FromSgfTag = (tag) ->
   coordStr = tag[0]
   return '' unless coordStr
   [x, y] = decodeSgfCoord coordStr
-  colStr = String.fromCharCode(x + 'a'.charCodeAt(0))
-  rowStr = y.toString()
+  colStr = letterFromNumber x
+  rowStr = (y+1).toString()
   return "#{colStr}#{rowStr}"
+
+letterFromNumber = (num) ->
+  String.fromCharCode(num + 'a'.charCodeAt(0))
 
 isLegalOnSgf = (sgfObject, color, x, y) ->
   {boardState: previousState} = stateFromSgfObject sgfObject

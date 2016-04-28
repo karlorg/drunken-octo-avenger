@@ -185,6 +185,62 @@ test "can view past board states", (assert) ->
   assert.ok $('.col-2.row-0').find('.last-played').length,
     "last-move marker is at (2,0)"
 
+test "can view past board states via back/forward buttons", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa]B[ac];W[ab];B[bb];W[ca])'
+  tesuji_charm.game.initialize()
+  assert.boardState ['b.w'
+                     '.b.'
+                     'b..'], "initial board state"
+
+  $('.back_button').click()
+  assert.boardState ['b..', '.b.', 'b..'], "back to move 3"
+  assert.equal $('.last-played').length, 1, "exactly one last-move marker"
+  assert.ok $('.col-1.row-1').find('.last-played').length,
+    "last-move marker is at (1,1)"
+
+  $('.back_button').click()
+  assert.boardState ['b..', 'w..', 'b..'], "back to move 2"
+  assert.equal $('.last-played').length, 1, "exactly one last-move marker"
+  assert.ok $('.col-0.row-1').find('.last-played').length,
+    "last-move marker is at (0,1)"
+
+  $('.forward_button').click()
+  assert.boardState ['b..', '.b.', 'b..'], "forward again to move 3"
+  assert.equal $('.last-played').length, 1, "exactly one last-move marker"
+  assert.ok $('.col-1.row-1').find('.last-played').length,
+    "last-move marker is at (1,1)"
+
+  $('.reset_button').click()
+  assert.equal getViewMoveNo(), 4, "reset button takes us to move 4"
+  assert.boardState ['b.w'
+                     '.b.'
+                     'b..'], "reset to initial board state"
+  assert.ok $('.col-2.row-0').find('.last-played').length,
+    "last-move marker is at (2,0)"
+
+test "can't go back/forward beyond moves played", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa]B[ac]'
+  tesuji_charm.game.initialize()
+  assert.boardState ['b..'
+                     '...'
+                     'b..'], "initial board state"
+
+  $('.forward_button').click()
+  assert.boardState ['b..', '...', 'b..'],
+                    "no change when moving past end of game"
+
+  $('.back_button').click()
+  assert.boardState ['...', '...', '...'],
+                    "going back after trying to pass game end works normally"
+
+  $('.back_button').click()
+  assert.boardState ['...', '...', '...'],
+                    "no change when moving back from move 0"
+
+  $('.forward_button').click()
+  assert.boardState ['b..', '...', 'b..'],
+                    "going forward after going back from move 0 works normally"
+
 test "viewing past moves after a resumption", (assert) ->
   setInputSgf '(;SZ[3];B[bb];W[cc];B[];W[]' +
               ';TW[aa][ba][ca][ab][bb][cb][ac][bc]' +
