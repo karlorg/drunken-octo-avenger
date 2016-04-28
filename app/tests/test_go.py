@@ -42,6 +42,9 @@ class TestCheckContinuation(unittest.TestCase):
              ("(;B[ab])", "(;B[ba];W[bc])", ('ve', 0)),
              ("(;B[bc])", "(;B[bc];W[bc])", ('ve', 1)),
              ("(;AW[ba])", "(;AW[ba]B[bc])", (True,)),
+             ("(;)", "(;RE[W+Resign])", (True,)),
+             ("(;B[ba])", "(;RE[B+Resign]B[ba])", (True,)),
+             ("(;B[ba])", "(;RE[0]B[ba])", ('ve', 1)),
              ("(;)", "(;FF[4];B[ba])", (True,)),
              ("(;FF[4])", "(;B[ba])", (True,)),
              ("(;SZ[19]FF[4];AW[ba])", "(;AW[ba]B[bc])", (True,))]
@@ -139,6 +142,12 @@ class TestScoring(unittest.TestCase):
         black_score, white_score = go.get_finished_game_scores(sgf)
         self.assertEqual(black_score, 9)
         self.assertEqual(white_score, 0)
+
+    def test_resign_recognised(self):
+        sgf = "(;B[ab]RE[B+Resign];W[bc];B[bb])"
+        result = go.get_game_result(sgf)
+        self.assertEqual(result, go.GameResult.black_by_resign)
+        pass
 
 # test helper Board facilities
 

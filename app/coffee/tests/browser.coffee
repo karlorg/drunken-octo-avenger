@@ -815,11 +815,22 @@ registerTest new SubmitAndNextGameTest
 class PassAndScoringTest extends BrowserTest
   names: ['PassAndScoringTest', 'pass', 'score', 'scoring']
   description: "pass moves and scoring system"
-  numTests: 62
+  numTests: 63
   testBody: (test) =>
     BLACK_EMAIL = 'black@schwarz.de'
     WHITE_EMAIL = 'white@wit.nl'
     clearGamesForPlayer p for p in [BLACK_EMAIL, WHITE_EMAIL]
+
+    casper.thenOpen serverUrl + "/logout"
+    casper.thenClick '#new_account', =>
+      @registerNewAccount BLACK_EMAIL, 'password'
+    casper.waitForSelector '#logout', ->
+      casper.click '#logout'
+
+    casper.thenOpen serverUrl
+    casper.thenClick '#new_account', =>
+      @registerNewAccount WHITE_EMAIL, 'password'
+
     createGame BLACK_EMAIL, WHITE_EMAIL, ['....b',
                                           'bb.wb',
                                           '...wb',
@@ -1005,6 +1016,14 @@ class PassAndScoringTest extends BrowserTest
       test.assertDoesntExist (@lastGameSelector true), "no games on turn"
       test.assertDoesntExist (@lastGameSelector false), "no games off turn"
 
+    # White logs in and sees a notification about the finished game
+    createLoginSession WHITE_EMAIL
+    casper.thenOpen serverUrl
+    casper.waitForSelector '.notification', ->
+      test.assertSelectorHasText '.notification',
+        'Your game has ended, black won on points.',
+        'Check that White has the correct notification'
+
 registerTest new PassAndScoringTest
 
 
@@ -1063,8 +1082,8 @@ class ResignTest extends BrowserTest
 
     # White logs in an is greated by a notification that they have won a game
     createLoginSession WHITE_EMAIL
-    casper.thenOpen serverUrl, ->
-      casper.waitForSelector '.unread.notification'
+    casper.thenOpen serverUrl
+    casper.waitForSelector '.unread.notification', ->
       test.assertSelectorHasText '.unread.notification',
         'Your game has ended, white won by resignation.',
         'Check that white has an unread notification'
@@ -1076,7 +1095,8 @@ class ResignTest extends BrowserTest
     casper.thenOpen serverUrl, ->
       casper.click '.unread.notification .mark-as-read'
     casper.thenOpen serverUrl, ->
-      test.assertDoesntExist '.unread.notification'
+      test.assertDoesntExist '.unread.notification',
+        "Notification is gone after marking it as read."
 
 registerTest new ResignTest
 
