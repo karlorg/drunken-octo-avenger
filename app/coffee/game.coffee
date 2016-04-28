@@ -424,13 +424,23 @@ NavigationDom = React.createClass
         ]
 
   onBackButton: (event) ->
-    @props.changeCallback @getViewingMove() - 1
+    newMoveNo = @getViewingMove() - 1
+    if newMoveNo < 0 then newMoveNo = 0
+    @props.changeCallback newMoveNo
 
   onSelectChange: (event) ->
     @props.changeCallback parseInt(event.target.value, 10)
 
   onForwardButton: (event) ->
-    @props.changeCallback @getViewingMove() + 1
+    newMoveNo = @getViewingMove() + 1
+    if newMoveNo > @maxMoveNo() then newMoveNo = @maxMoveNo()
+    @props.changeCallback newMoveNo
+
+  maxMoveNo: ->
+    actionNodes =
+      node for node in @props.sgfObject.gameTrees[0].nodes \
+                    when isActionNode node
+    actionNodes.length
 
   # hack for Firefox, which won't fire change/input event on
   # keyboard updates to select boxes until the focus is removed

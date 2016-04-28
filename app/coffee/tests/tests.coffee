@@ -218,6 +218,29 @@ test "can view past board states via back/forward buttons", (assert) ->
   assert.ok $('.col-2.row-0').find('.last-played').length,
     "last-move marker is at (2,0)"
 
+test "can't go back/forward beyond moves played", (assert) ->
+  setInputSgf '(;SZ[3];AB[aa]B[ac]'
+  tesuji_charm.game.initialize()
+  assert.boardState ['b..'
+                     '...'
+                     'b..'], "initial board state"
+
+  $('.forward_button').click()
+  assert.boardState ['b..', '...', 'b..'],
+                    "no change when moving past end of game"
+
+  $('.back_button').click()
+  assert.boardState ['...', '...', '...'],
+                    "going back after trying to pass game end works normally"
+
+  $('.back_button').click()
+  assert.boardState ['...', '...', '...'],
+                    "no change when moving back from move 0"
+
+  $('.forward_button').click()
+  assert.boardState ['b..', '...', 'b..'],
+                    "going forward after going back from move 0 works normally"
+
 test "viewing past moves after a resumption", (assert) ->
   setInputSgf '(;SZ[3];B[bb];W[cc];B[];W[]' +
               ';TW[aa][ba][ca][ab][bb][cb][ac][bc]' +
