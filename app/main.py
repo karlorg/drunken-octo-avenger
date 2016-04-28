@@ -169,26 +169,7 @@ def play(game_no):
         flash("It's not your turn in that game.")
         return redirect('/')
     arguments = request.form.to_dict()
-    # TODO: We should be able to change the way resign is played such that this
-    # special condition is not required. Note, we want the resignation to be
-    # recorded in the sgf. So I think we can simply change the way resign and
-    # pass are played and then remove this check for the resign button. Note
-    # below we check if the game is ended and send the correct notifications if
-    # it is.
-    if 'resign_button' in arguments:
-        game.resign(user)
-        winner = game.player_color(game.player_opponent(user))
-        result_summary = "{} won by resignation".format(winner)
-        game_url = url_for('game', game_no=game_no)
-        view_game_link = """<a href="{}" class="game-link">
-                            View game</a>""".format(game_url)
-        message = "Your game has ended, {}. {}".format(result_summary,
-                                                       view_game_link)
-        notify_user(game.black, message, commit_session=False)
-        notify_user(game.white, message, commit_session=False)
-        db.session.commit()
-        app.logger.debug("play(): resignation received and saved")
-        return redirect(redirect_url())
+
     try:
         go.check_continuation(old_sgf=game.sgf,
                               new_sgf=arguments['response'],
@@ -208,12 +189,17 @@ def play(game_no):
     game_result = go.get_game_result(game.sgf)
     game.result = game_result.value
     if game_result != go.GameResult.not_finished:
-        result_summary = {'WBR': 'white won by resignation',
-                          'WBC': 'white won on points',
-                          'BBR': 'black won by resignation',
-                          'BBC': 'black won on points',
-                          'D': ''}.get(game_result, '')
-        message = "Your game has ended, {}.".format(result_summary)
+        result_summary = {
+            go.GameResult.white_by_resign: 'white won by resignation',
+            go.GameResult.white_by_count: 'white won on points',
+            go.GameResult.black_by_resign: 'black won by resignation',
+            go.GameResult.black_by_count: 'black won on points',
+            go.GameResult.draw: ''}.get(game_result, '')
+        game_url = url_for('game', game_no=game_no)
+        view_game_link = """<a href="{}" class="game-link">
+                            View game</a>""".format(game_url)
+        message = "Your game has ended, {}. {}".format(result_summary,
+                                                       view_game_link)
         notify_user(game.black, message, commit_session=False)
         notify_user(game.white, message, commit_session=False)
 

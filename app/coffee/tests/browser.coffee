@@ -1076,7 +1076,8 @@ class ResignTest extends BrowserTest
     casper.thenOpen serverUrl, ->
       casper.click '.unread.notification .mark-as-read'
     casper.thenOpen serverUrl, ->
-      test.assertDoesntExist '.unread.notification'
+      test.assertDoesntExist '.unread.notification',
+        "Notification is gone after marking it as read."
 
 registerTest new ResignTest
 
