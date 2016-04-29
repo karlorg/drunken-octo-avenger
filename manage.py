@@ -158,7 +158,8 @@ def run_with_test_server(test_command, coverage, accumulate):
     # we have to make a request so that the server process can shut down
     # cleanly, and in particular finalise coverage analysis.
     # We could check the return from this is success.
-    requests.post('http://localhost:5000/shutdown')
+    port = app.config['TESTSERVER_PORT']
+    requests.post('http://localhost:{}/shutdown'.format(port))
     server_return_code = server.wait(timeout=90)
     if coverage:
         os.system("coverage report -m")
