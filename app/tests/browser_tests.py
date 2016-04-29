@@ -33,7 +33,7 @@ def get_url(local_url='/'):
     # Obviously this is not the same application instance as the running
     # server and hence the LIVESERVER_PORT could in theory be different,
     # but for testing purposes we just make sure it this is correct.
-    port = app.config['LIVESERVER_PORT']
+    port = app.config['TESTSERVER_PORT']
     return 'http://localhost:{}/{}'.format(port, local_url)
 
 # Note, we could write these additional assert methods in a class which
