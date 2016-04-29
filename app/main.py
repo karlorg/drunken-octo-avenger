@@ -165,9 +165,7 @@ def play(game_no):
         flash('You must be logged in to play a move.')
         app.logger.debug("play(): no logged in user")
         return redirect(redirect_url())
-    if not is_players_turn_in_game(game):
-        flash("It's not your turn in that game.")
-        return redirect('/')
+
     arguments = request.form.to_dict()
 
     try:
@@ -184,6 +182,13 @@ def play(game_no):
     except KeyError:
         flash("Invalid request.")
         return redirect(url_for('game', game_no=game_no))
+
+    if (not is_players_turn_in_game(game) and
+        not go.check_resignation(old_sgf=game.sgf,
+                                 new_sgf=arguments['response'])):
+        flash("It's not your turn in that game.")
+        return redirect('/')
+
     game.sgf = arguments['response']
     game.last_move_time = datetime.now()
     game_result = go.get_game_result(game.sgf)

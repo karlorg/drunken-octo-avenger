@@ -411,6 +411,26 @@ test 'Resign also works for Black resigning', (assert) ->
   assert.ok ('RE' of nodes[0]), "SGF has gained an RE (result) property"
   assert.ok (/^W\+R/.test nodes[0].RE), "result shows White wins by resign"
 
+test "Resign off-turn generates correct colour resignation", (assert) ->
+  setInputSgf '(;SZ[3];B[ab])'
+  tesuji_charm.onTurn = false
+  tesuji_charm.game.initialize()
+  form = $('#main_form').get(0)
+  oldSubmit = form.submit
+  submitCalled = false
+  form.submit = -> submitCalled = true
+
+  $('.confirm-resign-button').click()
+
+  assert.ok submitCalled, "form submit function called"
+  form.submit = oldSubmit
+
+  sgf = getResponseSgf()
+  sgfObject = tesuji_charm.smartgame.parse sgf
+  nodes = sgfObject.gameTrees[0].nodes
+  assert.ok ('RE' of nodes[0]), "SGF has gained an RE (result) property"
+  assert.ok (/^W\+R/.test nodes[0].RE), "result shows White wins by resign"
+
 test "clicking a pre-existing stone does nothing", (assert) ->
   setInputSgf '(;SZ[3];AW[bb])'
   tesuji_charm.game.initialize()

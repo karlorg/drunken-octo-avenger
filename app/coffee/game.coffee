@@ -849,6 +849,10 @@ sgfObjectWithResignAdded = (sgfObject) ->
     when 'black' then 'W'
     when 'white' then 'B'
     else throw Error "invalid next player color"
+  if tesuji_charm.onTurn == false
+    winner = switch winner
+      when 'B' then 'W'
+      when 'W' then 'B'
 
   sgfObjectCopy = cloneSgfObject sgfObject
   nodes = sgfObjectCopy.gameTrees[0].nodes
