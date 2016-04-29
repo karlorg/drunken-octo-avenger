@@ -47,7 +47,7 @@
 <script type="text/javascript">
 jQuery(document).ready(function(){
     $('.mark-as-read').each(function(index){
-        btn = this;
+        var btn = this;
         $(btn).on('click', function(e){
             $.ajax({
                 type: 'POST',
