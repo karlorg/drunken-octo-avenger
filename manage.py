@@ -269,7 +269,7 @@ def test_pytest(name=None, coverage=False, accumulate=True, output_capture='fd')
 
 
 @manager.command
-def test(nocoverage=False, coverage_erase=True):
+def test(nocoverage=False, coverage_erase=True, nopytest=False):
     """ Run both the casperJS and all the unittests. We do not bother to run
     the capser tests if the unittests fail. By default this will erase any
     coverage-data accrued so far, you can avoid this, and thus get the results
@@ -282,6 +282,8 @@ def test(nocoverage=False, coverage_erase=True):
                         ('Casper', test_casper)
                       ]
     for name, test_fun in test_categories:
+        if name == 'Pytest' and nopytest:
+            continue
         test_result = test_fun(coverage=coverage, accumulate=True)
         if test_result:
             print("{} test failure!".format(name))
