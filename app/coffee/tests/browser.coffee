@@ -14,7 +14,7 @@ do ->
 defaultHost = "http://localhost"
 host = casper.cli.options['host'] or defaultHost
 port = casper.cli.options['port'] or
-  if host is defaultHost then "5000" else "80"
+  if host is defaultHost then "5001" else "80"
 
 portString = if port == "80" or port == 80 then "" else ":#{port}"
 

@@ -174,6 +174,7 @@ def test_casper(name=None, coverage=False, accumulate=False):
     js_test_file = "app/static/compiled-js/tests/browser.js"
     casper_command = ["./node_modules/.bin/casperjs", "test", js_test_file]
     casper_command.append('--fail-fast')
+    casper_command.append('--port={}'.format(app.config['TESTSERVER_PORT']))
     if name is not None:
         casper_command.append('--single={}'.format(name))
     return run_with_test_server(casper_command, coverage, accumulate)
@@ -195,7 +196,7 @@ def run_test_server():
     # running the server in debug mode during testing fails for some reason
     app.config['DEBUG'] = False
     app.config['TESTING'] = True
-    port = app.config['LIVESERVER_PORT']
+    port = app.config['TESTSERVER_PORT']
     # Don't use the production database but a temporary test database.
     app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///test.db"
     db.drop_all()
@@ -268,8 +269,9 @@ def test_pytest(name=None, coverage=False, accumulate=True, output_capture='fd')
     return run_with_test_server(pytest_command, coverage, accumulate)
 
 
-@manager.command
-def test(nocoverage=False, coverage_erase=True):
+@manager.option('--nopytest', dest='nopytest',
+                default=False, action='store_true')
+def test(nopytest, nocoverage=False, coverage_erase=True):
     """ Run both the casperJS and all the unittests. We do not bother to run
     the capser tests if the unittests fail. By default this will erase any
     coverage-data accrued so far, you can avoid this, and thus get the results
@@ -282,9 +284,11 @@ def test(nocoverage=False, coverage_erase=True):
                         ('Casper', test_casper)
                       ]
     for name, test_fun in test_categories:
+        if name == 'Pytest' and nopytest:
+            continue
         test_result = test_fun(coverage=coverage, accumulate=True)
         if test_result:
-            print("{} test failure!")
+            print("{} test failure!".format(name))
             return test_result
     print('All tests passed!')
     return 0
