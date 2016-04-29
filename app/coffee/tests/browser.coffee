@@ -306,7 +306,7 @@ class NativeLoginTest extends BrowserTest
         username: 'darrenlamb'
         password: 'imdarrenlamb'
         }, true  # true = submit form
-    casper.then =>
+    casper.waitForSelector 'form#login_form', =>
       test.assertDoesntExist '#logout',
         "After trying incorrect password, logout button doesn't appear"
       @check_flashed_message test, 'Password incorrect', 'danger',
