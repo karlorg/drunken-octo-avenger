@@ -284,7 +284,7 @@ def test(nocoverage=False, coverage_erase=True):
     for name, test_fun in test_categories:
         test_result = test_fun(coverage=coverage, accumulate=True)
         if test_result:
-            print("{} test failure!")
+            print("{} test failure!".format(name))
             return test_result
     print('All tests passed!')
     return 0
