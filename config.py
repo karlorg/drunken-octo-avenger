@@ -10,6 +10,7 @@ ADMINS = admin_string.split(',')
 DEBUG = True
 
 LIVESERVER_PORT = 5000
+TESTSERVER_PORT = 5001
 
 sqlite_database_file = os.path.join(basedir, 'generated/db.sqlite')
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + sqlite_database_file
