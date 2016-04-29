@@ -73,6 +73,14 @@ def _is_valid_resignation(old_sgf, new_sgf):
         return False
     return True
 
+def check_resignation(old_sgf, new_sgf):
+    """Given a valid continuation, is the game being resigned?
+
+    We're assuming that check_continuation has already been tried and
+    has raised no exception.
+    """
+    return _is_valid_resignation(old_sgf, new_sgf)
+
 
 def agreed_marking(sgf):
     """Returns the final agreed proposal if an sgf ends in two identical

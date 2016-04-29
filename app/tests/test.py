@@ -506,6 +506,19 @@ class TestPlayIntegrated(TestWithDb):
         self.assertTrue(game.finished,
                         "game should be finished after resign posted")
 
+    def test_resign_works_off_turn(self):
+        # despite other move types being disallowed
+        game = self.add_game("(;B[ab];W[cc])")
+        game_no = game.id
+        self.assertFalse(game.finished,
+                         "game should not initially be finished")
+        with self.set_user('white@white.com') as test_client:
+            test_client.post(url_for('play', game_no=game_no),
+                             data=dict(response="(;RE[B+Resign]B[ab];W[cc])"))
+        db.session.rollback()  # to catch missing commits
+        game = db.session.query(Game).filter_by(id=game_no).one()
+        self.assertTrue(game.finished,
+                        "game should be finished after resign posted")
 
     def test_two_identical_deadstones_end_game(self):
         tw = 'TW[aa][ab][ac][ba][bb][bc][ca][cb][cc]'
